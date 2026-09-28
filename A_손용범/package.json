@@ -1,0 +1,12 @@
+{
+  "name": "ai-promo-video",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "node --check video.mjs && node --check example.mjs",
+    "generate": "node example.mjs"
+  },
+  "dependencies": {
+    "@higgsfield/client": "0.2.6"
+  }
+}
