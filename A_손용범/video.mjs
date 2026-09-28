@@ -9,7 +9,7 @@ const MODEL = 'kling-video/v2.5-turbo/standard/image-to-video';
 export async function generateVideo({
   imageUrl,
   prompt,
-  duration = 5,
+  duration = 10,
   cfgScale = 0.5,
   negativePrompt = '',
 }, { credentials = process.env.HF_CREDENTIALS, client } = {}) {

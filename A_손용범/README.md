@@ -16,7 +16,7 @@ $env:HF_CREDENTIALS = 'KEY_ID:KEY_SECRET'
 pnpm generate "https://example.com/product.jpg" "A slow camera push toward the product, soft studio lighting, keep the product shape and label unchanged"
 ```
 
-위 명령은 실제 유료 영상 생성을 요청합니다. 처음에는 5초 영상으로 확인하세요.
+위 명령은 실제 유료 영상 생성을 요청합니다. 기본 길이는 10초입니다. API 키를 받기 전에는 실행할 수 없으며, 실제 생성 전에 Higgsfield의 현재 요금을 확인하세요.
 
 ## 다른 코드에서 호출
 
@@ -26,16 +26,16 @@ import { generateVideo } from './A_손용범/video.mjs';
 const result = await generateVideo({
   imageUrl: 'https://example.com/product.jpg',
   prompt: 'A slow camera push toward the product, soft studio lighting',
-  duration: 5,
+  duration: 10,
 });
 
 console.log(result.videoUrl);
 ```
 
-입력: `imageUrl`, `prompt`, 선택값 `duration`(5 또는 10), `cfgScale`(0~1), `negativePrompt`.
+입력: `imageUrl`, `prompt`, 선택값 `duration`(기본 10초, 5 또는 10), `cfgScale`(0~1), `negativePrompt`.
 
 출력: `{ videoUrl, requestId, status }`. 결과 화면에서는 `videoUrl`을 재생하거나 다운로드 링크에 사용할 수 있습니다. SDK가 생성 완료까지 상태를 확인하므로 호출이 바로 끝나지 않을 수 있습니다. 오류는 예외로 전달됩니다.
 
-기획안의 약 8초 영상은 이 모델에서 직접 지정할 수 없습니다. 5초 또는 10초를 사용해야 합니다. 이 API 요청에는 화면 비율 설정값도 없으므로, 세로형 영상이 필요하면 입력 이미지와 실제 생성 결과의 비율을 확인하세요.
+이 모델은 5초 또는 10초를 생성합니다. 이 API 요청에는 화면 비율 설정값이 없으므로, 세로형 영상이 필요하면 입력 이미지와 실제 생성 결과의 비율을 확인하세요.
 
 모델 설명: https://open.higgsfield.ai/models/kling-video/v2.5-turbo/standard/image-to-video/playground
