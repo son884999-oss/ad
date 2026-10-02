@@ -8,16 +8,23 @@ const MODEL = 'kling-video/v2.5-turbo/standard/image-to-video';
  */
 export async function generateVideo({
   imageUrl,
+  videoPrompt,
   prompt,
   duration = 10,
   cfgScale = 0.5,
   negativePrompt = '',
 }, { credentials = process.env.HF_CREDENTIALS, client } = {}) {
+  if (videoPrompt !== undefined && prompt !== undefined && videoPrompt !== prompt) {
+    throw new TypeError('videoPrompt와 기존 prompt를 함께 전달할 때는 같은 값이어야 합니다.');
+  }
+
+  const resolvedPrompt = videoPrompt ?? prompt;
+
   if (typeof imageUrl !== 'string' || !/^https:\/\//i.test(imageUrl)) {
     throw new TypeError('imageUrl은 외부에서 접근 가능한 https:// 이미지 URL이어야 합니다.');
   }
-  if (typeof prompt !== 'string' || !prompt.trim()) {
-    throw new TypeError('prompt를 입력하세요.');
+  if (typeof resolvedPrompt !== 'string' || !resolvedPrompt.trim()) {
+    throw new TypeError('videoPrompt를 입력하세요.');
   }
   if (duration !== 5 && duration !== 10) {
     throw new RangeError('duration은 5초 또는 10초만 가능합니다.');
@@ -33,24 +40,43 @@ export async function generateVideo({
   }
 
   const api = client ?? createHiggsfieldClient({ credentials });
-  const result = await api.subscribe(MODEL, {
-    input: {
-      image_url: imageUrl,
-      prompt: prompt.trim(),
-      duration,
-      cfg_scale: cfgScale,
-      negative_prompt: negativePrompt,
-    },
-    withPolling: true,
-  });
+  try {
+    const result = await api.subscribe(MODEL, {
+      input: {
+        image_url: imageUrl,
+        prompt: resolvedPrompt.trim(),
+        duration,
+        cfg_scale: cfgScale,
+        negative_prompt: negativePrompt,
+      },
+      withPolling: true,
+    });
 
-  if (result.status !== 'completed' || !result.video?.url) {
-    throw new Error(`영상 생성 실패: ${result.status ?? '알 수 없는 상태'} (request_id: ${result.request_id ?? '없음'})`);
+    if (result.status !== 'completed' || !result.video?.url) {
+      const providerStatus = result.status ?? 'unknown';
+      return {
+        videoUrl: null,
+        requestId: result.request_id ?? null,
+        status: 'failed',
+        providerStatus,
+        errorMessage: `영상 생성 실패: ${providerStatus}`,
+      };
+    }
+
+    return {
+      videoUrl: result.video.url,
+      requestId: result.request_id ?? null,
+      status: 'completed',
+      providerStatus: result.status,
+      errorMessage: null,
+    };
+  } catch (error) {
+    return {
+      videoUrl: null,
+      requestId: error?.request_id ?? error?.requestId ?? null,
+      status: 'failed',
+      providerStatus: error?.status ?? null,
+      errorMessage: error instanceof Error ? error.message : '알 수 없는 영상 생성 오류가 발생했습니다.',
+    };
   }
-
-  return {
-    videoUrl: result.video.url,
-    requestId: result.request_id,
-    status: result.status,
-  };
 }

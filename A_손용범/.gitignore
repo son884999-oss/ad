@@ -2,3 +2,7 @@ node_modules/
 .env
 .env.*
 !.env.example
+*.mp4
+*.mov
+*생성기록.json
+*生成記録.json
