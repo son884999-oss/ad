@@ -3,10 +3,19 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "check": "node --check video.mjs && node --check example.mjs",
-    "generate": "node example.mjs"
+    "check": "node --check video.mjs && node --check example.mjs && node --check video.test.mjs && tsc -p tsconfig.json",
+    "test": "node --test video.test.mjs",
+    "generate": "node --env-file=.env.local example.mjs",
+    "seedance": "tsx --env-file=.env.local index.ts",
+    "product-ad": "node --env-file=.env.local kling-ad.mjs",
+    "compose-ad": "node compose-premium.mjs"
   },
   "dependencies": {
     "@higgsfield/client": "0.2.6"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.3",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2"
   }
 }
