@@ -1,0 +1,166 @@
+@import "tailwindcss";
+
+@font-face {
+  font-family: "Inter:Regular";
+  src: url("https://static.figma.com/font/Inter_1") format("woff2");
+  font-style: normal;
+  font-weight: 400;
+}
+
+@font-face {
+  font-family: "Noto Sans KR:Bold";
+  src: url("https://static.figma.com/font/NotoSansKR-VF_2") format("woff2");
+  font-style: normal;
+  font-weight: 700;
+}
+
+@font-face {
+  font-family: "Noto Sans KR:Medium";
+  src: url("https://static.figma.com/font/NotoSansKR-VF_2") format("woff2");
+  font-style: normal;
+  font-weight: 500;
+}
+
+@font-face {
+  font-family: "Noto Sans KR:Regular";
+  src: url("https://static.figma.com/font/NotoSansKR-VF_2") format("woff2");
+  font-style: normal;
+  font-weight: 400;
+}
+
+@font-face {
+  font-family: "Noto Sans Math:Regular";
+  src: url("https://static.figma.com/font/NotoSansMath-Regular_1") format("woff2");
+  font-style: normal;
+  font-weight: 400;
+}
+
+@font-face {
+  font-family: "Noto Sans Symbols2:Regular";
+  src: url("https://static.figma.com/font/NotoSansSymbols2-Regular_5") format("woff2");
+  font-style: normal;
+  font-weight: 400;
+}
+
+@font-face {
+  font-family: "Noto Sans Symbols:Medium";
+  src: url("https://static.figma.com/font/NotoSansSymbols-VF_2") format("woff2");
+  font-style: normal;
+  font-weight: 500;
+}
+
+@font-face {
+  font-family: "Noto Sans:Medium";
+  src: url("https://static.figma.com/font/NotoSans-VF_3") format("woff2");
+  font-style: normal;
+  font-weight: 500;
+}
+
+:root {
+  font-family: "Noto Sans KR:Regular", "Noto Sans KR", sans-serif;
+  color: #222222;
+  background: #f6f5f3;
+  font-synthesis: none;
+}
+
+button,
+input,
+textarea {
+  font: inherit;
+}
+
+button,
+label[for] {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+strong,
+h1,
+h2,
+h3,
+.font-bold {
+  font-family: "Noto Sans KR:Bold", "Noto Sans KR", sans-serif;
+}
+
+::selection {
+  color: white;
+  background: #c64f12;
+}
+
+.prototype-app main p,
+.prototype-app main label,
+.prototype-app input,
+.prototype-app textarea,
+.prototype-app main button {
+  font-size: 18px;
+  line-height: 1.6;
+}
+
+.prototype-app button,
+.prototype-app label:has(input[type="file"]) {
+  min-height: 48px;
+}
+
+.prototype-app main h2 {
+  font-size: clamp(26px, 3vw, 30px);
+  line-height: 1.3;
+}
+
+.easy-mode main p,
+.easy-mode main label,
+.easy-mode main input,
+.easy-mode main textarea,
+.easy-mode main button,
+.easy-mode main strong {
+  font-size: 22px;
+  line-height: 1.65;
+}
+
+.easy-mode main h2 {
+  font-size: 30px;
+  line-height: 1.35;
+}
+
+.easy-mode button,
+.easy-mode label:has(input[type="file"]) {
+  min-height: 60px;
+}
+
+.easy-mode input {
+  min-height: 64px;
+}
+
+@media (max-width: 639px) {
+  .mobile-primary-bar {
+    position: fixed;
+    right: 0;
+    bottom: calc(68px + env(safe-area-inset-bottom));
+    left: 0;
+    z-index: 29;
+    display: block;
+    margin: 0;
+    padding: 10px 16px;
+    border-top: 1px solid #d5d0cb;
+    background: rgb(255 255 255 / 96%);
+    box-shadow: 0 -6px 20px rgb(34 34 34 / 10%);
+    backdrop-filter: blur(8px);
+  }
+
+  .mobile-primary-bar > button {
+    width: 100%;
+  }
+
+  .easy-mode .mobile-primary-bar {
+    padding-block: 12px;
+  }
+}
+.login-screen button { font-size: 18px; line-height: 1.6; }
+.login-screen.easy-mode label, .login-screen.easy-mode input, .login-screen.easy-mode button { font-size: 22px; line-height: 1.65; }
