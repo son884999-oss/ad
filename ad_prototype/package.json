@@ -11,6 +11,7 @@
     "verify:readability": "node scripts/verify-readability.mjs",
     "verify:studio": "node scripts/verify-studio.mjs",
     "verify:zoom": "node scripts/verify-native-zoom.mjs",
+    "verify:recovery": "node scripts/verify-recovery.mjs",
     "format": "oxfmt"
   },
   "dependencies": {

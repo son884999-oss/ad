@@ -95,6 +95,14 @@ pnpm verify:ui
 
 로컬에서 CSS가 깨지는 문제는 [LOCAL_PREVIEW.md](./LOCAL_PREVIEW.md)의 실행 방식으로 확인한다. `start-preview.cmd`가 올바른 Vite 주소를 열며, 기존 서버 연결과 새 서버 시작(별도 5181 포트)을 모두 시험했다.
 
+## 사진 교체와 읽어주기 오류 회복
+
+2012년 [Flickr Uploadr 발표](https://blog.flickr.net/en/2012/04/25/say-hello-to-the-new-flickr-uploadr/)와 [개발팀 설명](https://code.flickr.net/2012/05/11/building-the-flickr-web-uploadr-the-grid/), 현대 보조 자료 [GOV.UK 오류 안내](https://design-system.service.gov.uk/components/error-message/)를 재검색했다. 사진 교체를 시작할 때 기존 사진부터 지우는 문제를 고쳐, 새 파일 형식·용량·읽기·이미지 디코딩이 모두 성공한 뒤에만 교체한다. 실패해도 기존 사진으로 이어갈 수 있다. 확인 중에는 다음 버튼이 잠기고, 새 선택보다 오래된 읽기 결과는 무시한다. 파일 입력을 초기화해 같은 파일 재선택도 가능하다. 안내는 파일 입력의 `aria-describedby`로 연결한다.
+
+읽어주기는 시작 이벤트 없이 OS 대기 상태가 지속돼도8초 뒤 요청을 무효화하고 취소·재시도 안내로 복구한다. 준비 취소, 중단 오류 뒤 남은 준비 메시지도 처리한다. 기본적으로 사용자 조작으로 시작하고 자동 재생하지 않는다. 2019년 [Google Live Caption](https://blog.google/products-and-platforms/platforms/android/live-caption/)은 접근하기 쉬운 사용자 제어의 역사적 보조 사례다.
+
+`pnpm verify:recovery`는 실제 잘못된/큰/깨진 파일 교체, 지연된 읽기 뒤 다른 파일 선택, 정상 교체를 검사한다. 음성은 모의 Web Speech API와 제어된 시계로 준비 취소·대기 시간 초과·늦은 시작 이벤트·시작/종료·중단·미지원 상태를 검사했다. 이 모의 상태 검사는 실제 한국어 음성을 듣거나 음질을 검증했다는 뜻이 아니다. 결과는 `ui-review/recovery-verification.json`에 저장한다.
+
 ## 남은 검수
 
 자동검수와 디자이너의 시니어 관점 검토는 실제 시니어 사용자 테스트를 대체하지 않는다. Chromium200%는 위 테스트 범위에서 확인했지만 스크린리더·실제 Android/iOS·가상키보드 검수는 추가로 진행해야 한다. 긴 한글/이모지 입력은 위 추가 검수로 확인했다. 모든 접근성 기준 충족을 선언하지 않는다.

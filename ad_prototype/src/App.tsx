@@ -794,8 +794,17 @@ function CreateFlow({
   const [videoMessage, setVideoMessage] = useState("")
 
   const [uploadMessage, setUploadMessage] = useState("")
+  const [uploadPending, setUploadPending] = useState(false)
 
   const uploadRequestRef = useRef(0)
+  useEffect(() => {
+    uploadRequestRef.current += 1
+    setUploadPending(false)
+    setUploadMessage("")
+    return () => {
+      uploadRequestRef.current += 1
+    }
+  }, [type])
 
   const missingFields = [
     !details.description.trim() && "제품 설명",
@@ -863,25 +872,33 @@ function CreateFlow({
     if (!file) return
 
     const request = ++uploadRequestRef.current
-
-    setImageUrl("")
+    event.currentTarget.value = ""
+    const keepNotice = imageUrl ? " 기존 사진은 그대로예요." : ""
 
     const fail = () => {
-      if (request === uploadRequestRef.current)
+      if (request === uploadRequestRef.current) {
+        setUploadPending(false)
         setUploadMessage(
-          "사진을 읽지 못했어요. JPG 또는 PNG 사진을 다시 선택해 주세요.",
+          "새 사진을 읽지 못했어요." +
+            keepNotice +
+            " JPG 또는 PNG 사진을 다시 선택해 주세요.",
         )
+      }
     }
 
-    if (!file.type.startsWith("image/") || file.size > 20 * 1024 * 1024) {
-      setUploadMessage("20MB 이하의 사진 파일을 선택해 주세요.")
-
-      event.target.value = ""
-
+    if (!file.type.startsWith("image/")) {
+      setUploadPending(false)
+      setUploadMessage("사진 파일을 선택해 주세요." + keepNotice)
+      return
+    }
+    if (file.size > 20 * 1024 * 1024) {
+      setUploadPending(false)
+      setUploadMessage("20MB 이하의 사진 파일을 선택해 주세요." + keepNotice)
       return
     }
 
     setUploadMessage("사진을 확인하고 있어요.")
+    setUploadPending(true)
 
     const reader = new FileReader()
 
@@ -895,6 +912,7 @@ function CreateFlow({
           if (request !== uploadRequestRef.current) return
 
           setImageUrl(reader.result)
+          setUploadPending(false)
 
           setUploadMessage("사진이 준비됐어요.")
 
@@ -902,10 +920,14 @@ function CreateFlow({
         } catch {
           fail()
         }
-      }
+      } else fail()
     }
 
-    reader.readAsDataURL(file)
+    try {
+      reader.readAsDataURL(file)
+    } catch {
+      fail()
+    }
   }
 
   const resultCopy: Record<Channel, string> = {
@@ -1364,7 +1386,11 @@ function CreateFlow({
             20MB 이하의 JPG·PNG 등 사진 한 장을 선택하세요.
           </p>
           {uploadMessage && (
-            <p role="status" className="mt-2 font-bold text-[#7f340d]">
+            <p
+              id="upload-feedback"
+              role="status"
+              className="mt-2 font-bold text-[#7f340d]"
+            >
               {uploadMessage}
             </p>
           )}
@@ -1381,7 +1407,9 @@ function CreateFlow({
                   className="aspect-square w-full rounded-[16px] bg-[#f1efec] object-cover"
                 />
                 <div>
-                  <strong className="text-[20px]">사진이 준비됐어요</strong>
+                  <strong className="text-[20px]">
+                    {uploadPending ? "새 사진 확인 중" : "사진이 준비됐어요"}
+                  </strong>
                   <p className="mt-2 text-[18px] leading-6 text-[#545454]">
                     제품이 잘 보이는지 확인해 주세요.
                   </p>
@@ -1389,7 +1417,7 @@ function CreateFlow({
                     사진 바꾸기
                     <input
                       type="file"
-                      aria-describedby="upload-help"
+                      aria-describedby="upload-help upload-feedback"
                       accept="image/*"
                       onChange={upload}
                       className="sr-only"
@@ -1408,7 +1436,7 @@ function CreateFlow({
                 </span>
                 <input
                   type="file"
-                  aria-describedby="upload-help"
+                  aria-describedby="upload-help upload-feedback"
                   accept="image/*"
                   onChange={upload}
                   className="sr-only"
@@ -1531,8 +1559,11 @@ function CreateFlow({
             {channelTheme.guide}
           </p>
           <div className="mobile-primary-bar mt-7 flex justify-end">
-            <PrimaryButton disabled={!imageUrl} onClick={() => setStep(2)}>
-              사진 확인하고 다음
+            <PrimaryButton
+              disabled={!imageUrl || uploadPending}
+              onClick={() => setStep(2)}
+            >
+              {uploadPending ? "사진 확인 중" : "사진 확인하고 다음"}
             </PrimaryButton>
           </div>
         </div>
@@ -2467,11 +2498,9 @@ export default function App() {
     }
 
     let startTimeoutId = window.setTimeout(() => {
-      if (
-        speechRequestRef.current === requestId &&
-        !synthesis.speaking &&
-        !synthesis.pending
-      ) {
+      if (speechRequestRef.current === requestId) {
+        speechRequestRef.current += 1
+        synthesis.cancel()
         setSpeaking(false)
 
         setSpeechPreparing(false)
@@ -2480,7 +2509,7 @@ export default function App() {
           "일시적으로 읽어주기를 시작하지 못했어요. 다시 눌러 시도해 주세요.",
         )
       }
-    }, 3000)
+    }, 8000)
 
     utterance.onstart = () => {
       if (speechRequestRef.current !== requestId) return
@@ -2515,7 +2544,10 @@ export default function App() {
 
       setSpeechPreparing(false)
 
-      if (event.error === "canceled" || event.error === "interrupted") return
+      if (event.error === "canceled" || event.error === "interrupted") {
+        setSpeechMessage("")
+        return
+      }
 
       setSpeechMessage(
         "일시적으로 읽어주기를 시작하지 못했어요. 화면을 한 번 누른 뒤 다시 시도해 주세요.",

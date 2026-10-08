@@ -105,7 +105,7 @@ try {
       buffer: Buffer.from("not a photo"),
     })
     await page
-      .getByText("20MB 이하의 사진 파일을 선택해 주세요.", { exact: true })
+      .getByText("사진 파일을 선택해 주세요.", { exact: true })
       .waitFor()
     if (
       await page
