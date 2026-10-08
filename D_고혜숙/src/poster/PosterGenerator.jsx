@@ -4,6 +4,7 @@ import { renderPosterToCanvas, POSTER_RATIOS } from './posterRenderer';
 export const PosterGenerator = forwardRef(function PosterGenerator({
   productData,
   imageUrl,
+  generatedBackgroundUrl = '',
   selectedTheme = 'nature',
   selectedRatio = '4:5',
   selectedComposition = 'vertical',
@@ -11,6 +12,7 @@ export const PosterGenerator = forwardRef(function PosterGenerator({
 }, ref) {
   const canvasRef = useRef(null);
   const imageRef = useRef(null);
+  const backgroundImageRef = useRef(null);
   const [status, setStatus] = useState(imageUrl ? 'loading' : 'empty');
   const [errorMessage, setErrorMessage] = useState('');
 
@@ -30,28 +32,37 @@ export const PosterGenerator = forwardRef(function PosterGenerator({
   useEffect(() => {
     setErrorMessage('');
     imageRef.current = null;
+    backgroundImageRef.current = null;
     if (!imageUrl) {
       setStatus('empty');
       return undefined;
     }
 
     setStatus('loading');
-    const image = new Image();
-    image.crossOrigin = 'anonymous';
-    image.onload = () => {
-      imageRef.current = image;
+    let cancelled = false;
+    const loadImage = (url, label) => new Promise((resolve, reject) => {
+      const image = new Image();
+      image.crossOrigin = 'anonymous';
+      image.onload = () => resolve(image);
+      image.onerror = () => reject(new Error(`${label}를 불러오지 못했습니다. 이미지 주소와 CORS 설정을 확인해 주세요.`));
+      image.src = url;
+    });
+
+    Promise.all([
+      loadImage(imageUrl, '제품 사진'),
+      generatedBackgroundUrl ? loadImage(generatedBackgroundUrl, '배경 이미지') : Promise.resolve(null),
+    ]).then(([productImage, backgroundImage]) => {
+      if (cancelled) return;
+      imageRef.current = productImage;
+      backgroundImageRef.current = backgroundImage;
       setStatus('ready');
-    };
-    image.onerror = () => {
-      setErrorMessage('제품 사진을 불러오지 못했습니다. 이미지 파일을 다시 선택해 주세요.');
+    }).catch((error) => {
+      if (cancelled) return;
+      setErrorMessage(error instanceof Error ? error.message : '이미지를 불러오지 못했습니다.');
       setStatus('error');
-    };
-    image.src = imageUrl;
-    return () => {
-      image.onload = null;
-      image.onerror = null;
-    };
-  }, [imageUrl]);
+    });
+    return () => { cancelled = true; };
+  }, [generatedBackgroundUrl, imageUrl]);
 
   useEffect(() => {
     if (!canvasRef.current) return;
@@ -59,6 +70,7 @@ export const PosterGenerator = forwardRef(function PosterGenerator({
       canvas: canvasRef.current,
       productData,
       productImageObj: imageRef.current,
+      backgroundImageObj: backgroundImageRef.current,
       themeKey: selectedTheme,
       ratioKey: selectedRatio,
       compositionKey: selectedComposition,

@@ -41,6 +41,7 @@ function getThemeForTone(brandTone) {
 export function PosterPreview({
   initialProductData = SAMPLE_PRODUCT_DATA,
   initialImageUrl = '/sample-product.png',
+  generatedBackgroundUrl = '',
   onPosterReady,
 }) {
   const [productData, setProductData] = useState(() => normalizeProductData(initialProductData));
@@ -125,9 +126,11 @@ export function PosterPreview({
       const result = {
         ...productData,
         imageUrl,
+        generatedBackgroundUrl,
         posterUrl: generatedPosterUrl,
         status: 'sample',
         format: 'image/png',
+        compositionMode: generatedBackgroundUrl ? 'canvas-with-background' : 'canvas-only',
       };
       setPosterUrl(generatedPosterUrl);
       setNotice('포스터를 만들었어요. 이 모듈은 posterUrl을 data URL 형식으로 반환합니다.');
@@ -160,7 +163,7 @@ export function PosterPreview({
               <h2 className="text-2xl font-extrabold leading-tight tracking-[-0.04em] text-[#17211b] sm:text-[34px]">제품 정보와 사진으로 홍보 포스터를 구성해요</h2>
               <p className="mt-3 max-w-xl text-sm leading-6 text-[#68746c] sm:text-[15px]">제품 형태와 특징을 살려 SNS에 바로 활용할 수 있는 포스터 시안을 만들어 보세요.</p>
             </div>
-            <div className="flex items-center gap-2 rounded-2xl border border-[#e3e8e2] bg-[#fafbf8] px-4 py-3 text-xs font-bold text-[#53645a]"><ShieldCheck className="h-4 w-4 text-[#3c8a59]" /> 샘플 Canvas 렌더러</div>
+            <div className="flex items-center gap-2 rounded-2xl border border-[#e3e8e2] bg-[#fafbf8] px-4 py-3 text-xs font-bold text-[#53645a]"><ShieldCheck className="h-4 w-4 text-[#3c8a59]" /> {generatedBackgroundUrl ? 'Canvas + 배경 이미지' : '샘플 Canvas 렌더러'}</div>
           </div>
         </div>
       </section>
@@ -305,6 +308,7 @@ export function PosterPreview({
                 ref={generatorRef}
                 productData={productData}
                 imageUrl={imageUrl}
+                generatedBackgroundUrl={generatedBackgroundUrl}
                 selectedTheme={selectedTheme}
                 selectedRatio={selectedRatio}
                 selectedComposition={selectedComposition}
