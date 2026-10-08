@@ -113,14 +113,20 @@ function drawCoverImage(ctx, image, x, y, width, height) {
   ctx.drawImage(image, x + (width - drawWidth) / 2, y + (height - drawHeight) / 2, drawWidth, drawHeight);
 }
 
-function drawPortraitBackdrop(ctx, image, width, height, theme) {
+function drawPortraitBackdrop(ctx, image, generatedBackgroundImage, width, height, theme) {
   ctx.fillStyle = theme.bgGradient[1];
   ctx.fillRect(0, 0, width, height);
   if (!image?.complete || !image.naturalWidth) return;
 
+  const backdropImage = generatedBackgroundImage?.complete && generatedBackgroundImage.naturalWidth
+    ? generatedBackgroundImage
+    : image;
+
   ctx.save();
-  ctx.filter = 'blur(38px) saturate(1.12)';
-  drawCoverImage(ctx, image, -54, -54, width + 108, height + 108);
+  ctx.filter = generatedBackgroundImage?.complete && generatedBackgroundImage.naturalWidth
+    ? 'blur(22px) saturate(1.08)'
+    : 'blur(38px) saturate(1.12)';
+  drawCoverImage(ctx, backdropImage, -54, -54, width + 108, height + 108);
   ctx.restore();
 
   ctx.save();
@@ -144,9 +150,9 @@ function drawPortraitBackdrop(ctx, image, width, height, theme) {
   ctx.restore();
 }
 
-function renderVerticalPoster({ ctx, image, productData, theme, ratio, width, height }) {
+function renderVerticalPoster({ ctx, image, generatedBackgroundImage, productData, theme, ratio, width, height }) {
   const { productName = '', productDescription = '', keySellingPoint = '', targetAudience = '' } = productData;
-  drawPortraitBackdrop(ctx, image, width, height, theme);
+  drawPortraitBackdrop(ctx, image, generatedBackgroundImage, width, height, theme);
 
   const panelX = 48;
   const panelY = 48;
@@ -314,6 +320,7 @@ export function renderPosterToCanvas({
   canvas,
   productData = {},
   productImageObj,
+  backgroundImageObj,
   themeKey = 'nature',
   ratioKey = '4:5',
   compositionKey = 'vertical',
@@ -329,7 +336,7 @@ export function renderPosterToCanvas({
 
   const { productName = '', productDescription = '', keySellingPoint = '', targetAudience = '' } = productData;
   if (compositionKey === 'vertical') {
-    renderVerticalPoster({ ctx, image: productImageObj, productData, theme, ratio, width, height });
+    renderVerticalPoster({ ctx, image: productImageObj, generatedBackgroundImage: backgroundImageObj, productData, theme, ratio, width, height });
     return true;
   }
 
@@ -342,6 +349,17 @@ export function renderPosterToCanvas({
   background.addColorStop(1, theme.bgGradient[2]);
   ctx.fillStyle = background;
   ctx.fillRect(0, 0, width, height);
+  if (backgroundImageObj?.complete && backgroundImageObj.naturalWidth) {
+    ctx.save();
+    ctx.filter = 'blur(24px) saturate(1.08)';
+    drawCoverImage(ctx, backgroundImageObj, -48, -48, width + 96, height + 96);
+    ctx.restore();
+    ctx.save();
+    ctx.globalAlpha = 0.58;
+    ctx.fillStyle = theme.paper;
+    ctx.fillRect(0, 0, width, height);
+    ctx.restore();
+  }
 
   ctx.fillStyle = theme.ink;
   ctx.font = '700 24px "Noto Sans KR", sans-serif';
