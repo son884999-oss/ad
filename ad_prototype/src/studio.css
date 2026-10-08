@@ -244,3 +244,24 @@
  .studio-header { position:static; }
  .studio-bottom-nav { position:static; }
 }
+
+/* Focused entry screen: one form, with the main logo directly above it. */
+.studio-login { display:flex; flex-direction:column; align-items:center; justify-content:center; padding:40px 20px; }
+.studio-login-brand { margin:0 0 28px; text-align:center; }
+.studio-login-brand .studio-brand-note { display:none; }
+.studio-login-brand .studio-wordmark { font-size:30px; gap:12px; }
+.studio-login-brand .studio-mark { font-size:48px; }
+.studio-login-layout { display:block; width:100%; max-width:440px; margin:0; }
+.studio-login-form { padding:32px; border-radius:24px; box-shadow:0 12px 36px #58442c08; }
+.studio-login-form h1 { font-size:26px; font-weight:700; line-height:1.4; text-align:center; margin-bottom:12px; }
+.studio-login-form > p:first-of-type { margin-bottom:28px; text-align:center; font-size:17px; }
+.studio-login .studio-password-input { display:block; position:relative; }
+.studio-login .studio-password-input input { padding-right:90px; }
+.studio-login .studio-password-input button { position:absolute; top:12px; right:4px; width:80px; min-height:48px; padding:4px 8px; margin:0; border:0; border-left:1px solid #ded8cc; border-radius:0 10px 10px 0; color:#3f6559; font-size:16px; }
+.studio-login .studio-divider { margin:24px 0 16px; }
+.studio-login-form > .studio-tool { display:block; margin:18px auto 0; }
+@media (max-width:479px) {
+ .studio-login { padding:28px 16px; justify-content:flex-start; }
+ .studio-login-form { padding:28px 22px; }
+ .studio-login-brand { margin-bottom:22px; }
+}

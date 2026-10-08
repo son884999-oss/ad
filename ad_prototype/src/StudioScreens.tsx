@@ -160,33 +160,9 @@ export function StudioLogin({
         <Wordmark />
       </div>
       <div className="studio-login-layout">
-        <section className="studio-login-story">
-          <p className="studio-eyebrow">홍보가 처음이어도 괜찮아요</p>
-          <h1>
-            좋은 가게의 이야기가
-            <br />더 멀리 닿도록.
-          </h1>
-          <p>
-            사진과 설명을 넣으면
-            <br />
-            포스터, 영상, 홍보 글을 한곳에서 만들어요.
-          </p>
-          <SampleComposition />
-        </section>
         <section className="studio-login-form">
-          <span className="studio-eyebrow">반가워요, 사장님</span>
-          <h2>
-            {mode === "login"
-              ? "우리 가게 홍보, 시작해 볼까요?"
-              : "홍보잇다에 오신 걸 환영해요"}
-          </h2>
-          <p>먼저 둘러보고 싶다면 바로 시작할 수 있어요.</p>
-          <button className="studio-primary" onClick={onEnter}>
-            바로 시작하기 <StudioIcon name="arrow" />
-          </button>
-          <div className="studio-divider">
-            <span>계정으로 이용하기</span>
-          </div>
+          <h1>{mode === "login" ? "로그인" : "회원가입"}</h1>
+          <p>{mode === "login" ? "우리 가게 홍보를 시작해 보세요." : "이메일과 비밀번호를 입력해 주세요."}</p>
           <form onSubmit={submit}>
             <label>
               이메일
@@ -211,14 +187,15 @@ export function StudioLogin({
                 />
                 <button
                   type="button"
+                  aria-label={showPassword ? "비밀번호 숨기기" : "비밀번호 보기"}
                   aria-pressed={showPassword}
                   onClick={() => setShowPassword(!showPassword)}
                 >
-                  {showPassword ? "비밀번호 숨기기" : "비밀번호 보기"}
+                  {showPassword ? "숨기기" : "보기"}
                 </button>
               </div>
             </label>
-            <button type="submit" className="studio-secondary">
+            <button type="submit" className="studio-primary">
               {mode === "login" ? "로그인" : "가입하고 시작하기"}
             </button>
           </form>
@@ -230,6 +207,8 @@ export function StudioLogin({
               ? "처음이신가요? 회원가입"
               : "이미 계정이 있나요? 로그인"}
           </button>
+          <div className="studio-divider"><span>먼저 둘러보고 싶다면</span></div>
+          <button className="studio-secondary" onClick={onEnter}>바로 시작하기 <StudioIcon name="arrow"/></button>
           {easyMode && (
             <ReadButton {...{ speaking, speechPreparing, onSpeak }} />
           )}
