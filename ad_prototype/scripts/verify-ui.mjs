@@ -17,9 +17,7 @@ try {
     await page
       .getByRole("button", { name: "바로 시작하기", exact: true })
       .click()
-    await page
-      .getByRole("button", { name: "홍보물 만들기 시작", exact: true })
-      .click()
+    await page.getByRole("button", { name: "만들러 가기", exact: true }).click()
     await page
       .locator("input[type=file]")
       .setInputFiles(
@@ -35,8 +33,12 @@ try {
       .click()
     await page.locator(".result-grid").waitFor()
     for (const large of [false, true]) {
-      if (large)
-        await page.getByRole("button", { name: /큰 글씨·쉬운 안내/ }).click()
+      const modeSwitch = page.getByRole("switch", {
+        name: "간편모드",
+        exact: true,
+      })
+      if ((await modeSwitch.getAttribute("aria-checked")) !== String(large))
+        await modeSwitch.click()
       const metric = await page.evaluate(() => {
         const cards = [...document.querySelectorAll(".result-card")].map(
           (c) => {
@@ -95,17 +97,13 @@ try {
     await page
       .getByRole("button", { name: "바로 시작하기", exact: true })
       .click()
-    await page
-      .getByRole("button", { name: "홍보물 만들기 시작", exact: true })
-      .click()
+    await page.getByRole("button", { name: "만들러 가기", exact: true }).click()
     await page.getByRole("radio", { name: format, exact: true }).click()
-    await page
-      .locator("input[type=file]")
-      .setInputFiles({
-        name: "wrong.txt",
-        mimeType: "text/plain",
-        buffer: Buffer.from("not a photo"),
-      })
+    await page.locator("input[type=file]").setInputFiles({
+      name: "wrong.txt",
+      mimeType: "text/plain",
+      buffer: Buffer.from("not a photo"),
+    })
     await page
       .getByText("20MB 이하의 사진 파일을 선택해 주세요.", { exact: true })
       .waitFor()
@@ -140,6 +138,12 @@ try {
     await page
       .getByRole("button", { name: "이 내용으로 결과 보기", exact: true })
       .click()
+    const modeSwitch = page.getByRole("switch", {
+      name: "간편모드",
+      exact: true,
+    })
+    if ((await modeSwitch.getAttribute("aria-checked")) === "true")
+      await modeSwitch.click()
     const count = await page.locator(".result-card").count()
     if (count !== (format === "포스터와 영상 둘 다" ? 3 : 2))
       throw Error("wrong result count")

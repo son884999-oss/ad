@@ -8,6 +8,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "verify:ui": "node scripts/verify-ui.mjs",
+    "verify:readability": "node scripts/verify-readability.mjs",
+    "verify:studio": "node scripts/verify-studio.mjs",
     "format": "oxfmt"
   },
   "dependencies": {

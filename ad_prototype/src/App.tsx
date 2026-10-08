@@ -6,6 +6,12 @@ import {
   useRef,
   useState,
 } from "react"
+import { wrapCanvasText } from "./canvasText"
+import {
+  StudioShell as Shell,
+  StudioHome as Home,
+  StudioLogin as Login,
+} from "./StudioScreens"
 
 type Page = "login" | "home" | "create" | "records" | "plan"
 
@@ -46,11 +52,11 @@ type GeneratedRecord = {
 const creationNames: Record<CreationType, string> = {
   all: "한 번에 완성",
 
-  poster: "포스터 만들기",
+  poster: "이미지 만들기",
 
-  video: "영상 만들기",
+  video: "동영상 만들기",
 
-  copy: "문구 만들기",
+  copy: "홍보 글 만들기",
 }
 
 const channelNames: Record<Channel, string> = {
@@ -67,6 +73,33 @@ const channelIcons: Record<Channel, string> = {
   x: "✕",
 
   threads: "💬",
+}
+
+// Channel-specific composition samples, independent of future AI providers.
+const channelThemes: Record<Channel, {
+  guide: string
+  heading: string
+  rgb: string
+  accent: string
+}> = {
+  instagram: {
+    guide: "인스타그램은 사진을 돋보이게, 짧고 감성적인 말투로 보여줘요.",
+    heading: "오늘의 추천",
+    rgb: "42, 59, 45",
+    accent: "#f1d598",
+  },
+  x: {
+    guide: "엑스는 핵심 특징과 행동을 짧고 또렷하게 전달해요.",
+    heading: "한눈에 보는 핵심",
+    rgb: "38, 45, 69",
+    accent: "#d7dcf1",
+  },
+  threads: {
+    guide: "쓰레드는 손님에게 이야기하듯 편안하고 친근한 말투를 사용해요.",
+    heading: "우리 가게 이야기",
+    rgb: "74, 47, 38",
+    accent: "#f4d1bf",
+  },
 }
 
 const initialDetails = {
@@ -483,27 +516,7 @@ function drawWrappedText(
 
   maxLines: number,
 ) {
-  const words = text.split(/\s+/).filter(Boolean)
-
-  const lines: string[] = []
-
-  let line = ""
-
-  for (const word of words) {
-    const next = line ? `${line} ${word}` : word
-
-    if (context.measureText(next).width > maxWidth && line) {
-      lines.push(line)
-
-      line = word
-
-      if (lines.length === maxLines - 1) break
-    } else {
-      line = next
-    }
-  }
-
-  if (line && lines.length < maxLines) lines.push(line)
+  const lines = wrapCanvasText(context, text, maxWidth, maxLines)
 
   lines.forEach((value, index) =>
     context.fillText(value, x, y + index * lineHeight),
@@ -526,53 +539,6 @@ function triggerFileDownload(file: File) {
   anchor.remove()
 
   window.setTimeout(() => URL.revokeObjectURL(url), 1000)
-}
-
-const menuItems: Array<{
-  label: string
-
-  page?: Page
-
-  type?: CreationType
-
-  symbol: string
-
-  tone?: string
-}> = [
-  { label: "홈", page: "home", symbol: "⌂" },
-
-  { label: "한 번에 완성", type: "all", symbol: "＋", tone: "bg-[#ffffff]" },
-
-  {
-    label: "포스터 만들기",
-
-    type: "poster",
-
-    symbol: "＋",
-
-    tone: "bg-[#ffffff]",
-  },
-
-  { label: "영상 만들기", type: "video", symbol: "＋", tone: "bg-[#ffffff]" },
-
-  { label: "문구 만들기", type: "copy", symbol: "＋", tone: "bg-[#ffffff]" },
-
-  { label: "최근 생성 기록", page: "records", symbol: "▣" },
-
-  { label: "이용권", page: "plan", symbol: "◇" },
-]
-
-function Brand({ compact = false }: { compact?: boolean }) {
-  return (
-    <div className="flex items-center gap-2.5">
-      <img
-        src="/assets/8a210.svg"
-        alt=""
-        className={compact ? "h-8 w-8" : "h-10 w-10"}
-      />
-      <strong className="text-[18px] font-bold text-[#c9541a]">홍보잇다</strong>
-    </div>
-  )
 }
 
 function PrimaryButton({
@@ -605,489 +571,6 @@ function PrimaryButton({
     >
       {children}
     </button>
-  )
-}
-
-function SpeakerButton({
-  speaking,
-
-  preparing,
-
-  onClick,
-}: {
-  speaking: boolean
-
-  preparing: boolean
-
-  onClick: () => void
-}) {
-  return (
-    <button
-      onClick={onClick}
-      aria-pressed={speaking || preparing}
-      className={`min-h-12 rounded-[12px] border-2 px-4 text-[18px] font-bold transition ${
-        speaking || preparing
-          ? "border-[#817a74] bg-[#f6f5f3] text-[#2b2b2b]"
-          : "border-[#817a74] bg-white text-[#2b2b2b]"
-      }`}
-    >
-      {speaking ? "⏹ 읽기 중지" : preparing ? "🔊 준비 중" : "🔊 화면 읽어주기"}
-    </button>
-  )
-}
-
-function Login({
-  onEnter,
-
-  easyMode,
-
-  speaking,
-
-  speechPreparing,
-
-  onSpeak,
-
-  speechMessage,
-}: {
-  onEnter: () => void
-
-  easyMode: boolean
-
-  speaking: boolean
-
-  speechPreparing: boolean
-
-  onSpeak: () => void
-
-  speechMessage: string
-}) {
-  const [mode, setMode] = useState<"login" | "signup">("login")
-
-  const submit = (event: FormEvent) => {
-    event.preventDefault()
-
-    onEnter()
-  }
-
-  return (
-    <main
-      className={`prototype-app login-screen flex min-h-dvh items-center justify-center bg-[#f6f5f3] px-5 py-10 ${
-        easyMode ? "easy-mode" : ""
-      }`}
-    >
-      <section className="w-full max-w-[480px] rounded-[28px] border border-[#dedbd7] bg-white p-7 shadow-[0_18px_55px_rgba(34,34,34,0.10)] sm:p-11">
-        <div className="mb-9 flex justify-center">
-          <Brand />
-        </div>
-        <form onSubmit={submit} className="space-y-5">
-          <label className="block text-[18px] font-bold text-[#2b2b2b]">
-            이메일
-            <input
-              type="email"
-              required
-              placeholder="name@example.com"
-              className="mt-2 h-14 w-full rounded-[12px] border border-[#817a74] px-4 text-[18px] font-normal outline-none placeholder:text-[#9aa39c] focus:border-[#c64f12] focus:ring-3 focus:ring-[#c64f12]/15"
-            />
-          </label>
-          <label className="block text-[18px] font-bold text-[#2b2b2b]">
-            비밀번호
-            <input
-              type="password"
-              required
-              minLength={4}
-              placeholder="4자 이상 입력"
-              className="mt-2 h-14 w-full rounded-[12px] border border-[#817a74] px-4 text-[18px] font-normal outline-none placeholder:text-[#9aa39c] focus:border-[#c64f12] focus:ring-3 focus:ring-[#c64f12]/15"
-            />
-          </label>
-          <PrimaryButton type="submit" className="w-full">
-            {mode === "login" ? "로그인" : "가입하고 시작하기"}
-          </PrimaryButton>
-        </form>
-        <button
-          onClick={onEnter}
-          className="mt-3 min-h-13 w-full rounded-[14px] border-2 border-[#2b2b2b] bg-white px-7 py-3 text-[16px] font-bold text-[#2b2b2b] transition hover:bg-[#fff1e7] focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[#c64f12]"
-        >
-          바로 시작하기
-        </button>
-        <button
-          onClick={() => setMode(mode === "login" ? "signup" : "login")}
-          className="mx-auto mt-6 block min-h-11 px-3 text-[18px] font-bold text-[#9f3e0d] underline underline-offset-4"
-        >
-          {mode === "login"
-            ? "처음이신가요? 회원가입"
-            : "이미 계정이 있나요? 로그인"}
-        </button>
-        {easyMode && (
-          <div className="mt-5 border-t border-[#dedbd7] pt-5 text-center">
-            <SpeakerButton
-              speaking={speaking}
-              preparing={speechPreparing}
-              onClick={onSpeak}
-            />
-            {speechMessage && (
-              <p className="mt-2 text-[16px] text-[#9f3e0d]" role="status">
-                {speechMessage}
-              </p>
-            )}
-          </div>
-        )}
-      </section>
-    </main>
-  )
-}
-
-function Shell({
-  page,
-
-  title,
-
-  creationType,
-
-  mobileOpen,
-
-  setMobileOpen,
-
-  navigate,
-
-  onLogout,
-
-  easyMode,
-
-  setEasyMode,
-
-  speaking,
-
-  speechPreparing,
-
-  onSpeak,
-
-  speechMessage,
-
-  children,
-}: {
-  page: Page
-
-  title: string
-
-  creationType: CreationType
-
-  mobileOpen: boolean
-
-  setMobileOpen: (open: boolean) => void
-
-  navigate: (page: Page, type?: CreationType) => void
-
-  onLogout: () => void
-
-  easyMode: boolean
-
-  setEasyMode: (enabled: boolean) => void
-
-  speaking: boolean
-
-  speechPreparing: boolean
-
-  onSpeak: () => void
-
-  speechMessage: string
-
-  children: ReactNode
-}) {
-  return (
-    <div
-      className={`prototype-app min-h-dvh bg-[#f6f5f3] text-[#222222] ${
-        easyMode ? "easy-mode" : ""
-      }`}
-    >
-      <aside
-        className={`fixed inset-y-0 left-0 z-40 w-[260px] border-r border-[#ebe8e4] bg-white px-5 py-6 transition-transform lg:translate-x-0 ${
-          mobileOpen
-            ? "translate-x-0"
-            : "-translate-x-full invisible lg:visible"
-        }`}
-      >
-        <div className="mb-7 flex items-center justify-between">
-          <Brand />
-          <button
-            onClick={() => setMobileOpen(false)}
-            className="flex h-12 min-h-12 w-12 min-w-12 items-center justify-center rounded-xl border border-[#dedbd7] text-xl lg:hidden"
-            aria-label="메뉴 닫기"
-          >
-            ×
-          </button>
-        </div>
-        <nav aria-label="주요 메뉴" className="space-y-1.5">
-          {menuItems.map((item) => {
-            const active =
-              item.page === page ||
-              (page === "create" && item.type === creationType)
-
-            return (
-              <button
-                key={item.label}
-                onClick={() => navigate(item.page ?? "create", item.type)}
-                className={`flex min-h-12 w-full items-center gap-3 rounded-[12px] px-2.5 text-left text-[16px] transition hover:brightness-95 ${
-                  active
-                    ? "bg-[#fff1e7] font-bold text-[#2b2b2b]"
-                    : (item.tone ?? "bg-white")
-                }`}
-              >
-                <span
-                  className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-[9px] text-[16px] ${
-                    active
-                      ? "bg-[#fff1e7] text-[#9f3e0d]"
-                      : "bg-[#f1efec] text-[#2b2b2b]"
-                  }`}
-                >
-                  {item.symbol}
-                </span>
-                {uiText(item.label, easyMode)}
-              </button>
-            )
-          })}
-        </nav>
-      </aside>
-      {mobileOpen && (
-        <button
-          aria-label="메뉴 닫기"
-          className="fixed inset-0 z-30 bg-[#222222]/45 lg:hidden"
-          onClick={() => setMobileOpen(false)}
-        />
-      )}
-      <div className="lg:pl-[260px]">
-        <header className="sticky top-0 z-20 flex min-h-[72px] flex-wrap items-center gap-3 border-b border-[#ebe8e4] bg-white px-5 py-2 sm:flex-nowrap sm:px-8 lg:px-10">
-          <button
-            onClick={() => setMobileOpen(true)}
-            className="flex h-12 min-h-12 w-12 min-w-12 items-center justify-center rounded-xl border border-[#dedbd7] text-xl lg:hidden"
-            aria-label="메뉴 열기"
-          >
-            ☰
-          </button>
-          <h1 className="text-[19px] font-bold tracking-[-0.02em]">{title}</h1>
-          <div className="ml-auto flex items-center gap-2">
-            <button
-              onClick={onLogout}
-              className="min-h-12 bg-white px-2 text-[16px] font-bold text-[#545454] underline underline-offset-4 transition hover:text-[#9f3e0d] sm:px-3 sm:text-[16px]"
-            >
-              <span>로그아웃</span>
-            </button>
-          </div>
-          {(page === "home" || page === "create" || easyMode) && (
-            <div className="order-3 flex w-full items-center gap-2 border-t border-[#ebe8e4] pt-2 sm:order-none sm:w-auto sm:border-0 sm:pt-0">
-              {(page === "home" || page === "create") && (
-                <button
-                  onClick={() => setEasyMode(!easyMode)}
-                  aria-pressed={easyMode}
-                  className={`min-h-12 flex-1 rounded-[12px] border px-4 text-[16px] font-bold sm:flex-none ${
-                    easyMode
-                      ? "border-[#817a74] bg-[#f6f5f3] text-[#2b2b2b]"
-                      : "border-[#817a74] bg-white text-[#2b2b2b]"
-                  }`}
-                >
-                  큰 글씨·쉬운 안내 {easyMode ? "켜짐" : "켜기"}
-                </button>
-              )}
-              {easyMode && (
-                <SpeakerButton
-                  speaking={speaking}
-                  preparing={speechPreparing}
-                  onClick={onSpeak}
-                />
-              )}
-            </div>
-          )}
-        </header>
-        <main
-          data-app-scroll-container
-          className="mx-auto w-full max-w-[1240px] p-5 pb-44 sm:p-8 sm:pb-14 lg:p-10"
-        >
-          {speechMessage && (
-            <p
-              className="mb-4 rounded-[10px] bg-[#fff1e7] px-4 py-3 text-[16px] text-[#7f340d]"
-              role="status"
-            >
-              {speechMessage}
-            </p>
-          )}
-          {children}
-        </main>
-      </div>
-      <nav
-        aria-label="모바일 빠른 메뉴"
-        className="mobile-navigation fixed inset-x-0 bottom-0 z-30 grid grid-cols-3 border-t border-[#d5d0cb] bg-white/95 pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_24px_rgba(34,34,34,0.10)] backdrop-blur lg:hidden"
-      >
-        {[
-          { label: "홈", symbol: "🏠", page: "home" as Page },
-
-          { label: "만들기", symbol: "＋", type: "all" as CreationType },
-
-          { label: "내 홍보물", symbol: "▤", page: "records" as Page },
-        ].map((item) => {
-          const active =
-            item.page === page || (page === "create" && item.type === "all")
-
-          return (
-            <button
-              key={item.label}
-              onClick={() => navigate(item.page ?? "create", item.type)}
-              aria-current={active ? "page" : undefined}
-              className={`flex min-h-[68px] min-w-0 flex-col items-center justify-center gap-0.5 border-t-2 px-0 text-[16px] font-bold ${
-                active
-                  ? "border-[#c64f12] bg-[#fff8f3] text-[#9f3e0d]"
-                  : "border-transparent text-[#505050]"
-              }`}
-            >
-              <span className="text-[21px]" aria-hidden="true">
-                {item.symbol}
-              </span>
-              <span className="whitespace-nowrap">
-                {uiText(item.label, easyMode)}
-              </span>
-            </button>
-          )
-        })}
-      </nav>
-    </div>
-  )
-}
-
-function Home({
-  navigate,
-
-  easyMode,
-}: {
-  navigate: (page: Page, type?: CreationType) => void
-
-  easyMode: boolean
-}) {
-  const shortcuts: Array<{
-    type: CreationType
-
-    note: string
-
-    className: string
-  }> = [
-    { type: "poster", note: "사진과 글을 한 장에", className: "bg-[#ffffff]" },
-
-    {
-      type: "video",
-
-      note: "짧고 눈에 띄는 미리보기",
-
-      className: "bg-[#ffffff]",
-    },
-
-    { type: "copy", note: "채널에 맞는 홍보 문구", className: "bg-[#ffffff]" },
-  ]
-
-  const guideSteps = [
-    {
-      number: "①",
-
-      icon: "📷",
-
-      title: "사진 넣기",
-
-      description: "홍보할 제품 사진을 넣어 주세요.",
-    },
-
-    {
-      number: "②",
-
-      icon: "✍️",
-
-      title: "설명·해시태그 확인",
-
-      description: "정리된 설명과 추천 해시태그를 확인하고 고쳐 주세요.",
-    },
-
-    {
-      number: "③",
-
-      icon: "✨",
-
-      title: "홍보물 만들기",
-
-      description: "선택한 홍보물을 만들고 결과를 확인해 주세요.",
-    },
-  ]
-
-  return (
-    <div className="space-y-6 sm:space-y-7">
-      <section className="welcome-panel rounded-[22px] border border-[#dedbd7] bg-white p-5 shadow-[0_10px_30px_rgba(34,34,34,0.06)] sm:p-7">
-        <p className="welcome-eyebrow">우리 가게를 알리는 작은 시작</p>
-        <h2 className="text-[25px] font-bold leading-tight tracking-[-0.04em] text-[#2b2b2b] sm:text-[30px]">
-          사진 한 장으로 홍보물을 만들어 보세요
-        </h2>
-        <div className="mt-4 grid divide-y divide-[#dedbd7] sm:mt-6 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
-          {guideSteps.map((guide) => (
-            <div
-              key={guide.number}
-              className="flex items-start gap-3 py-3 first:pt-0 last:pb-0 sm:px-5 sm:py-0 sm:first:pl-0 sm:last:pr-0"
-            >
-              <span
-                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[12px] bg-[#fff1e7] text-[20px]"
-                aria-hidden="true"
-              >
-                {guide.icon}
-              </span>
-              <div>
-                <strong className="block text-[18px] leading-6">
-                  <span className="mr-1 text-[#c9541a]">{guide.number}</span>
-                  {uiText(guide.title, easyMode)}
-                </strong>
-                <p className="mt-0.5 text-[16px] leading-6 text-[#545454]">
-                  {uiText(guide.description, easyMode)}
-                </p>
-              </div>
-            </div>
-          ))}
-        </div>
-        <div className="mt-5 sm:mt-7">
-          <PrimaryButton
-            onClick={() => navigate("create", "all")}
-            className="bg-[#c64f12] hover:bg-[#a63f0b]"
-          >
-            홍보물 만들기 시작
-          </PrimaryButton>
-        </div>
-      </section>
-      <section>
-        <div>
-          <button
-            onClick={() => navigate("records")}
-            className="w-full rounded-[18px] border border-[#dedbd7] bg-white p-5 text-left hover:border-[#c64f12] sm:p-6"
-          >
-            <strong className="block text-[19px]">최근 생성 기록</strong>
-            <p className="mt-1 text-[16px] text-[#545454]">
-              이 앱에서 만든 결과 다시 보기
-            </p>
-          </button>
-        </div>
-      </section>
-      <section>
-        <h2 className="mb-4 text-[20px] font-bold">
-          {uiText("단독 제작 바로가기", easyMode)}
-        </h2>
-        <div className="shortcut-grid grid gap-3">
-          {shortcuts.map((shortcut) => (
-            <button
-              key={shortcut.type}
-              onClick={() => navigate("create", shortcut.type)}
-              className={`min-h-[150px] rounded-[18px] border border-[#dedbd7] p-5 text-left transition hover:-translate-y-0.5 hover:shadow-md ${shortcut.className}`}
-            >
-              <span className="text-[16px] font-bold">바로 시작</span>
-              <strong className="mt-4 block text-[21px]">
-                {uiText(creationNames[shortcut.type], easyMode)}
-              </strong>
-              <span className="mt-2 flex items-end justify-between gap-2 text-[16px]">
-                {uiText(shortcut.note, easyMode)} <b className="text-xl">→</b>
-              </span>
-            </button>
-          ))}
-        </div>
-      </section>
-    </div>
   )
 }
 
@@ -1411,6 +894,7 @@ function CreateFlow({
 
     threads: `요즘 손님들이 자주 찾는 이유가 있더라고요.\n${details.description}\n특히 ${details.features} 이 부분이 참 좋아요. 궁금한 점은 편하게 물어보세요.`,
   }
+  const channelTheme = channelThemes[channel]
 
   const safeRecommendations = normalizeHashtagValues(
     recommendedHashtagsByChannel,
@@ -1537,9 +1021,9 @@ function CreateFlow({
 
       gradient.addColorStop(0, "rgba(0,0,0,0)")
 
-      gradient.addColorStop(0.35, "rgba(0,0,0,0.6)")
+      gradient.addColorStop(0.35, `rgba(${channelTheme.rgb},0.6)`)
 
-      gradient.addColorStop(1, "rgba(0,0,0,0.92)")
+      gradient.addColorStop(1, `rgba(${channelTheme.rgb},0.92)`)
 
       context.fillStyle = gradient
 
@@ -1747,7 +1231,7 @@ function CreateFlow({
 
           context.restore()
 
-          context.fillStyle = "rgba(0,0,0,0.48)"
+          context.fillStyle = `rgba(${channelTheme.rgb},0.68)`
 
           context.fillRect(0, 780, canvas.width, 500)
 
@@ -1844,6 +1328,66 @@ function CreateFlow({
       )}
       {step === 1 && (
         <div>
+          <h3 className="mt-8 text-[20px] font-bold text-[#222222]">
+            제품 사진을 올려 주세요
+          </h3>
+          <p id="upload-help" className="mt-2 text-[#545454]">
+            20MB 이하의 JPG·PNG 등 사진 한 장을 선택하세요.
+          </p>
+          {uploadMessage && (
+            <p role="status" className="mt-2 font-bold text-[#7f340d]">
+              {uploadMessage}
+            </p>
+          )}
+          <div className="mt-3 rounded-[22px] border-2 border-dashed border-[#817a74] bg-white p-5 sm:p-7">
+            {imageUrl ? (
+              <div className="grid items-center gap-6 sm:grid-cols-[220px_1fr]">
+                <img
+                  src={imageUrl}
+                  alt={
+                    easyMode
+                      ? "넣은 제품 사진 미리보기"
+                      : "업로드한 제품 미리보기"
+                  }
+                  className="aspect-square w-full rounded-[16px] bg-[#f1efec] object-cover"
+                />
+                <div>
+                  <strong className="text-[20px]">사진이 준비됐어요</strong>
+                  <p className="mt-2 text-[18px] leading-6 text-[#545454]">
+                    제품이 잘 보이는지 확인해 주세요.
+                  </p>
+                  <label className="mt-5 inline-flex min-h-12 cursor-pointer items-center rounded-[12px] border-2 border-[#2b2b2b] px-5 font-bold text-[#2b2b2b] hover:bg-[#fff1e7]">
+                    사진 바꾸기
+                    <input
+                      type="file"
+                      aria-describedby="upload-help"
+                      accept="image/*"
+                      onChange={upload}
+                      className="sr-only"
+                    />
+                  </label>
+                </div>
+              </div>
+            ) : (
+              <label className="flex min-h-[300px] cursor-pointer flex-col items-center justify-center text-center">
+                <span className="flex h-14 w-14 items-center justify-center rounded-full bg-[#fff1e7] text-3xl text-[#c9541a]">
+                  ＋
+                </span>
+                <strong className="mt-4 text-[20px]">제품 사진 올리기</strong>
+                <span className="mt-2 text-[16px] text-[#626262]">
+                  {uiText("JPG, PNG 등 이미지 파일을 선택해 주세요", easyMode)}
+                </span>
+                <input
+                  type="file"
+                  aria-describedby="upload-help"
+                  accept="image/*"
+                  onChange={upload}
+                  className="sr-only"
+                />
+              </label>
+            )}
+          </div>
+
           {type === "all" ? (
             <div>
               <h3 className="text-[19px] font-bold">
@@ -1924,6 +1468,7 @@ function CreateFlow({
             className="mt-6 grid gap-3 sm:grid-cols-3"
             role="radiogroup"
             aria-label={uiText("홍보 채널", easyMode)}
+            aria-describedby="channel-tone-guide"
           >
             {(Object.keys(channelNames) as Channel[]).map((item) => (
               <button
@@ -1949,65 +1494,13 @@ function CreateFlow({
               </button>
             ))}
           </div>
-          <h3 className="mt-8 text-[20px] font-bold text-[#222222]">
-            제품 사진을 올려 주세요
-          </h3>
-          <p id="upload-help" className="mt-2 text-[#545454]">
-            20MB 이하의 JPG·PNG 등 사진 한 장을 선택하세요.
+          <p
+            id="channel-tone-guide"
+            className="channel-tone-guide"
+            role="status"
+          >
+            {channelTheme.guide}
           </p>
-          {uploadMessage && (
-            <p role="status" className="mt-2 font-bold text-[#7f340d]">
-              {uploadMessage}
-            </p>
-          )}
-          <div className="mt-3 rounded-[22px] border-2 border-dashed border-[#817a74] bg-white p-5 sm:p-7">
-            {imageUrl ? (
-              <div className="grid items-center gap-6 sm:grid-cols-[220px_1fr]">
-                <img
-                  src={imageUrl}
-                  alt={
-                    easyMode
-                      ? "넣은 제품 사진 미리보기"
-                      : "업로드한 제품 미리보기"
-                  }
-                  className="aspect-square w-full rounded-[16px] bg-[#f1efec] object-cover"
-                />
-                <div>
-                  <strong className="text-[20px]">사진이 준비됐어요</strong>
-                  <p className="mt-2 text-[18px] leading-6 text-[#545454]">
-                    제품이 잘 보이는지 확인해 주세요.
-                  </p>
-                  <label className="mt-5 inline-flex min-h-12 cursor-pointer items-center rounded-[12px] border-2 border-[#2b2b2b] px-5 font-bold text-[#2b2b2b] hover:bg-[#fff1e7]">
-                    사진 바꾸기
-                    <input
-                      type="file"
-                      aria-describedby="upload-help"
-                      accept="image/*"
-                      onChange={upload}
-                      className="sr-only"
-                    />
-                  </label>
-                </div>
-              </div>
-            ) : (
-              <label className="flex min-h-[300px] cursor-pointer flex-col items-center justify-center text-center">
-                <span className="flex h-14 w-14 items-center justify-center rounded-full bg-[#fff1e7] text-3xl text-[#c9541a]">
-                  ＋
-                </span>
-                <strong className="mt-4 text-[20px]">제품 사진 올리기</strong>
-                <span className="mt-2 text-[16px] text-[#626262]">
-                  {uiText("JPG, PNG 등 이미지 파일을 선택해 주세요", easyMode)}
-                </span>
-                <input
-                  type="file"
-                  aria-describedby="upload-help"
-                  accept="image/*"
-                  onChange={upload}
-                  className="sr-only"
-                />
-              </label>
-            )}
-          </div>
           <div className="mobile-primary-bar mt-7 flex justify-end">
             <PrimaryButton disabled={!imageUrl} onClick={() => setStep(2)}>
               사진 확인하고 다음
@@ -2048,6 +1541,7 @@ function CreateFlow({
             <label className="block text-[18px] font-bold">
               강조할 특징
               <textarea
+                aria-label="강조할 특징"
                 value={details.features}
                 onChange={(event) =>
                   updateDetails({ ...details, features: event.target.value })
@@ -2058,12 +1552,14 @@ function CreateFlow({
             </label>
             <label className="block text-[18px] font-bold">
               주요 고객
-              <input
+              <textarea
+                aria-label="주요 고객"
                 value={details.audience}
                 onChange={(event) =>
                   updateDetails({ ...details, audience: event.target.value })
                 }
-                className="mt-2 h-14 w-full rounded-[12px] border-2 border-[#817a74] px-4 text-[18px] font-normal outline-none focus:border-[#c64f12] focus:ring-3 focus:ring-[#c64f12]/15"
+                rows={2}
+                className="mt-2 w-full rounded-[12px] border-2 border-[#817a74] p-4 text-[18px] font-normal outline-none focus:border-[#c64f12] focus:ring-3 focus:ring-[#c64f12]/15"
               />
             </label>
             <div className="rounded-[14px] border-2 border-[#817a74] bg-white p-4">
@@ -2155,7 +1651,7 @@ function CreateFlow({
             >
               이전으로
             </button>
-            <div className="mobile-primary-bar">
+            <div className="mobile-primary-bar details-primary-bar">
               {missingFields.length > 0 && (
                 <p
                   id="missing-details"
@@ -2266,20 +1762,32 @@ function CreateFlow({
                     }
                     className="h-full w-full object-cover opacity-75"
                   />
-                  <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-[#1d1d1d] via-[#1d1d1d]/85 to-transparent p-6 pt-24 text-white">
-                    <span className="text-[16px] font-bold text-[#f5c96b]">
-                      오늘의 추천
+                  <div
+                    style={{
+                      backgroundImage: `linear-gradient(to top, rgba(${channelTheme.rgb},0.96), rgba(${channelTheme.rgb},0.75), transparent)`,
+                    }}
+                    className="absolute inset-x-0 bottom-0 p-6 pt-24 text-white"
+                  >
+                    <span
+                      style={{ color: channelTheme.accent }}
+                      className="text-[16px] font-bold"
+                    >
+                      {channelTheme.heading}
                     </span>
-                    <strong className="mt-2 block text-[25px] leading-tight">
+                    <strong className="poster-preview-title mt-2 block text-[25px] leading-tight">
                       {details.features}
                     </strong>
-                    <p className="mt-2 text-[16px] text-[#f7f7f7]">
+                    <p className="poster-preview-description mt-2 text-[16px] text-[#f7f7f7]">
                       {details.description}
                     </p>
                   </div>
                 </div>
                 <p className="p-4 text-center text-[16px] font-bold text-[#545454]">
                   {uiText("포스터 미리보기", easyMode)}
+                </p>
+                <p className="px-4 pb-4 text-[#545454]">
+                  긴 내용은 포스터에서 줄여 보여줘요. 전체 내용은 홍보 글에서
+                  확인하세요.
                 </p>
                 <div className="result-card-actions border-t border-[#dedbd7] p-4">
                   <button
@@ -2385,7 +1893,12 @@ function CreateFlow({
                       playing ? "scale-110 opacity-70" : "opacity-55"
                     }`}
                   />
-                  <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center text-white">
+                  <div
+                    style={{
+                      backgroundColor: `rgba(${channelTheme.rgb},0.25)`,
+                    }}
+                    className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center text-white"
+                  >
                     <strong className="text-[24px] leading-tight">
                       {details.features}
                     </strong>
@@ -2543,9 +2056,17 @@ function Plan({ easyMode }: { easyMode: boolean }) {
       </p>
       <div className="mt-7 grid gap-4 sm:grid-cols-2">
         {[
-          ["subscription", "구독으로 이용", "꾸준히 홍보물을 만드는 사장님께"],
+          [
+            "subscription",
+            "매달 이용하는 구독 플랜",
+            "꾸준히 홍보물을 만드는 사장님께",
+          ],
 
-          ["single", "건당 이용", "필요할 때 한 번씩 만드는 사장님께"],
+          [
+            "single",
+            "한 번씩 이용하는 건당 플랜",
+            "필요할 때 한 번씩 만드는 사장님께",
+          ],
         ].map(([value, title, note]) => (
           <button
             key={value}
@@ -2609,7 +2130,7 @@ export default function App() {
 
   const [records, setRecords] = useState<GeneratedRecord[]>([])
 
-  const [easyMode, setEasyModeState] = useState(false)
+  const [easyMode, setEasyModeState] = useState(true)
 
   const [speaking, setSpeaking] = useState(false)
 
