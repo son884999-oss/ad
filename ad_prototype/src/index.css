@@ -234,6 +234,18 @@ h3,
 }
 
 .prototype-app textarea { resize: vertical; overflow-wrap: anywhere; }
+.video-preview-title { display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:3; overflow:hidden; padding:12px; border-radius:12px; background:rgb(20 30 23 / 85%); }
+.prototype-app main .video-preview-control { margin:16px; min-height:60px; padding:12px; border:1px solid #769181; border-radius:12px; background:#edf2e8; color:#345042; font-weight:700; }
+.prototype-app main .video-preview-state { font-size:16px; color:#52624f; text-align:center; margin:0 16px 16px; }
+.media-full-copy { margin:0 16px 18px; padding:14px; border:1px solid #d7dfd0; border-radius:12px; background:#f5f7f0; }
+.media-full-copy summary { display:list-item; min-height:48px; padding:10px 0; cursor:pointer; font-size:18px; font-weight:700; color:#345042; }
+.media-full-copy p { margin-top:12px; white-space:pre-wrap; }
+.prototype-app main .media-copy-note { font-size:16px; color:#65715f; }
+.result-next-link { display:flex; align-items:center; justify-content:center; min-height:48px; padding:12px; margin-top:18px; border-top:1px solid #d7dfd0; color:#345042; font-size:18px; font-weight:700; }
+.easy-mode .media-full-copy summary,.easy-mode .result-next-link { font-size:22px; min-height:60px; }
+.media-full-copy summary:focus-visible { outline:3px solid #b46740; outline-offset:4px; }
+.result-copy > .result-copy-action { margin:18px 20px 8px; }
+.result-copy > [role="status"] { margin-top:6px; }
 .result-poster .result-media > div { padding-top: 32px; padding-bottom: 20px; }
 .poster-preview-title, .poster-preview-description {
   display: -webkit-box;

@@ -161,8 +161,14 @@ export function StudioLogin({
       </div>
       <div className="studio-login-layout">
         <section className="studio-login-form">
-          <h1>{mode === "login" ? "로그인" : "회원가입"}</h1>
-          <p>{mode === "login" ? "우리 가게 홍보를 시작해 보세요." : "이메일과 비밀번호를 입력해 주세요."}</p>
+          <h1 data-screen-heading tabIndex={-1}>
+            {mode === "login" ? "로그인" : "회원가입"}
+          </h1>
+          <p>
+            {mode === "login"
+              ? "우리 가게 홍보를 시작해 보세요."
+              : "이메일과 비밀번호를 입력해 주세요."}
+          </p>
           <form onSubmit={submit}>
             <label>
               이메일
@@ -187,7 +193,9 @@ export function StudioLogin({
                 />
                 <button
                   type="button"
-                  aria-label={showPassword ? "비밀번호 숨기기" : "비밀번호 보기"}
+                  aria-label={
+                    showPassword ? "비밀번호 숨기기" : "비밀번호 보기"
+                  }
                   aria-pressed={showPassword}
                   onClick={() => setShowPassword(!showPassword)}
                 >
@@ -207,8 +215,12 @@ export function StudioLogin({
               ? "처음이신가요? 회원가입"
               : "이미 계정이 있나요? 로그인"}
           </button>
-          <div className="studio-divider"><span>먼저 둘러보고 싶다면</span></div>
-          <button className="studio-secondary" onClick={onEnter}>바로 시작하기 <StudioIcon name="arrow"/></button>
+          <div className="studio-divider">
+            <span>먼저 둘러보고 싶다면</span>
+          </div>
+          <button className="studio-secondary" onClick={onEnter}>
+            바로 시작하기 <StudioIcon name="arrow" />
+          </button>
           {easyMode && (
             <ReadButton {...{ speaking, speechPreparing, onSpeak }} />
           )}
@@ -262,6 +274,21 @@ export function StudioShell({
   const isActive = (item: typeof pages[number]) =>
     item.page === page && (item.page !== "create" || creationType === "all")
   const menuRef = useRef<HTMLElement>(null)
+  const headerRef = useRef<HTMLElement>(null)
+  useEffect(() => {
+    const header = headerRef.current
+    const shell = header?.closest<HTMLElement>(".studio-shell")
+    if (!header || !shell) return
+    const measure = () =>
+      shell.style.setProperty(
+        "--studio-header-height",
+        `${header.getBoundingClientRect().height}px`,
+      )
+    measure()
+    const observer = new ResizeObserver(measure)
+    observer.observe(header)
+    return () => observer.disconnect()
+  }, [])
   useEffect(() => {
     if (!mobileOpen) return
     const previous = document.activeElement as HTMLElement | null
@@ -309,7 +336,7 @@ export function StudioShell({
     <div
       className={`prototype-app studio-shell ${easyMode ? "easy-mode" : ""}`}
     >
-      <header className="studio-header" inert={mobileOpen}>
+      <header ref={headerRef} className="studio-header" inert={mobileOpen}>
         <div className="studio-header-inner">
           <button
             className="studio-brand-button"
@@ -527,7 +554,7 @@ export function StudioHome({
       >
         <div className="studio-guide-intro">
           <p className="studio-eyebrow">반가워요, 사장님 · 이렇게 진행해요</p>
-          <h1 id="start-guide-title">
+          <h1 id="start-guide-title" data-screen-heading tabIndex={-1}>
             사진 한 장에서
             <br />
             <em>우리 가게 홍보물까지.</em>

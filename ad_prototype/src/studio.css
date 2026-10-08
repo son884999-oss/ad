@@ -7,9 +7,9 @@
 .studio-brand-note { margin-left:12px; padding-left:18px; border-left:1px solid var(--line); color:var(--muted); font-size:14px; font-weight:400; letter-spacing:0; }
 .studio-brand-button { background:transparent; border:0; padding:0; }
 .studio-header { position:sticky; top:0; z-index:20; border-bottom:1px solid var(--line); background:rgb(255 254 251 / 96%); }
-.studio-header-inner { max-width:1280px; margin:auto; min-height:88px; padding:12px 24px; display:flex; align-items:center; gap:32px; }
+.studio-header-inner { max-width:1280px; margin:auto; min-height:88px; padding:12px 24px; display:flex; flex-wrap:wrap; align-items:center; gap:16px 32px; }
 .studio-header-inner .studio-menu-button { margin-left:auto; }
-.studio-quickbar { position:fixed; top:88px; left:0; bottom:0; z-index:15; width:240px; padding:24px 16px; border-right:1px solid var(--line); background:var(--surface); overflow-y:auto; }
+.studio-quickbar { position:fixed; top:var(--studio-header-height,88px); left:0; bottom:0; z-index:15; width:240px; padding:24px 16px; border-right:1px solid var(--line); background:var(--surface); overflow-y:auto; }
 .studio-quickbar > p { color:#746b61; font-size:14px; font-weight:700; margin:20px 12px 10px; }
 .studio-quickbar > p:first-child { margin-top:0; }
 .studio-quickbar button { display:flex; align-items:center; gap:12px; width:100%; min-height:54px; padding:12px; border-radius:12px; text-align:left; font-size:18px; }

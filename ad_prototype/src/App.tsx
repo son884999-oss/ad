@@ -654,7 +654,11 @@ function StepHeader({
         ))}
       </div>
       <div className="mt-5">
-        <h2 className="text-[26px] font-bold leading-tight text-[#222222] sm:text-[28px]">
+        <h2
+          data-screen-heading
+          tabIndex={-1}
+          className="text-[26px] font-bold leading-tight text-[#222222] sm:text-[28px]"
+        >
           {step}단계 · {uiText(stepGuides[step].title, easyMode)}
         </h2>
         <p className="mt-2 text-[18px] leading-7 text-[#545454]">
@@ -1696,41 +1700,43 @@ function CreateFlow({
             {uiText(channelNames[channel], easyMode)}에 어울리는 말투로 구성한
             미리보기입니다.
           </p>
-          <nav className="result-jump-links" aria-label="결과 종류로 이동">
-            {showPoster && (
-              <a
-                href="#result-poster"
-                onClick={(event) => {
-                  event.preventDefault()
-                  jumpToResult("poster-title")
-                }}
-              >
-                포스터 보기 ↓
-              </a>
-            )}
-            {showCopy && (
-              <a
-                href="#result-copy"
-                onClick={(event) => {
-                  event.preventDefault()
-                  jumpToResult("copy-title")
-                }}
-              >
-                홍보 글 보기 ↓
-              </a>
-            )}
-            {showVideo && (
-              <a
-                href="#result-video"
-                onClick={(event) => {
-                  event.preventDefault()
-                  jumpToResult("video-title")
-                }}
-              >
-                영상 보기 ↓
-              </a>
-            )}
-          </nav>
+          {[showPoster, showCopy, showVideo].filter(Boolean).length > 1 && (
+            <nav className="result-jump-links" aria-label="결과 종류로 이동">
+              {showPoster && (
+                <a
+                  href="#result-poster"
+                  onClick={(event) => {
+                    event.preventDefault()
+                    jumpToResult("poster-title")
+                  }}
+                >
+                  포스터 보기 ↓
+                </a>
+              )}
+              {showCopy && (
+                <a
+                  href="#result-copy"
+                  onClick={(event) => {
+                    event.preventDefault()
+                    jumpToResult("copy-title")
+                  }}
+                >
+                  홍보 글 보기 ↓
+                </a>
+              )}
+              {showVideo && (
+                <a
+                  href="#result-video"
+                  onClick={(event) => {
+                    event.preventDefault()
+                    jumpToResult("video-title")
+                  }}
+                >
+                  영상 보기 ↓
+                </a>
+              )}
+            </nav>
+          )}
           <div
             className="result-grid mt-7"
             data-result-count={
@@ -1786,9 +1792,16 @@ function CreateFlow({
                   {uiText("포스터 미리보기", easyMode)}
                 </p>
                 <p className="px-4 pb-4 text-[#545454]">
-                  긴 내용은 포스터에서 줄여 보여줘요. 전체 내용은 홍보 글에서
-                  확인하세요.
+                  긴 내용은 포스터에서 줄여 보여줘요.
                 </p>
+                <details className="media-full-copy">
+                  <summary>이미지 문구 원문 보기</summary>
+                  <p className="media-copy-note">
+                    저장된 이미지에는 길이에 맞춰 줄여 표시돼요.
+                  </p>
+                  <p>{details.features}</p>
+                  <p>{resultCopy[channel]}</p>
+                </details>
                 <div className="result-card-actions border-t border-[#dedbd7] p-4">
                   <button
                     onClick={() => void createPosterFile(true)}
@@ -1803,13 +1816,26 @@ function CreateFlow({
                   </button>
                   {posterStatus === "ready" && (
                     <p className="mt-2 text-[16px] text-[#545454]">
-                      PNG 파일이 준비됐어요.
+                      PNG 파일 저장을 요청했어요. 기기의 다운로드 목록을
+                      확인하세요.
                     </p>
                   )}
                   {posterStatus === "failed" && (
                     <p className="mt-2 text-[16px] font-bold text-[#9f3e0d]">
                       포스터 저장에 실패했어요. 다시 시도해 주세요.
                     </p>
+                  )}
+                  {showCopy && (
+                    <a
+                      className="result-next-link"
+                      href="#result-copy"
+                      onClick={(event) => {
+                        event.preventDefault()
+                        jumpToResult("copy-title")
+                      }}
+                    >
+                      다음 결과: 홍보 글 보기 ↓
+                    </a>
                   )}
                 </div>
               </article>
@@ -1829,6 +1855,20 @@ function CreateFlow({
                     <p>복사해서 원하는 곳에 붙여 넣으세요</p>
                   </div>
                 </div>
+                <button
+                  onClick={() => void copyFinalText()}
+                  className="result-copy-action mt-6 min-h-12 w-full rounded-[12px] border-2 border-[#817a74] bg-white px-4 font-bold text-[#2b2b2b]"
+                >
+                  홍보 글 전체 복사하기
+                </button>
+                {copyMessage && (
+                  <p
+                    className="mt-2 text-[16px] font-bold text-[#545454]"
+                    role="status"
+                  >
+                    {copyMessage}
+                  </p>
+                )}
                 <span className="rounded-full bg-[#fff1e7] px-3 py-1.5 text-[16px] font-bold text-[#2b2b2b]">
                   {uiText(channelNames[channel], easyMode)} 문구
                 </span>
@@ -1854,19 +1894,17 @@ function CreateFlow({
                     ))}
                   </div>
                 </div>
-                <button
-                  onClick={() => void copyFinalText()}
-                  className="result-copy-action mt-6 min-h-12 w-full rounded-[12px] border-2 border-[#817a74] bg-white px-4 font-bold text-[#2b2b2b]"
-                >
-                  홍보 글 전체 복사하기
-                </button>
-                {copyMessage && (
-                  <p
-                    className="mt-2 text-[16px] font-bold text-[#545454]"
-                    role="status"
+                {showVideo && (
+                  <a
+                    className="result-next-link"
+                    href="#result-video"
+                    onClick={(event) => {
+                      event.preventDefault()
+                      jumpToResult("video-title")
+                    }}
                   >
-                    {copyMessage}
-                  </p>
+                    다음 결과: 영상 보기 ↓
+                  </a>
                 )}
               </article>
             )}
@@ -1899,22 +1937,31 @@ function CreateFlow({
                     }}
                     className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center text-white"
                   >
-                    <strong className="text-[24px] leading-tight">
+                    <strong className="video-preview-title text-[24px] leading-tight">
                       {details.features}
                     </strong>
-                    <span className="mt-3 text-[16px]">
-                      {playing
-                        ? "예시 장면을 재생 중입니다"
-                        : "재생 가능한 영상 미리보기 상태"}
-                    </span>
-                    <button
-                      onClick={() => setPlaying(!playing)}
-                      className="mt-6 min-h-12 rounded-full bg-white px-6 font-bold text-[#2b2b2b]"
-                    >
-                      {playing ? "일시 정지" : "미리보기 재생"}
-                    </button>
                   </div>
                 </div>
+                <button
+                  onClick={() => setPlaying(!playing)}
+                  aria-pressed={playing}
+                  className="video-preview-control"
+                >
+                  {playing ? "일시 정지" : "미리보기 재생"}
+                </button>
+                <p className="video-preview-state" role="status">
+                  {playing
+                    ? "예시 장면을 재생하고 있어요."
+                    : "아래 버튼으로 영상을 저장할 수 있어요."}
+                </p>
+                <details className="media-full-copy">
+                  <summary>영상 문구 원문 보기</summary>
+                  <p className="media-copy-note">
+                    저장된 영상에는 길이에 맞춰 줄여 표시돼요.
+                  </p>
+                  <p>{details.features}</p>
+                  <p>{resultCopy[channel]}</p>
+                </details>
                 <p className="mt-4 text-center text-[16px] leading-5 text-[#626262]">
                   AI 없이 사진과 문구로 만든 확인용 예시 영상입니다.
                 </p>
@@ -1994,6 +2041,13 @@ function Records({
 }) {
   return (
     <section>
+      <h2
+        data-screen-heading
+        tabIndex={-1}
+        className="mb-6 text-[28px] font-bold"
+      >
+        내 홍보물
+      </h2>
       {records.length > 0 && (
         <p className="mb-5 rounded-[14px] border border-[#e3d8ce] bg-[#fff8ed] p-4">
           새로고침하거나 창을 닫으면 기록이 사라져요. 필요한 파일을 먼저 저장해
@@ -2044,7 +2098,7 @@ function Plan({ easyMode }: { easyMode: boolean }) {
 
   return (
     <section className="mx-auto max-w-[900px]">
-      <h2 className="text-[26px] font-bold">
+      <h2 data-screen-heading tabIndex={-1} className="text-[26px] font-bold">
         {uiText("내게 맞는 이용 방식을 골라 보세요", easyMode)}
       </h2>
       <p className="mt-2 text-[16px] leading-7 text-[#545454]">
@@ -2194,7 +2248,7 @@ export default function App() {
 
     setSpeechMessage("")
 
-    window.requestAnimationFrame(() => {
+    {
       const scrollingElement = document.scrollingElement
 
       if (scrollingElement) scrollingElement.scrollTop = 0
@@ -2206,7 +2260,10 @@ export default function App() {
       )
 
       if (appMain) appMain.scrollTop = 0
-    })
+      document
+        .querySelector<HTMLElement>("[data-screen-heading]")
+        ?.focus({ preventScroll: true })
+    }
   }, [page, step, creationType])
 
   const setEasyMode = (enabled: boolean) => {
