@@ -8,185 +8,298 @@ import {
 } from "react"
 
 type Page = "login" | "home" | "create" | "records" | "plan"
+
 type CreationType = "all" | "poster" | "video" | "copy"
+
 type Channel = "instagram" | "x" | "threads"
+
 type Step = 1 | 2 | 3
+
 type OutputFormat = "poster" | "video" | "both"
+
 type FileStatus = "idle" | "preparing" | "ready" | "cancelled" | "failed" | "unsupported"
+
 type GeneratedRecord = {
   id: string
+
   createdAt: string
+
   type: CreationType
+
   outputFormat: OutputFormat
+
   channel: Channel
+
   imageUrl: string
+
   details: {
     description: string
+
     features: string
+
     audience: string
   }
+
   userHashtags: Record<Channel, string>
 }
 
 const creationNames: Record<CreationType, string> = {
   all: "한 번에 완성",
+
   poster: "포스터 만들기",
+
   video: "영상 만들기",
+
   copy: "문구 만들기",
 }
 
 const channelNames: Record<Channel, string> = {
   instagram: "인스타그램",
+
   x: "엑스(X)",
+
   threads: "쓰레드(Threads)",
 }
 
 const channelIcons: Record<Channel, string> = {
   instagram: "📸",
+
   x: "✕",
+
   threads: "💬",
 }
 
 const initialDetails = {
   description: "정성을 담아 만든 우리 가게의 대표 제품입니다.",
+
   features: "좋은 재료와 꼼꼼한 손길로 완성한 특별한 맛",
+
   audience: "좋은 품질과 따뜻한 이야기를 중요하게 생각하는 고객",
 }
 
 const outputFormatNames: Record<OutputFormat, string> = {
   poster: "포스터",
+
   video: "영상",
+
   both: "포스터와 영상 둘 다",
 }
 
 const outputFormatIcons: Record<OutputFormat, string> = {
   poster: "🖼️",
+
   video: "🎬",
+
   both: "✨",
 }
 
 const easyUiDictionary: Record<string, string> = {
   "메인 대시보드": "첫 화면",
+
   "대시보드로 돌아가기": "첫 화면으로 돌아가기",
+
   이용권: "이용 방법",
+
   "구독으로 이용": "매달 이용",
+
   "건당 이용": "필요할 때 이용",
+
   "쓰레드(Threads)": "쓰레드",
+
   "엑스(X)": "엑스",
+
   Threads: "쓰레드",
+
   X: "엑스",
+
   "결과 형식": "만들 종류",
+
   "선택한 결과 형식": "고른 만들 종류",
+
   "선택된 결과 형식": "고른 만들 종류",
+
   "결과 형식을 선택해 주세요": "만들 종류를 골라 주세요",
+
   "홍보 채널": "홍보할 곳",
+
   채널: "홍보할 곳",
+
   "현재 결과 형식": "현재 만들 종류",
+
   "홍보 채널을 선택해 주세요": "홍보할 곳을 골라 주세요",
+
   "JPG, PNG 등 이미지 파일을 선택해 주세요": "사진 파일을 골라 주세요",
+
   "설명·해시태그 확인": "설명·검색어(#) 확인",
+
   "정리된 설명과 추천 해시태그를 확인하고 고쳐 주세요.":
     "정리된 설명과 추천 검색어(#)를 확인하고 고쳐 주세요.",
+
   "형식·채널·사진 선택": "만들 종류·홍보할 곳·사진 고르기",
+
   "결과 형식과 채널을 고르고 제품 사진 한 장을 올려 주세요.":
     "만들 종류와 홍보할 곳을 고르고 제품 사진 한 장을 넣어 주세요.",
+
   "제품 정보와 해시태그 확인하기": "제품 설명과 검색어(#) 확인하기",
+
   "예시 초안을 제품에 맞게 수정하고, 추천 해시태그도 결과를 만들기 전에 직접 고쳐 주세요.":
     "처음 작성한 설명을 제품에 맞게 고치고, 추천 검색어(#)도 직접 고쳐 주세요.",
+
   "아래 내용은 실제 AI 분석이 아닌 예시 초안입니다. 제품에 맞게 자유롭게 고쳐 주세요.":
     "아래 내용은 자동 분석이 아닌 처음 작성한 설명입니다. 제품에 맞게 고쳐 주세요.",
+
   "사용할 해시태그 직접 수정": "사용할 검색어(#) 직접 수정",
+
   "추천 해시태그 후보": "추천 검색어(#)",
+
   "‘추천으로 교체’를 누르면 위 작성란이 추천 후보로 바뀝니다.":
     "‘추천으로 바꾸기’를 누르면 위 작성란이 추천 검색어(#)로 바뀝니다.",
+
   "포스터 미리보기": "포스터 확인 화면",
+
   "영상 다운로드": "영상 저장",
+
   해시태그: "검색어(#)",
+
   "확정 해시태그": "확정 검색어(#)",
+
   "채널에 맞는 홍보 문구": "홍보할 곳에 맞는 글",
+
   "문구와 확정 해시태그를 복사했어요.": "글과 확정 검색어(#)를 복사했어요.",
+
   "2단계 제품 정보와 해시태그 확인 화면입니다.":
     "2단계 제품 설명과 검색어(#) 확인 화면입니다.",
+
   "사용자가 입력한 확정 해시태그": "사용자가 입력한 검색어(#)",
+
   "현재 브라우저에서는 예시 영상을 만들 수 없어요.":
     "이 기기에서는 예시 영상을 만들 수 없어요.",
+
   "이 브라우저에서 저장할 수 있는 영상 형식을 찾지 못했어요.":
     "이 기기에서 저장할 수 있는 영상 종류를 찾지 못했어요.",
+
   "현재 브라우저에서 읽어주기를 사용할 수 없어요.":
     "이 기기에서는 화면 읽어주기를 사용할 수 없어요.",
+
   "단독 제작 바로가기": "원하는 것 바로 만들기",
+
   "내게 맞는 이용 방식을 골라 보세요": "내게 맞는 이용 방법을 골라 보세요",
+
   "현재는 구조를 확인하는 프로토타입이며, 가격과 제공 수량은 아직 정해지지 않았습니다.":
     "지금은 화면을 확인하는 시험용이며, 가격과 만들 수 있는 수량은 아직 정해지지 않았습니다.",
 }
 
 function uiText(text: string, easyMode: boolean) {
   if (!easyMode) return text
+
   return easyUiDictionary[text] ?? text
 }
 
 const knownRegions = new Set([
   "서울",
+
   "부산",
+
   "대구",
+
   "인천",
+
   "광주",
+
   "대전",
+
   "울산",
+
   "세종",
+
   "경기",
+
   "강원",
+
   "충북",
+
   "충남",
+
   "전북",
+
   "전남",
+
   "경북",
+
   "경남",
+
   "제주",
 ])
 
 const hashtagStopWords = new Set([
   "정성",
+
   "담아",
+
   "만든",
+
   "직접",
+
   "우리",
+
   "가게",
+
   "대표",
+
   "제품",
+
   "좋은",
+
   "꼼꼼한",
+
   "완성한",
+
   "특별한",
+
   "중요하게",
+
   "생각하는",
+
   "고객",
+
   "분들",
+
   "추천",
 ])
 
 function cleanKeyword(word: string) {
   return word
+
     .replace(/[^\p{L}\p{N}]/gu, "")
+
     .replace(/(입니다|이에요|예요|합니다|해요|입니다만)$/u, "")
+
     .replace(/(에서|에게|으로|로|와|과|을|를|은|는|이|가|의)$/u, "")
 }
 
 function extractHashtagKeywords(value: string) {
   const rawWords = value
+
     .split(/\s+/)
+
     .map((word) => word.replace(/[^\p{L}\p{N}]/gu, ""))
+
     .filter(Boolean)
+
   const keywords: string[] = []
 
   for (let index = 0; index < rawWords.length; index += 1) {
     const rawWord = rawWords[index]
+
     const keyword = cleanKeyword(rawWord)
+
     if (!keyword || keyword.length < 2) continue
 
     const regionCandidate = rawWord.replace(/(에서|의)$/u, "")
+
     if (knownRegions.has(regionCandidate)) {
       keywords.push(regionCandidate)
+
       continue
     }
 
@@ -194,14 +307,17 @@ function extractHashtagKeywords(value: string) {
 
     if (keyword === "수제") {
       const nextKeyword = cleanKeyword(rawWords[index + 1] ?? "")
+
       if (
         nextKeyword &&
         nextKeyword.length > 1 &&
         !hashtagStopWords.has(nextKeyword)
       ) {
         keywords.push(`수제${nextKeyword}`)
+
         index += 1
       }
+
       continue
     }
 
@@ -213,51 +329,69 @@ function extractHashtagKeywords(value: string) {
 
 function makeHashtags(
   channel: Channel,
+
   details: {
     description: string
+
     features: string
+
     audience: string
   },
 ) {
   const keywords = [
     ...extractHashtagKeywords(details.description),
+
     ...extractHashtagKeywords(details.features),
+
     ...extractHashtagKeywords(details.audience),
   ]
+
   const limits: Record<Channel, number> = {
     instagram: 8,
+
     x: 3,
+
     threads: 4,
   }
 
   return [...new Set(keywords)]
+
     .slice(0, limits[channel])
+
     .map((tag) => `#${tag}`)
 }
 
 function initialHashtagValues(
   details: {
     description: string
+
     features: string
+
     audience: string
   } = initialDetails,
 ) {
   return {
     instagram: makeHashtags("instagram", details).join(" "),
+
     x: makeHashtags("x", details).join(" "),
+
     threads: makeHashtags("threads", details).join(" "),
   }
 }
 
 function normalizeHashtagValues(
   value: unknown,
+
   details: {
     description: string
+
     features: string
+
     audience: string
   } = initialDetails,
 ): Record<Channel, string> {
   const fallback = initialHashtagValues(details)
+
   const candidate =
     value && typeof value === "object"
       ? value as Partial<Record<Channel, unknown>>
@@ -268,7 +402,9 @@ function normalizeHashtagValues(
       typeof candidate.instagram === "string"
         ? candidate.instagram
         : fallback.instagram,
+
     x: typeof candidate.x === "string" ? candidate.x : fallback.x,
+
     threads:
       typeof candidate.threads === "string"
         ? candidate.threads
@@ -278,65 +414,97 @@ function normalizeHashtagValues(
 
 function parseHashtags(value: unknown) {
   return (typeof value === "string" ? value : "")
+
     .split(/[\s,]+/)
+
     .map((tag) => tag.trim())
+
     .filter(Boolean)
+
     .map((tag) => (tag.startsWith("#") ? tag : `#${tag}`))
 }
 
 function loadCanvasImage(src: string) {
   return new Promise<HTMLImageElement>((resolve, reject) => {
     const image = new Image()
+
     image.onload = () => resolve(image)
+
     image.onerror = () => reject(new Error("image-load-failed"))
+
     image.src = src
   })
 }
 
 function drawImageCover(
   context: CanvasRenderingContext2D,
+
   image: HTMLImageElement,
+
   width: number,
+
   height: number,
 ) {
   const scale = Math.max(
     width / image.naturalWidth,
+
     height / image.naturalHeight,
   )
+
   const drawWidth = image.naturalWidth * scale
+
   const drawHeight = image.naturalHeight * scale
+
   context.drawImage(
     image,
+
     (width - drawWidth) / 2,
+
     (height - drawHeight) / 2,
+
     drawWidth,
+
     drawHeight,
   )
 }
 
 function drawWrappedText(
   context: CanvasRenderingContext2D,
+
   text: string,
+
   x: number,
+
   y: number,
+
   maxWidth: number,
+
   lineHeight: number,
+
   maxLines: number,
 ) {
   const words = text.split(/\s+/).filter(Boolean)
+
   const lines: string[] = []
+
   let line = ""
+
   for (const word of words) {
     const next = line ? `${line} ${word}` : word
+
     if (context.measureText(next).width > maxWidth && line) {
       lines.push(line)
+
       line = word
+
       if (lines.length === maxLines - 1) break
     } else {
       line = next
     }
   }
+
   if (line && lines.length < maxLines) lines.push(line)
+
   lines.forEach((value, index) =>
     context.fillText(value, x, y + index * lineHeight),
   )
@@ -344,33 +512,53 @@ function drawWrappedText(
 
 function triggerFileDownload(file: File) {
   const url = URL.createObjectURL(file)
+
   const anchor = document.createElement("a")
+
   anchor.href = url
+
   anchor.download = file.name
+
   document.body.appendChild(anchor)
+
   anchor.click()
+
   anchor.remove()
+
   window.setTimeout(() => URL.revokeObjectURL(url), 1000)
 }
 
 const menuItems: Array<{
   label: string
+
   page?: Page
+
   type?: CreationType
+
   symbol: string
+
   tone?: string
 }> = [
   { label: "홈", page: "home", symbol: "⌂" },
+
   { label: "한 번에 완성", type: "all", symbol: "＋", tone: "bg-[#ffffff]" },
+
   {
     label: "포스터 만들기",
+
     type: "poster",
+
     symbol: "＋",
+
     tone: "bg-[#ffffff]",
   },
+
   { label: "영상 만들기", type: "video", symbol: "＋", tone: "bg-[#ffffff]" },
+
   { label: "문구 만들기", type: "copy", symbol: "＋", tone: "bg-[#ffffff]" },
+
   { label: "최근 생성 기록", page: "records", symbol: "▣" },
+
   { label: "이용권", page: "plan", symbol: "◇" },
 ]
 
@@ -389,15 +577,23 @@ function Brand({ compact = false }: { compact?: boolean }) {
 
 function PrimaryButton({
   children,
+
   onClick,
+
   disabled = false,
+
   type = "button",
+
   className = "",
 }: {
   children: ReactNode
+
   onClick?: () => void
+
   disabled?: boolean
+
   type?: "button" | "submit"
+
   className?: string
 }) {
   return (
@@ -414,11 +610,15 @@ function PrimaryButton({
 
 function SpeakerButton({
   speaking,
+
   preparing,
+
   onClick,
 }: {
   speaking: boolean
+
   preparing: boolean
+
   onClick: () => void
 }) {
   return (
@@ -438,23 +638,34 @@ function SpeakerButton({
 
 function Login({
   onEnter,
+
   easyMode,
+
   speaking,
+
   speechPreparing,
+
   onSpeak,
+
   speechMessage,
 }: {
   onEnter: () => void
+
   easyMode: boolean
+
   speaking: boolean
+
   speechPreparing: boolean
+
   onSpeak: () => void
+
   speechMessage: string
 }) {
   const [mode, setMode] = useState<"login" | "signup">("login")
 
   const submit = (event: FormEvent) => {
     event.preventDefault()
+
     onEnter()
   }
 
@@ -527,33 +738,59 @@ function Login({
 
 function Shell({
   page,
+
   title,
+
   creationType,
+
   mobileOpen,
+
   setMobileOpen,
+
   navigate,
+
   onLogout,
+
   easyMode,
+
   setEasyMode,
+
   speaking,
+
   speechPreparing,
+
   onSpeak,
+
   speechMessage,
+
   children,
 }: {
   page: Page
+
   title: string
+
   creationType: CreationType
+
   mobileOpen: boolean
+
   setMobileOpen: (open: boolean) => void
+
   navigate: (page: Page, type?: CreationType) => void
+
   onLogout: () => void
+
   easyMode: boolean
+
   setEasyMode: (enabled: boolean) => void
+
   speaking: boolean
+
   speechPreparing: boolean
+
   onSpeak: () => void
+
   speechMessage: string
+
   children: ReactNode
 }) {
   return (
@@ -564,7 +801,9 @@ function Shell({
     >
       <aside
         className={`fixed inset-y-0 left-0 z-40 w-[260px] border-r border-[#ebe8e4] bg-white px-5 py-6 transition-transform lg:translate-x-0 ${
-          mobileOpen ? "translate-x-0" : "-translate-x-full invisible lg:visible"
+          mobileOpen
+            ? "translate-x-0"
+            : "-translate-x-full invisible lg:visible"
         }`}
       >
         <div className="mb-7 flex items-center justify-between">
@@ -582,6 +821,7 @@ function Shell({
             const active =
               item.page === page ||
               (page === "create" && item.type === creationType)
+
             return (
               <button
                 key={item.label}
@@ -629,8 +869,7 @@ function Shell({
               onClick={onLogout}
               className="min-h-12 bg-white px-2 text-[16px] font-bold text-[#545454] underline underline-offset-4 transition hover:text-[#9f3e0d] sm:px-3 sm:text-[16px]"
             >
-              <span className="sm:hidden">처음으로</span>
-              <span className="hidden sm:inline">로그아웃 · 처음으로</span>
+              <span>로그아웃</span>
             </button>
           </div>
           {(page === "home" || page === "create" || easyMode) && (
@@ -645,7 +884,7 @@ function Shell({
                       : "border-[#817a74] bg-white text-[#2b2b2b]"
                   }`}
                 >
-                  쉬운 모드 {easyMode ? "켜짐" : "켜기"}
+                  큰 글씨·쉬운 안내 {easyMode ? "켜짐" : "켜기"}
                 </button>
               )}
               {easyMode && (
@@ -675,18 +914,18 @@ function Shell({
       </div>
       <nav
         aria-label="모바일 빠른 메뉴"
-        className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t border-[#d5d0cb] bg-white/95 pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_24px_rgba(34,34,34,0.10)] backdrop-blur lg:hidden"
+        className="mobile-navigation fixed inset-x-0 bottom-0 z-30 grid grid-cols-3 border-t border-[#d5d0cb] bg-white/95 pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_24px_rgba(34,34,34,0.10)] backdrop-blur lg:hidden"
       >
         {[
           { label: "홈", symbol: "🏠", page: "home" as Page },
-          { label: "한 번에", symbol: "✨", type: "all" as CreationType },
-          { label: "포스터", symbol: "🖼️", type: "poster" as CreationType },
-          { label: "영상", symbol: "🎬", type: "video" as CreationType },
-          { label: "문구", symbol: "✍️", type: "copy" as CreationType },
+
+          { label: "만들기", symbol: "＋", type: "all" as CreationType },
+
+          { label: "내 홍보물", symbol: "▤", page: "records" as Page },
         ].map((item) => {
           const active =
-            item.page === page ||
-            (page === "create" && item.type === creationType)
+            item.page === page || (page === "create" && item.type === "all")
+
           return (
             <button
               key={item.label}
@@ -701,7 +940,7 @@ function Shell({
               <span className="text-[21px]" aria-hidden="true">
                 {item.symbol}
               </span>
-              <span className="whitespace-nowrap tracking-[-0.08em]">
+              <span className="whitespace-nowrap">
                 {uiText(item.label, easyMode)}
               </span>
             </button>
@@ -714,48 +953,69 @@ function Shell({
 
 function Home({
   navigate,
+
   easyMode,
 }: {
   navigate: (page: Page, type?: CreationType) => void
+
   easyMode: boolean
 }) {
   const shortcuts: Array<{
     type: CreationType
+
     note: string
+
     className: string
   }> = [
     { type: "poster", note: "사진과 글을 한 장에", className: "bg-[#ffffff]" },
+
     {
       type: "video",
+
       note: "짧고 눈에 띄는 미리보기",
+
       className: "bg-[#ffffff]",
     },
+
     { type: "copy", note: "채널에 맞는 홍보 문구", className: "bg-[#ffffff]" },
   ]
+
   const guideSteps = [
     {
       number: "①",
+
       icon: "📷",
+
       title: "사진 넣기",
+
       description: "홍보할 제품 사진을 넣어 주세요.",
     },
+
     {
       number: "②",
+
       icon: "✍️",
+
       title: "설명·해시태그 확인",
+
       description: "정리된 설명과 추천 해시태그를 확인하고 고쳐 주세요.",
     },
+
     {
       number: "③",
+
       icon: "✨",
+
       title: "홍보물 만들기",
+
       description: "선택한 홍보물을 만들고 결과를 확인해 주세요.",
     },
   ]
 
   return (
     <div className="space-y-6 sm:space-y-7">
-      <section className="rounded-[22px] border border-[#dedbd7] bg-white p-5 shadow-[0_10px_30px_rgba(34,34,34,0.06)] sm:p-7">
+      <section className="welcome-panel rounded-[22px] border border-[#dedbd7] bg-white p-5 shadow-[0_10px_30px_rgba(34,34,34,0.06)] sm:p-7">
+        <p className="welcome-eyebrow">우리 가게를 알리는 작은 시작</p>
         <h2 className="text-[25px] font-bold leading-tight tracking-[-0.04em] text-[#2b2b2b] sm:text-[30px]">
           사진 한 장으로 홍보물을 만들어 보세요
         </h2>
@@ -809,7 +1069,7 @@ function Home({
         <h2 className="mb-4 text-[20px] font-bold">
           {uiText("단독 제작 바로가기", easyMode)}
         </h2>
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="shortcut-grid grid gap-3">
           {shortcuts.map((shortcut) => (
             <button
               key={shortcut.type}
@@ -833,37 +1093,45 @@ function Home({
 
 function StepHeader({
   step,
+
   easyMode,
 }: {
   step: Step
+
   easyMode: boolean
 }) {
-  const stepGuides: Record<
-    Step,
-    {
-      title: string
-      description: string
-    }
-  > = {
+  const stepGuides: Record<Step, {
+    title: string
+
+    description: string
+  }> = {
     1: {
       title: "사진을 넣어 주세요",
+
       description:
         "홍보할 곳과 만들 종류를 고르고 제품 사진 한 장을 넣어 주세요.",
     },
+
     2: {
       title: "설명을 확인하고 고쳐 주세요",
+
       description:
         "예시 초안을 제품에 맞게 수정하고, 추천 해시태그도 결과를 만들기 전에 직접 고쳐 주세요.",
     },
+
     3: {
       title: "홍보물이 준비됐어요",
+
       description:
         "선택한 결과와 홍보 문구를 확인하고 필요한 파일을 저장해 주세요.",
     },
   }
+
   const stepLabels: Record<Step, string> = {
     1: "사진",
+
     2: "설명",
+
     3: "결과",
   }
 
@@ -891,7 +1159,9 @@ function StepHeader({
             </div>
             {number < 3 && (
               <span
-                className={`${easyMode ? "text-[18px]" : "text-[16px]"} text-[#817a74]`}
+                className={`${
+                  easyMode ? "text-[18px]" : "text-[16px]"
+                } text-[#817a74]`}
                 aria-hidden="true"
               >
                 →
@@ -914,168 +1184,325 @@ function StepHeader({
 
 function CreateFlow({
   type,
+
   step,
+
   setStep,
+
   channel,
+
   setChannel,
+
   imageUrl,
+
   setImageUrl,
+
   details,
+
   setDetails,
+
   recommendedHashtagsByChannel,
+
   setRecommendedHashtagsByChannel,
+
   userHashtagsByChannel,
+
   setUserHashtagsByChannel,
+
   outputFormat,
+
   setOutputFormat,
+
   continuationNotice,
+
   onDraftTouched,
+
   easyMode,
+
   onResultCreated,
+
   onDashboard,
+
   onStartNew,
 }: {
   type: CreationType
+
   step: Step
+
   setStep: (step: Step) => void
+
   channel: Channel
+
   setChannel: (channel: Channel) => void
+
   imageUrl: string
+
   setImageUrl: (url: string) => void
+
   details: {
     description: string
+
     features: string
+
     audience: string
   }
+
   setDetails: (details: {
     description: string
+
     features: string
+
     audience: string
   }) => void
+
   recommendedHashtagsByChannel: Record<Channel, string> | undefined
+
   setRecommendedHashtagsByChannel: (hashtags: Record<Channel, string>) => void
+
   userHashtagsByChannel: Record<Channel, string> | undefined
+
   setUserHashtagsByChannel: (hashtags: Record<Channel, string>) => void
+
   outputFormat: OutputFormat
+
   setOutputFormat: (format: OutputFormat) => void
+
   continuationNotice: boolean
+
   onDraftTouched: () => void
+
   easyMode: boolean
+
   onResultCreated: () => void
+
   onDashboard: () => void
+
   onStartNew: () => void
 }) {
   const [playing, setPlaying] = useState(false)
+
   const [copyMessage, setCopyMessage] = useState("")
+
   const [posterStatus, setPosterStatus] = useState<FileStatus>("idle")
+
   const [videoStatus, setVideoStatus] = useState<FileStatus>("idle")
+
   const [videoMessage, setVideoMessage] = useState("")
+
+  const [uploadMessage, setUploadMessage] = useState("")
+
+  const uploadRequestRef = useRef(0)
+
+  const missingFields = [
+    !details.description.trim() && "제품 설명",
+
+    !details.features.trim() && "강조할 특징",
+
+    !details.audience.trim() && "주요 고객",
+  ].filter(Boolean)
+
+  const jumpToResult = (id: string) => {
+    const title = document.getElementById(id)
+
+    title?.focus({ preventScroll: true })
+
+    title?.closest("article")?.scrollIntoView({ block: "start" })
+  }
+
   const videoRecorderRef = useRef<MediaRecorder | null>(null)
+
   const videoFrameRef = useRef<number | null>(null)
+
   const videoCancelledRef = useRef(false)
 
   useEffect(() => {
     setPlaying(false)
+
     setPosterStatus("idle")
+
     setVideoStatus("idle")
+
     setVideoMessage("")
+
     setCopyMessage("")
+
     videoCancelledRef.current = true
+
     if (videoFrameRef.current !== null) {
       window.cancelAnimationFrame(videoFrameRef.current)
+
       videoFrameRef.current = null
     }
+
     if (videoRecorderRef.current?.state === "recording") {
       videoRecorderRef.current.stop()
     }
   }, [
     type,
+
     outputFormat,
+
     channel,
+
     imageUrl,
+
     details.description,
+
     details.features,
+
     details.audience,
   ])
 
   const upload = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
+
     if (!file) return
+
+    const request = ++uploadRequestRef.current
+
+    setImageUrl("")
+
+    const fail = () => {
+      if (request === uploadRequestRef.current)
+        setUploadMessage(
+          "사진을 읽지 못했어요. JPG 또는 PNG 사진을 다시 선택해 주세요.",
+        )
+    }
+
+    if (!file.type.startsWith("image/") || file.size > 20 * 1024 * 1024) {
+      setUploadMessage("20MB 이하의 사진 파일을 선택해 주세요.")
+
+      event.target.value = ""
+
+      return
+    }
+
+    setUploadMessage("사진을 확인하고 있어요.")
+
     const reader = new FileReader()
-    reader.onload = () => {
+
+    reader.onerror = fail
+
+    reader.onload = async () => {
       if (typeof reader.result === "string") {
-        setImageUrl(reader.result)
-        onDraftTouched()
+        try {
+          await loadCanvasImage(reader.result)
+
+          if (request !== uploadRequestRef.current) return
+
+          setImageUrl(reader.result)
+
+          setUploadMessage("사진이 준비됐어요.")
+
+          onDraftTouched()
+        } catch {
+          fail()
+        }
       }
     }
+
     reader.readAsDataURL(file)
   }
 
   const resultCopy: Record<Channel, string> = {
     instagram: `오늘을 더 특별하게 만드는 ${details.description}\n\n${details.features}\n지금 사진으로 만나보세요.`,
+
     x: `${details.features} — 필요한 분은 바로 확인해 보세요. ${details.audience}에게 추천합니다.`,
+
     threads: `요즘 손님들이 자주 찾는 이유가 있더라고요.\n${details.description}\n특히 ${details.features} 이 부분이 참 좋아요. 궁금한 점은 편하게 물어보세요.`,
   }
+
   const safeRecommendations = normalizeHashtagValues(
     recommendedHashtagsByChannel,
+
     details,
   )
+
   const safeUserHashtags = normalizeHashtagValues(
     userHashtagsByChannel,
+
     details,
   )
+
   const hashtags = parseHashtags(safeUserHashtags[channel])
+
   const recommendationMinimum: Record<Channel, number> = {
     instagram: 5,
+
     x: 1,
+
     threads: 2,
   }
+
   const recommendationTags = parseHashtags(safeRecommendations[channel])
+
   const needsMoreKeywords =
     recommendationTags.length < recommendationMinimum[channel]
+
   const showPoster =
     type === "poster" ||
     (type === "all" && (outputFormat === "poster" || outputFormat === "both"))
+
   const showVideo =
     type === "video" ||
     (type === "all" && (outputFormat === "video" || outputFormat === "both"))
+
   const showCopy = type === "copy" || type === "all"
+
   const finalText = `${resultCopy[channel]}\n\n${hashtags.join(" ")}`.trim()
 
   const updateDetails = (nextDetails: {
     description: string
+
     features: string
+
     audience: string
   }) => {
     setDetails(nextDetails)
+
     onDraftTouched()
   }
 
   const copyFinalText = async () => {
     try {
       let copied = false
+
       if (navigator.clipboard?.writeText) {
         try {
           await navigator.clipboard.writeText(finalText)
+
           copied = true
         } catch {
           copied = false
         }
       }
+
       if (!copied) {
         const textarea = document.createElement("textarea")
+
         textarea.value = finalText
+
         textarea.style.position = "fixed"
+
         textarea.style.opacity = "0"
+
         textarea.setAttribute("readonly", "")
+
         document.body.appendChild(textarea)
+
         textarea.focus()
+
         textarea.select()
+
         textarea.setSelectionRange(0, textarea.value.length)
+
         copied = document.execCommand("copy")
+
         textarea.remove()
       }
+
       if (!copied) throw new Error("copy-failed")
+
       setCopyMessage(uiText("문구와 확정 해시태그를 복사했어요.", easyMode))
     } catch {
       setCopyMessage(uiText("복사하지 못했어요. 다시 시도해 주세요.", easyMode))
@@ -1085,138 +1512,209 @@ function CreateFlow({
   const createPosterFile = async (download: boolean) => {
     if (!imageUrl) {
       setPosterStatus("failed")
+
       return null
     }
+
     setPosterStatus("preparing")
+
     try {
       const image = await loadCanvasImage(imageUrl)
+
       const canvas = document.createElement("canvas")
+
       canvas.width = 1080
+
       canvas.height = 1350
+
       const context = canvas.getContext("2d")
+
       if (!context) throw new Error("canvas-unavailable")
+
       drawImageCover(context, image, canvas.width, canvas.height)
+
       const gradient = context.createLinearGradient(0, 620, 0, 1350)
+
       gradient.addColorStop(0, "rgba(0,0,0,0)")
+
       gradient.addColorStop(0.35, "rgba(0,0,0,0.6)")
+
       gradient.addColorStop(1, "rgba(0,0,0,0.92)")
+
       context.fillStyle = gradient
+
       context.fillRect(0, 0, canvas.width, canvas.height)
+
       context.fillStyle = "#ffffff"
+
       context.font = '700 64px "Noto Sans KR", sans-serif'
+
       drawWrappedText(context, details.features, 76, 960, 928, 82, 3)
+
       context.font = '400 34px "Noto Sans KR", sans-serif'
+
       drawWrappedText(context, resultCopy[channel], 76, 1180, 928, 48, 3)
+
       const blob = await new Promise<Blob | null>((resolve) =>
         canvas.toBlob(resolve, "image/png"),
       )
+
       if (!blob || blob.size === 0) throw new Error("empty-png")
+
       const file = new File([blob], `hongboitda-poster-${Date.now()}.png`, {
         type: "image/png",
       })
+
       setPosterStatus("ready")
+
       if (download) triggerFileDownload(file)
+
       return file
     } catch {
       setPosterStatus("failed")
+
       return null
     }
   }
 
   const cancelVideoPreparation = () => {
     videoCancelledRef.current = true
+
     if (videoFrameRef.current !== null) {
       window.cancelAnimationFrame(videoFrameRef.current)
+
       videoFrameRef.current = null
     }
+
     if (videoRecorderRef.current?.state === "recording") {
       videoRecorderRef.current.stop()
     } else {
       setVideoStatus("cancelled")
+
       setVideoMessage(uiText("영상 준비를 취소했어요.", easyMode))
     }
   }
 
   const createVideoFile = async (download: boolean) => {
     const canvas = document.createElement("canvas")
+
     const captureStream = canvas.captureStream
+
     if (
       !imageUrl ||
       typeof captureStream !== "function" ||
       typeof window.MediaRecorder === "undefined"
     ) {
       setVideoStatus("unsupported")
+
       setVideoMessage(
         uiText("현재 브라우저에서는 예시 영상을 만들 수 없어요.", easyMode),
       )
+
       return null
     }
 
     const mimeCandidates = [
       "video/mp4;codecs=avc1",
+
       "video/mp4",
+
       "video/webm;codecs=vp9",
+
       "video/webm;codecs=vp8",
+
       "video/webm",
     ]
+
     const mimeType = mimeCandidates.find((candidate) =>
       MediaRecorder.isTypeSupported(candidate),
     )
+
     if (!mimeType) {
       setVideoStatus("unsupported")
+
       setVideoMessage(
         uiText(
           "이 브라우저에서 저장할 수 있는 영상 형식을 찾지 못했어요.",
+
           easyMode,
         ),
       )
+
       return null
     }
 
     setVideoStatus("preparing")
+
     setVideoMessage(uiText("확인용 예시 영상을 준비하고 있어요.", easyMode))
+
     videoCancelledRef.current = false
 
     try {
       const image = await loadCanvasImage(imageUrl)
+
       if (videoCancelledRef.current) {
         setVideoStatus("cancelled")
+
         setVideoMessage(uiText("영상 준비를 취소했어요.", easyMode))
+
         return null
       }
+
       canvas.width = 720
+
       canvas.height = 1280
+
       const context = canvas.getContext("2d")
+
       if (!context) throw new Error("canvas-unavailable")
+
       const stream = canvas.captureStream(30)
+
       const chunks: BlobPart[] = []
+
       const recorder = new MediaRecorder(stream, { mimeType })
+
       videoRecorderRef.current = recorder
 
       const result = await new Promise<File | null>((resolve, reject) => {
         recorder.ondataavailable = (event) => {
           if (event.data.size > 0) chunks.push(event.data)
         }
+
         recorder.onerror = () => reject(new Error("recording-failed"))
+
         recorder.onstop = () => {
           videoFrameRef.current = null
+
           stream.getTracks().forEach((track) => track.stop())
+
           videoRecorderRef.current = null
+
           if (videoCancelledRef.current) {
             setVideoStatus("cancelled")
+
             setVideoMessage(uiText("영상 준비를 취소했어요.", easyMode))
+
             resolve(null)
+
             return
           }
+
           const actualType = recorder.mimeType || mimeType
+
           const blob = new Blob(chunks, { type: actualType })
+
           if (blob.size === 0) {
             reject(new Error("empty-video"))
+
             return
           }
+
           const extension = actualType.toLowerCase().startsWith("video/mp4")
             ? "mp4"
             : "webm"
+
           resolve(
             new File([blob], `hongboitda-preview-${Date.now()}.${extension}`, {
               type: actualType,
@@ -1225,25 +1723,44 @@ function CreateFlow({
         }
 
         const startedAt = performance.now()
+
         const duration = 3000
+
         const drawFrame = (now: number) => {
           if (videoCancelledRef.current) return
+
           const progress = Math.min((now - startedAt) / duration, 1)
+
           context.save()
+
           context.clearRect(0, 0, canvas.width, canvas.height)
+
           const zoom = 1 + progress * 0.06
+
           context.translate(canvas.width / 2, canvas.height / 2)
+
           context.scale(zoom, zoom)
+
           context.translate(-canvas.width / 2, -canvas.height / 2)
+
           drawImageCover(context, image, canvas.width, canvas.height)
+
           context.restore()
+
           context.fillStyle = "rgba(0,0,0,0.48)"
+
           context.fillRect(0, 780, canvas.width, 500)
+
           context.fillStyle = "#ffffff"
+
           context.font = '700 44px "Noto Sans KR", sans-serif'
+
           drawWrappedText(context, details.features, 48, 900, 624, 60, 3)
+
           context.font = '400 26px "Noto Sans KR", sans-serif'
+
           drawWrappedText(context, resultCopy[channel], 48, 1110, 624, 38, 3)
+
           if (progress < 1) {
             videoFrameRef.current = window.requestAnimationFrame(drawFrame)
           } else if (recorder.state === "recording") {
@@ -1252,37 +1769,49 @@ function CreateFlow({
         }
 
         recorder.start(250)
+
         videoFrameRef.current = window.requestAnimationFrame(drawFrame)
       })
 
       if (!result) return null
+
       setVideoStatus("ready")
+
       const extension = result.name.endsWith(".mp4") ? "MP4" : "WebM"
+
       setVideoMessage(
         easyMode
           ? "확인용 예시 영상 파일이 준비됐어요."
           : `${extension} 확인용 예시 영상이 준비됐어요.`,
       )
+
       if (download) triggerFileDownload(result)
+
       return result
     } catch {
       setVideoStatus("failed")
+
       setVideoMessage(
         uiText("영상 준비에 실패했어요. 다시 시도해 주세요.", easyMode),
       )
+
       return null
     }
   }
 
   return (
-    <section className="mx-auto max-w-[920px]">
+    <section
+      className={`creation-flow mx-auto ${
+        step === 3 ? "results-flow" : "max-w-[920px]"
+      }`}
+    >
       <StepHeader step={step} easyMode={easyMode} />
       {step === 1 && continuationNotice && (
         <p className="mb-6 rounded-[12px] border border-[#dda77f] bg-[#fff8f3] px-4 py-3 text-[18px] font-bold text-[#7f340d]">
           입력한 사진과 설명을 이어서 사용해요.
         </p>
       )}
-      {type === "all" && step > 1 && (
+      {type === "all" && step === 2 && (
         <div className="mb-7">
           <p className="mb-2 text-[16px] font-bold text-[#545454]">
             {uiText("선택한 결과 형식", easyMode)}
@@ -1423,6 +1952,14 @@ function CreateFlow({
           <h3 className="mt-8 text-[20px] font-bold text-[#222222]">
             제품 사진을 올려 주세요
           </h3>
+          <p id="upload-help" className="mt-2 text-[#545454]">
+            20MB 이하의 JPG·PNG 등 사진 한 장을 선택하세요.
+          </p>
+          {uploadMessage && (
+            <p role="status" className="mt-2 font-bold text-[#7f340d]">
+              {uploadMessage}
+            </p>
+          )}
           <div className="mt-3 rounded-[22px] border-2 border-dashed border-[#817a74] bg-white p-5 sm:p-7">
             {imageUrl ? (
               <div className="grid items-center gap-6 sm:grid-cols-[220px_1fr]">
@@ -1444,6 +1981,7 @@ function CreateFlow({
                     사진 바꾸기
                     <input
                       type="file"
+                      aria-describedby="upload-help"
                       accept="image/*"
                       onChange={upload}
                       className="sr-only"
@@ -1462,6 +2000,7 @@ function CreateFlow({
                 </span>
                 <input
                   type="file"
+                  aria-describedby="upload-help"
                   accept="image/*"
                   onChange={upload}
                   className="sr-only"
@@ -1481,6 +2020,7 @@ function CreateFlow({
           <p className="rounded-[12px] border border-[#dda77f] bg-[#fff1e7] px-4 py-3 text-[18px] leading-7 text-[#7f340d]">
             {uiText(
               "아래 내용은 실제 AI 분석이 아닌 예시 초안입니다. 제품에 맞게 자유롭게 고쳐 주세요.",
+
               easyMode,
             )}
           </p>
@@ -1496,6 +2036,7 @@ function CreateFlow({
             <label className="block text-[18px] font-bold">
               제품 설명
               <textarea
+                aria-label="제품 설명"
                 value={details.description}
                 onChange={(event) =>
                   updateDetails({ ...details, description: event.target.value })
@@ -1533,8 +2074,10 @@ function CreateFlow({
                   onChange={(event) => {
                     setUserHashtagsByChannel({
                       ...safeUserHashtags,
+
                       [channel]: event.target.value,
                     })
+
                     onDraftTouched()
                   }}
                   rows={3}
@@ -1570,6 +2113,7 @@ function CreateFlow({
                 <p className="mt-4 text-[16px] text-[#545454]">
                   {uiText(
                     "‘추천으로 교체’를 누르면 위 작성란이 추천 후보로 바뀝니다.",
+
                     easyMode,
                   )}
                 </p>
@@ -1578,6 +2122,7 @@ function CreateFlow({
                     onClick={() =>
                       setRecommendedHashtagsByChannel({
                         ...safeRecommendations,
+
                         [channel]: makeHashtags(channel, details).join(" "),
                       })
                     }
@@ -1589,8 +2134,10 @@ function CreateFlow({
                     onClick={() => {
                       setUserHashtagsByChannel({
                         ...safeUserHashtags,
+
                         [channel]: safeRecommendations[channel],
                       })
+
                       onDraftTouched()
                     }}
                     className="min-h-12 rounded-[12px] border-2 border-[#c64f12] bg-white px-4 text-[16px] font-bold text-[#9f3e0d]"
@@ -1609,12 +2156,20 @@ function CreateFlow({
               이전으로
             </button>
             <div className="mobile-primary-bar">
+              {missingFields.length > 0 && (
+                <p
+                  id="missing-details"
+                  role="status"
+                  className="mb-2 text-[#7f340d]"
+                >
+                  {missingFields.join(", ")}을 입력하면 다음으로 갈 수 있어요.
+                </p>
+              )}
               <PrimaryButton
-                disabled={
-                  !details.description || !details.features || !details.audience
-                }
+                disabled={missingFields.length > 0}
                 onClick={() => {
                   onResultCreated()
+
                   setStep(3)
                 }}
               >
@@ -1626,17 +2181,82 @@ function CreateFlow({
       )}
       {step === 3 && (
         <div>
-          <p className="mb-3 inline-flex rounded-full border border-[#c64f12] bg-[#fff1e7] px-4 py-2 text-[16px] font-bold text-[#7f340d]">
-            확인용 미리보기 · 자동 생성 예시예요
-          </p>
+          <div className="result-summary">
+            <span className="result-check" aria-hidden="true">
+              ✓
+            </span>
+            <div>
+              <strong>
+                {[showPoster, showCopy, showVideo].filter(Boolean).length}개의
+                홍보물을 확인해 보세요
+              </strong>
+              <p>
+                지금은 사진과 입력한 내용으로 만든 예시예요. 마음에 들면
+                아래에서 저장하세요.
+              </p>
+            </div>
+          </div>
           <p className="mt-2 text-[16px] text-[#545454]">
             {uiText(channelNames[channel], easyMode)}에 어울리는 말투로 구성한
             미리보기입니다.
           </p>
-          <div className="mt-7 grid gap-5 lg:grid-cols-2">
+          <nav className="result-jump-links" aria-label="결과 종류로 이동">
             {showPoster && (
-              <article className="overflow-hidden rounded-[22px] border border-[#dedbd7] bg-white">
-                <div className="relative aspect-[4/5] bg-[#2b2b2b]">
+              <a
+                href="#result-poster"
+                onClick={(event) => {
+                  event.preventDefault()
+                  jumpToResult("poster-title")
+                }}
+              >
+                포스터 보기 ↓
+              </a>
+            )}
+            {showCopy && (
+              <a
+                href="#result-copy"
+                onClick={(event) => {
+                  event.preventDefault()
+                  jumpToResult("copy-title")
+                }}
+              >
+                홍보 글 보기 ↓
+              </a>
+            )}
+            {showVideo && (
+              <a
+                href="#result-video"
+                onClick={(event) => {
+                  event.preventDefault()
+                  jumpToResult("video-title")
+                }}
+              >
+                영상 보기 ↓
+              </a>
+            )}
+          </nav>
+          <div
+            className="result-grid mt-7"
+            data-result-count={
+              [showPoster, showCopy, showVideo].filter(Boolean).length
+            }
+          >
+            {showPoster && (
+              <article
+                id="result-poster"
+                aria-labelledby="poster-title"
+                className="result-card result-poster overflow-hidden rounded-[22px] border border-[#dedbd7] bg-white"
+              >
+                <div className="result-card-heading">
+                  <span aria-hidden="true">🖼️</span>
+                  <div>
+                    <h3 id="poster-title" tabIndex={-1}>
+                      포스터
+                    </h3>
+                    <p>사진과 글을 한 장에 담았어요</p>
+                  </div>
+                </div>
+                <div className="result-media relative aspect-[4/5] bg-[#2b2b2b]">
                   <img
                     src={imageUrl}
                     alt={
@@ -1661,7 +2281,7 @@ function CreateFlow({
                 <p className="p-4 text-center text-[16px] font-bold text-[#545454]">
                   {uiText("포스터 미리보기", easyMode)}
                 </p>
-                <div className="border-t border-[#dedbd7] p-4">
+                <div className="result-card-actions border-t border-[#dedbd7] p-4">
                   <button
                     onClick={() => void createPosterFile(true)}
                     disabled={posterStatus === "preparing"}
@@ -1671,7 +2291,7 @@ function CreateFlow({
                       ? "사진을 준비하고 있어요"
                       : easyMode
                         ? "포스터 저장"
-                        : "포스터 다운로드"}
+                        : "포스터 저장하기"}
                   </button>
                   {posterStatus === "ready" && (
                     <p className="mt-2 text-[16px] text-[#545454]">
@@ -1687,7 +2307,20 @@ function CreateFlow({
               </article>
             )}
             {showCopy && (
-              <article className="rounded-[22px] border border-[#dedbd7] bg-white p-6">
+              <article
+                id="result-copy"
+                aria-labelledby="copy-title"
+                className="result-card result-copy rounded-[22px] border border-[#dedbd7] bg-white p-6"
+              >
+                <div className="result-card-heading">
+                  <span aria-hidden="true">✍️</span>
+                  <div>
+                    <h3 id="copy-title" tabIndex={-1}>
+                      홍보 글
+                    </h3>
+                    <p>복사해서 원하는 곳에 붙여 넣으세요</p>
+                  </div>
+                </div>
                 <span className="rounded-full bg-[#fff1e7] px-3 py-1.5 text-[16px] font-bold text-[#2b2b2b]">
                   {uiText(channelNames[channel], easyMode)} 문구
                 </span>
@@ -1700,7 +2333,7 @@ function CreateFlow({
                     {uiText("확정 해시태그", easyMode)}
                   </strong>
                   <p className="mt-1 text-[16px] leading-6 text-[#626262]">
-                    2단계에서 사용자가 확인하고 수정한 값입니다.
+                    아래 검색어도 홍보 글과 함께 복사돼요.
                   </p>
                   <div className="mt-3 flex flex-wrap gap-2">
                     {hashtags.map((tag) => (
@@ -1715,9 +2348,9 @@ function CreateFlow({
                 </div>
                 <button
                   onClick={() => void copyFinalText()}
-                  className="mt-6 min-h-12 w-full rounded-[12px] border-2 border-[#817a74] bg-white px-4 font-bold text-[#2b2b2b]"
+                  className="result-copy-action mt-6 min-h-12 w-full rounded-[12px] border-2 border-[#817a74] bg-white px-4 font-bold text-[#2b2b2b]"
                 >
-                  문구와 {uiText("해시태그", easyMode)} 복사
+                  홍보 글 전체 복사하기
                 </button>
                 {copyMessage && (
                   <p
@@ -1730,8 +2363,21 @@ function CreateFlow({
               </article>
             )}
             {showVideo && (
-              <article className="rounded-[22px] border border-[#dedbd7] bg-white p-5">
-                <div className="relative mx-auto aspect-[9/16] max-h-[520px] overflow-hidden rounded-[18px] bg-[#2b2b2b]">
+              <article
+                id="result-video"
+                aria-labelledby="video-title"
+                className="result-card result-video rounded-[22px] border border-[#dedbd7] bg-white p-5"
+              >
+                <div className="result-card-heading">
+                  <span aria-hidden="true">🎬</span>
+                  <div>
+                    <h3 id="video-title" tabIndex={-1}>
+                      영상
+                    </h3>
+                    <p>움직이는 예시를 먼저 확인하세요</p>
+                  </div>
+                </div>
+                <div className="result-media relative mx-auto aspect-[9/16] max-h-[520px] overflow-hidden rounded-[18px] bg-[#2b2b2b]">
                   <img
                     src={imageUrl}
                     alt=""
@@ -1759,7 +2405,7 @@ function CreateFlow({
                 <p className="mt-4 text-center text-[16px] leading-5 text-[#626262]">
                   AI 없이 사진과 문구로 만든 확인용 예시 영상입니다.
                 </p>
-                <div className="mt-4">
+                <div className="result-card-actions mt-4">
                   {videoStatus === "preparing" ? (
                     <button
                       onClick={cancelVideoPreparation}
@@ -1772,7 +2418,7 @@ function CreateFlow({
                       onClick={() => void createVideoFile(true)}
                       className="min-h-12 w-full rounded-[12px] border-2 border-[#817a74] bg-white px-4 font-bold text-[#2b2b2b]"
                     >
-                      {uiText("영상 다운로드", easyMode)}
+                      영상 저장하기
                     </button>
                   )}
                   {videoMessage && (
@@ -1806,9 +2452,12 @@ function CreateFlow({
               >
                 새 홍보물 만들기
               </button>
-              <PrimaryButton onClick={onDashboard}>
-                {uiText("대시보드로 돌아가기", easyMode)}
-              </PrimaryButton>
+              <button
+                onClick={onDashboard}
+                className="min-h-13 rounded-[14px] border border-[#817a74] bg-white px-7 font-bold"
+              >
+                홈으로 돌아가기
+              </button>
             </div>
           </div>
         </div>
@@ -1819,20 +2468,31 @@ function CreateFlow({
 
 function Records({
   easyMode,
+
   records,
+
   onOpen,
 }: {
   easyMode: boolean
+
   records: GeneratedRecord[]
+
   onOpen: (record: GeneratedRecord) => void
 }) {
   return (
     <section>
+      {records.length > 0 && (
+        <p className="mb-5 rounded-[14px] border border-[#e3d8ce] bg-[#fff8ed] p-4">
+          새로고침하거나 창을 닫으면 기록이 사라져요. 필요한 파일을 먼저 저장해
+          주세요.
+        </p>
+      )}
       {records.length === 0 ? (
         <div className="rounded-[18px] border border-[#dedbd7] bg-white p-7 text-center">
           <strong className="text-[20px]">아직 만든 결과가 없어요</strong>
           <p className="mt-2 text-[16px] text-[#545454]">
-            홍보물을 만들면 종류와 날짜를 이 앱 안에서 다시 볼 수 있어요.
+            이 창에서 만든 홍보물을 다시 볼 수 있어요. 새로고침하거나 창을
+            닫으면 기록이 사라지니 파일을 먼저 저장하세요.
           </p>
         </div>
       ) : (
@@ -1868,6 +2528,7 @@ function Plan({ easyMode }: { easyMode: boolean }) {
   const [selected, setSelected] = useState<"subscription" | "single">(
     "subscription",
   )
+
   return (
     <section className="mx-auto max-w-[900px]">
       <h2 className="text-[26px] font-bold">
@@ -1876,12 +2537,14 @@ function Plan({ easyMode }: { easyMode: boolean }) {
       <p className="mt-2 text-[16px] leading-7 text-[#545454]">
         {uiText(
           "현재는 구조를 확인하는 프로토타입이며, 가격과 제공 수량은 아직 정해지지 않았습니다.",
+
           easyMode,
         )}
       </p>
       <div className="mt-7 grid gap-4 sm:grid-cols-2">
         {[
           ["subscription", "구독으로 이용", "꾸준히 홍보물을 만드는 사장님께"],
+
           ["single", "건당 이용", "필요할 때 한 번씩 만드는 사장님께"],
         ].map(([value, title, note]) => (
           <button
@@ -1919,24 +2582,41 @@ function Plan({ easyMode }: { easyMode: boolean }) {
 
 export default function App() {
   const [page, setPage] = useState<Page>("login")
+
   const [creationType, setCreationType] = useState<CreationType>("all")
+
   const [allOutputFormat, setAllOutputFormat] = useState<OutputFormat>("both")
+
   const [step, setStep] = useState<Step>(1)
+
   const [channel, setChannel] = useState<Channel>("instagram")
+
   const [imageUrl, setImageUrl] = useState("")
+
   const [mobileOpen, setMobileOpen] = useState(false)
+
   const [details, setDetails] = useState(initialDetails)
+
   const [recommendedHashtagsByChannel, setRecommendedHashtagsByChannel] =
     useState<Record<Channel, string> | undefined>(initialHashtagValues)
+
   const [userHashtagsByChannel, setUserHashtagsByChannel] =
     useState<Record<Channel, string> | undefined>(initialHashtagValues)
+
   const [userTouched, setUserTouched] = useState(false)
+
   const [continuationNotice, setContinuationNotice] = useState(false)
+
   const [records, setRecords] = useState<GeneratedRecord[]>([])
+
   const [easyMode, setEasyModeState] = useState(false)
+
   const [speaking, setSpeaking] = useState(false)
+
   const [speechPreparing, setSpeechPreparing] = useState(false)
+
   const [speechMessage, setSpeechMessage] = useState("")
+
   const speechRequestRef = useRef(0)
 
   const outputFormat: OutputFormat =
@@ -1945,12 +2625,16 @@ export default function App() {
       : creationType === "video"
         ? "video"
         : "poster"
+
   const safeRecommendedHashtags = normalizeHashtagValues(
     recommendedHashtagsByChannel,
+
     details,
   )
+
   const safeUserHashtags = normalizeHashtagValues(
     userHashtagsByChannel,
+
     details,
   )
 
@@ -1958,6 +2642,7 @@ export default function App() {
     setRecommendedHashtagsByChannel((current) =>
       normalizeHashtagValues(current, initialDetails),
     )
+
     setUserHashtagsByChannel((current) =>
       normalizeHashtagValues(current, initialDetails),
     )
@@ -1967,79 +2652,104 @@ export default function App() {
     () => () => {
       if (imageUrl.startsWith("blob:")) URL.revokeObjectURL(imageUrl)
     },
+
     [imageUrl],
   )
 
   useEffect(() => {
     speechRequestRef.current += 1
+
     if ("speechSynthesis" in window) {
       const synthesis = window.speechSynthesis
+
       if (synthesis.speaking || synthesis.pending || synthesis.paused) {
         synthesis.cancel()
       }
     }
+
     setSpeaking(false)
+
     setSpeechPreparing(false)
+
     setSpeechMessage("")
+
     window.requestAnimationFrame(() => {
       const scrollingElement = document.scrollingElement
+
       if (scrollingElement) scrollingElement.scrollTop = 0
+
       window.scrollTo({ top: 0, left: 0, behavior: "auto" })
+
       const appMain = document.querySelector<HTMLElement>(
         "[data-app-scroll-container]",
       )
+
       if (appMain) appMain.scrollTop = 0
     })
   }, [page, step, creationType])
 
   const setEasyMode = (enabled: boolean) => {
     setEasyModeState(enabled)
+
     if (!enabled) {
       speechRequestRef.current += 1
+
       if ("speechSynthesis" in window) {
         const synthesis = window.speechSynthesis
+
         if (synthesis.speaking || synthesis.pending || synthesis.paused) {
           synthesis.cancel()
         }
       }
+
       setSpeaking(false)
+
       setSpeechPreparing(false)
+
       setSpeechMessage("")
     }
   }
 
   const speechText = (() => {
     const speakUi = (text: string) => uiText(text, easyMode)
+
     if (page === "login") {
       return "이메일과 비밀번호를 입력하고 로그인하거나, 바로 시작하기 버튼을 누르세요."
     }
+
     if (page === "home") {
       return easyMode
         ? "첫 화면입니다. 사진 한 장으로 홍보물을 만들어 보세요. 1단계, 사진 넣기. 홍보할 제품 사진을 넣어 주세요. 2단계, 설명과 검색어 확인. 정리된 설명과 추천 검색어를 확인하고 고쳐 주세요. 3단계, 홍보물 만들기. 고른 홍보물을 만들고 결과를 확인해 주세요. 홍보물 만들기 시작 버튼을 누르면 1단계로 이동합니다."
         : "메인 대시보드입니다. 사진 한 장으로 홍보물을 만들어 보세요. 1단계, 사진 넣기. 홍보할 제품 사진을 넣어 주세요. 2단계, 설명과 해시태그 확인. 정리된 설명과 추천 해시태그를 확인하고 고쳐 주세요. 3단계, 홍보물 만들기. 선택한 홍보물을 만들고 결과를 확인해 주세요. 홍보물 만들기 시작 버튼을 누르면 1단계로 이동합니다."
     }
+
     if (page === "records") {
       return "최근 생성 기록 화면입니다. 이 앱에서 만든 결과의 종류와 날짜를 확인하고 다시 열 수 있습니다."
     }
+
     if (page === "plan") {
       return easyMode
         ? "이용 방법 화면입니다. 매달 이용하거나 필요할 때 이용하는 방법을 고를 수 있으며, 가격과 만들 수 있는 수량은 아직 정해지지 않았습니다."
         : "이용권 화면입니다. 구독으로 이용하거나 건당 이용하는 구조를 선택할 수 있으며, 가격과 수량은 아직 정해지지 않았습니다."
     }
+
     if (step === 1) {
       const format =
         creationType === "all"
           ? `${speakUi(outputFormatNames[allOutputFormat])}와 홍보 문구`
           : speakUi(creationNames[creationType])
+
       return `${speakUi(creationNames[creationType])} 1단계입니다. ${speakUi("현재 결과 형식")}은 ${format}, ${speakUi("채널")}은 ${speakUi(channelNames[channel])}입니다. ${
         imageUrl
           ? "제품 사진이 준비되었습니다. 다음 버튼을 누르세요."
           : "제품 사진을 올려 주세요."
       }`
     }
+
     if (step === 2) {
       return `${speakUi("2단계 제품 정보와 해시태그 확인 화면입니다.")} 제품 설명은 ${details.description}. 강조할 특징은 ${details.features}. 주요 고객은 ${details.audience}입니다. ${speakUi("사용자가 입력한 확정 해시태그")}는 ${parseHashtags(safeUserHashtags[channel]).join(", ")}입니다. 각 입력값을 직접 고친 뒤 결과 보기 버튼을 누르세요.`
     }
+
     return `3단계 결과 화면입니다. ${speakUi(channelNames[channel])}용 ${speakUi(creationNames[creationType])} 결과입니다. 제품 설명은 ${details.description}. 강조 특징은 ${details.features}. ${speakUi("확정 해시태그")}는 ${parseHashtags(safeUserHashtags[channel]).join(", ")}입니다.`
   })()
 
@@ -2049,42 +2759,62 @@ export default function App() {
       typeof window.SpeechSynthesisUtterance === "undefined"
     ) {
       setSpeaking(false)
+
       setSpeechPreparing(false)
+
       setSpeechMessage(
         uiText("현재 브라우저에서 읽어주기를 사용할 수 없어요.", easyMode),
       )
+
       return
     }
 
     const synthesis = window.speechSynthesis
+
     if (speaking || speechPreparing) {
       speechRequestRef.current += 1
+
       if (synthesis.speaking || synthesis.pending || synthesis.paused) {
         synthesis.cancel()
       }
+
       setSpeaking(false)
+
       setSpeechPreparing(false)
+
       setSpeechMessage("")
+
       return
     }
 
     const requestId = speechRequestRef.current + 1
+
     speechRequestRef.current = requestId
+
     setSpeechPreparing(true)
+
     setSpeechMessage("읽어주기를 준비하고 있어요.")
 
     let voices = synthesis.getVoices()
+
     if (voices.length === 0) {
       voices = await new Promise<SpeechSynthesisVoice[]>((resolve) => {
         let settled = false
+
         const finish = () => {
           if (settled) return
+
           settled = true
+
           synthesis.removeEventListener("voiceschanged", finish)
+
           window.clearTimeout(timeoutId)
+
           resolve(synthesis.getVoices())
         }
+
         const timeoutId = window.setTimeout(finish, 1500)
+
         synthesis.addEventListener("voiceschanged", finish, { once: true })
       })
     }
@@ -2096,13 +2826,19 @@ export default function App() {
     }
 
     const utterance = new SpeechSynthesisUtterance(speechText)
+
     utterance.lang = "ko-KR"
+
     utterance.rate = 0.9
+
     utterance.pitch = 1
+
     utterance.volume = 1
+
     const koreanVoice = voices.find((voice) =>
       voice.lang.toLowerCase().startsWith("ko"),
     )
+
     if (koreanVoice) {
       utterance.voice = koreanVoice
     }
@@ -2114,7 +2850,9 @@ export default function App() {
         !synthesis.pending
       ) {
         setSpeaking(false)
+
         setSpeechPreparing(false)
+
         setSpeechMessage(
           "일시적으로 읽어주기를 시작하지 못했어요. 다시 눌러 시도해 주세요.",
         )
@@ -2123,24 +2861,39 @@ export default function App() {
 
     utterance.onstart = () => {
       if (speechRequestRef.current !== requestId) return
+
       window.clearTimeout(startTimeoutId)
+
       setSpeechPreparing(false)
+
       setSpeaking(true)
+
       setSpeechMessage("")
     }
+
     utterance.onend = () => {
       if (speechRequestRef.current !== requestId) return
+
       window.clearTimeout(startTimeoutId)
+
       setSpeaking(false)
+
       setSpeechPreparing(false)
+
       setSpeechMessage("")
     }
+
     utterance.onerror = (event) => {
       if (speechRequestRef.current !== requestId) return
+
       window.clearTimeout(startTimeoutId)
+
       setSpeaking(false)
+
       setSpeechPreparing(false)
+
       if (event.error === "canceled" || event.error === "interrupted") return
+
       setSpeechMessage(
         "일시적으로 읽어주기를 시작하지 못했어요. 화면을 한 번 누른 뒤 다시 시도해 주세요.",
       )
@@ -2150,8 +2903,11 @@ export default function App() {
       synthesis.speak(utterance)
     } catch {
       window.clearTimeout(startTimeoutId)
+
       setSpeaking(false)
+
       setSpeechPreparing(false)
+
       setSpeechMessage(
         "일시적으로 읽어주기를 시작하지 못했어요. 다시 눌러 시도해 주세요.",
       )
@@ -2161,56 +2917,88 @@ export default function App() {
   const navigate = (nextPage: Page, type?: CreationType) => {
     if (type) {
       setCreationType(type)
+
       setStep(1)
+
       setContinuationNotice(Boolean(imageUrl) || userTouched)
     }
+
     setPage(nextPage)
+
     setMobileOpen(false)
   }
 
   const startNew = () => {
     setImageUrl("")
+
     setDetails({ ...initialDetails })
+
     setRecommendedHashtagsByChannel(initialHashtagValues())
+
     setUserHashtagsByChannel(initialHashtagValues())
+
     setUserTouched(false)
+
     setContinuationNotice(false)
+
     setStep(1)
+
     setPage("create")
   }
 
   const saveCurrentResult = () => {
     const record: GeneratedRecord = {
       id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+
       createdAt: new Intl.DateTimeFormat("ko-KR", {
         month: "long",
+
         day: "numeric",
+
         hour: "2-digit",
+
         minute: "2-digit",
       }).format(new Date()),
+
       type: creationType,
+
       outputFormat,
+
       channel,
+
       imageUrl,
+
       details: { ...details },
+
       userHashtags: { ...safeUserHashtags },
     }
+
     setRecords((current) => [record, ...current])
   }
 
   const openRecord = (record: GeneratedRecord) => {
     setCreationType(record.type)
+
     if (record.type === "all") setAllOutputFormat(record.outputFormat)
+
     setChannel(record.channel)
+
     setImageUrl(record.imageUrl)
+
     setDetails({ ...record.details })
+
     setUserHashtagsByChannel(
       normalizeHashtagValues(record.userHashtags, record.details),
     )
+
     setRecommendedHashtagsByChannel(initialHashtagValues(record.details))
+
     setUserTouched(true)
+
     setContinuationNotice(false)
+
     setStep(3)
+
     setPage("create")
   }
 
@@ -2229,8 +3017,11 @@ export default function App() {
 
   const titles: Record<Exclude<Page, "login">, string> = {
     home: "메인 대시보드",
+
     create: creationNames[creationType],
+
     records: "최근 생성 기록",
+
     plan: "이용권",
   }
 
@@ -2250,12 +3041,11 @@ export default function App() {
       speechMessage={speechMessage}
       onLogout={() => {
         setMobileOpen(false)
+
         setPage("login")
       }}
     >
-      {page === "home" && (
-        <Home navigate={navigate} easyMode={easyMode} />
-      )}
+      {page === "home" && <Home navigate={navigate} easyMode={easyMode} />}
       {page === "create" && (
         <CreateFlow
           type={creationType}
