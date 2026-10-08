@@ -35,6 +35,14 @@
 .studio-guide-action p { margin-top:6px; }
 .studio-start-guide .studio-guide-action { background:#e3ebdc; }
 .studio-shell .channel-tone-guide { margin-top:16px; padding:18px; border:1px solid #c9d7c1; border-radius:16px; background:#edf2e8; color:#354e3f; }
+.optional-hashtags summary { min-height:48px; padding:8px 0; font-size:19px; font-weight:700; color:#3f6559; cursor:pointer; }
+.optional-hashtags .optional-hashtag-note { margin:12px 0 18px; color:#686057; }
+.current-hashtag-preview { display:block; margin-top:6px; font-size:16px; font-weight:400; color:#686057; overflow-wrap:anywhere; }
+.easy-mode .current-hashtag-preview { font-size:18px; }
+.easy-mode .optional-hashtags summary { min-height:60px; font-size:22px; }
+.optional-hashtags summary:focus-visible { outline:3px solid #b46740; outline-offset:4px; }
+.draft-undo-notice { padding:18px; margin:0 0 24px; border:1px solid #c3d0b9; border-radius:16px; background:#e9f0e1; }
+.draft-undo-notice button { min-height:48px; margin-top:12px; padding:10px 16px; border:1px solid #78907c; border-radius:10px; font-weight:700; color:#345042; background:#fffefb; }
 @media(max-width:1100px) { .studio-guide-steps {grid-template-columns:1fr;gap:12px;} }
 @media(max-width:767px) {
  .studio-start-guide {padding:24px 18px;border-radius:24px;}

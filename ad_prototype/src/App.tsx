@@ -26,6 +26,7 @@ type OutputFormat = "poster" | "video" | "both"
 type FileStatus = "idle" | "preparing" | "ready" | "cancelled" | "failed" | "unsupported"
 
 type GeneratedRecord = {
+  editedHashtags?: Record<Channel, boolean>
   id: string
 
   createdAt: string
@@ -47,6 +48,18 @@ type GeneratedRecord = {
   }
 
   userHashtags: Record<Channel, string>
+}
+type DraftSnapshot = {
+  editedHashtags: Record<Channel, boolean>
+  type: CreationType
+  format: OutputFormat
+  step: Step
+  channel: Channel
+  imageUrl: string
+  details: GeneratedRecord["details"]
+  recommendations: Record<Channel, string>
+  hashtags: Record<Channel, string>
+  touched: boolean
 }
 
 const creationNames: Record<CreationType, string> = {
@@ -711,6 +724,8 @@ function CreateFlow({
   onDashboard,
 
   onStartNew,
+  canUndoReset,
+  onUndoReset,
 }: {
   type: CreationType
 
@@ -765,6 +780,8 @@ function CreateFlow({
   onDashboard: () => void
 
   onStartNew: () => void
+  canUndoReset: boolean
+  onUndoReset: () => void
 }) {
   const [playing, setPlaying] = useState(false)
 
@@ -1294,6 +1311,14 @@ function CreateFlow({
       }`}
     >
       <StepHeader step={step} easyMode={easyMode} />
+      {step === 1 && canUndoReset && (
+        <div className="draft-undo-notice" role="status">
+          <p>
+            새 작업을 시작했어요. 이전 사진과 입력 내용은 아직 되돌릴 수 있어요.
+          </p>
+          <button onClick={onUndoReset}>이전 내용 되돌리기</button>
+        </div>
+      )}
       {step === 1 && continuationNotice && (
         <p className="mb-6 rounded-[12px] border border-[#dda77f] bg-[#fff8f3] px-4 py-3 text-[18px] font-bold text-[#7f340d]">
           입력한 사진과 설명을 이어서 사용해요.
@@ -1566,10 +1591,22 @@ function CreateFlow({
                 className="mt-2 w-full rounded-[12px] border-2 border-[#817a74] p-4 text-[18px] font-normal outline-none focus:border-[#c64f12] focus:ring-3 focus:ring-[#c64f12]/15"
               />
             </label>
-            <div className="rounded-[14px] border-2 border-[#817a74] bg-white p-4">
+            <details className="optional-hashtags rounded-[14px] border border-[#817a74] bg-white p-4">
+              <summary>
+                검색어(#) 수정하기 · 선택
+                <span className="current-hashtag-preview">
+                  현재: {hashtags.slice(0, 2).join(" ")}
+                  {hashtags.length > 2 ? ` 외 ${hashtags.length - 2}개` : ""}
+                </span>
+              </summary>
+              <p className="optional-hashtag-note">
+                기본 검색어는 설명에 맞춰 갱신해요. 직접 고친 검색어는 그대로
+                유지돼요.
+              </p>
               <label className="block text-[18px] font-bold">
                 {uiText("사용할 해시태그 직접 수정", easyMode)}
                 <textarea
+                  aria-label={uiText("사용할 해시태그 직접 수정", easyMode)}
                   value={safeUserHashtags[channel]}
                   onChange={(event) => {
                     setUserHashtagsByChannel({
@@ -1646,7 +1683,7 @@ function CreateFlow({
                   </button>
                 </div>
               </div>
-            </div>
+            </details>
           </div>
           <div className="mt-7 flex flex-col-reverse gap-3 sm:flex-row sm:justify-between">
             <button
@@ -2185,6 +2222,14 @@ export default function App() {
   const [records, setRecords] = useState<GeneratedRecord[]>([])
 
   const [easyMode, setEasyModeState] = useState(true)
+  const [undoDraft, setUndoDraft] = useState<DraftSnapshot | null>(null)
+  const [editedHashtags, setEditedHashtags] =
+    useState<Record<Channel, boolean>>({
+      instagram: false,
+      x: false,
+      threads: false,
+    })
+  const [draftRestoreMessage, setDraftRestoreMessage] = useState("")
 
   const [speaking, setSpeaking] = useState(false)
 
@@ -2507,6 +2552,20 @@ export default function App() {
   }
 
   const startNew = () => {
+    setUndoDraft({
+      type: creationType,
+      format: allOutputFormat,
+      step,
+      channel,
+      imageUrl,
+      details: { ...details },
+      recommendations: { ...safeRecommendedHashtags },
+      hashtags: { ...safeUserHashtags },
+      touched: userTouched,
+      editedHashtags: { ...editedHashtags },
+    })
+    setEditedHashtags({ instagram: false, x: false, threads: false })
+    setDraftRestoreMessage("")
     setImageUrl("")
 
     setDetails({ ...initialDetails })
@@ -2526,6 +2585,7 @@ export default function App() {
 
   const saveCurrentResult = () => {
     const record: GeneratedRecord = {
+      editedHashtags: { ...editedHashtags },
       id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
 
       createdAt: new Intl.DateTimeFormat("ko-KR", {
@@ -2553,8 +2613,30 @@ export default function App() {
 
     setRecords((current) => [record, ...current])
   }
+  const restoreDraft = () => {
+    if (!undoDraft) return
+    setCreationType(undoDraft.type)
+    setAllOutputFormat(undoDraft.format)
+    setChannel(undoDraft.channel)
+    setImageUrl(undoDraft.imageUrl)
+    setDetails({ ...undoDraft.details })
+    setRecommendedHashtagsByChannel({ ...undoDraft.recommendations })
+    setUserHashtagsByChannel({ ...undoDraft.hashtags })
+    setUserTouched(undoDraft.touched)
+    setEditedHashtags({ ...undoDraft.editedHashtags })
+    setDraftRestoreMessage("이전 사진과 입력 내용을 되돌렸어요.")
+    setContinuationNotice(false)
+    setStep(undoDraft.step)
+    setPage("create")
+    setUndoDraft(null)
+  }
 
   const openRecord = (record: GeneratedRecord) => {
+    setUndoDraft(null)
+    setDraftRestoreMessage("")
+    setEditedHashtags(
+      record.editedHashtags ?? { instagram: true, x: true, threads: true },
+    )
     setCreationType(record.type)
 
     if (record.type === "all") setAllOutputFormat(record.outputFormat)
@@ -2618,11 +2700,23 @@ export default function App() {
       onSpeak={toggleSpeech}
       speechMessage={speechMessage}
       onLogout={() => {
+        setUndoDraft(null)
+        setDraftRestoreMessage("")
         setMobileOpen(false)
 
         setPage("login")
       }}
     >
+      <p
+        role="status"
+        className={
+          draftRestoreMessage && page === "create"
+            ? "draft-undo-notice"
+            : "sr-only"
+        }
+      >
+        {page === "create" ? draftRestoreMessage : ""}
+      </p>
       {page === "home" && <Home navigate={navigate} easyMode={easyMode} />}
       {page === "create" && (
         <CreateFlow
@@ -2630,23 +2724,58 @@ export default function App() {
           step={step}
           setStep={setStep}
           channel={channel}
-          setChannel={setChannel}
+          setChannel={(next) => {
+            setChannel(next)
+            setUndoDraft(null)
+            setDraftRestoreMessage("")
+          }}
           imageUrl={imageUrl}
           setImageUrl={setImageUrl}
           details={details}
-          setDetails={setDetails}
+          setDetails={(next) => {
+            setDetails(next)
+            const recommendations = initialHashtagValues(next)
+            setRecommendedHashtagsByChannel(recommendations)
+            setUserHashtagsByChannel((current) => {
+              const existing = normalizeHashtagValues(current, next)
+              return {
+                instagram: editedHashtags.instagram
+                  ? existing.instagram
+                  : recommendations.instagram,
+                x: editedHashtags.x ? existing.x : recommendations.x,
+                threads: editedHashtags.threads
+                  ? existing.threads
+                  : recommendations.threads,
+              }
+            })
+            setDraftRestoreMessage("")
+          }}
           recommendedHashtagsByChannel={safeRecommendedHashtags}
           setRecommendedHashtagsByChannel={setRecommendedHashtagsByChannel}
           userHashtagsByChannel={safeUserHashtags}
-          setUserHashtagsByChannel={setUserHashtagsByChannel}
+          setUserHashtagsByChannel={(next) => {
+            setUserHashtagsByChannel(next)
+            setEditedHashtags((current) => ({ ...current, [channel]: true }))
+            setDraftRestoreMessage("")
+          }}
           outputFormat={outputFormat}
-          setOutputFormat={setAllOutputFormat}
+          setOutputFormat={(next) => {
+            setAllOutputFormat(next)
+            setUndoDraft(null)
+            setDraftRestoreMessage("")
+          }}
           continuationNotice={continuationNotice}
-          onDraftTouched={() => setUserTouched(true)}
+          onDraftTouched={() => {
+            setUserTouched(true)
+            setUndoDraft(null)
+            setDraftRestoreMessage("")
+          }}
           easyMode={easyMode}
           onResultCreated={saveCurrentResult}
           onDashboard={() => navigate("home")}
           onStartNew={startNew}
+          canUndoReset={undoDraft !== null}
+          onUndoReset={restoreDraft}
         />
       )}
       {page === "records" && (
