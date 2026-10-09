@@ -1,0 +1,55 @@
+{
+  "source": "https://raw.githubusercontent.com/notofonts/noto-cjk/main/Sans/OTF/Korean/NotoSansCJKkr-Bold.otf",
+  "names": {
+    "windows": {
+      "copyright": {
+        "en": "© 2014-2021 Adobe (http://www.adobe.com/)."
+      },
+      "fontFamily": {
+        "en": "Noto Sans CJK KR",
+        "ko": "Noto Sans CJK KR"
+      },
+      "fontSubfamily": {
+        "en": "Bold",
+        "ko": "Bold"
+      },
+      "uniqueID": {
+        "en": "2.004;GOOG;NotoSansCJKkr-Bold;ADOBE"
+      },
+      "fullName": {
+        "en": "Noto Sans CJK KR Bold",
+        "ko": "Noto Sans CJK KR Bold"
+      },
+      "version": {
+        "en": "Version 2.004;hotconv 1.0.118;makeotfexe 2.5.65603"
+      },
+      "postScriptName": {
+        "en": "NotoSansCJKkr-Bold"
+      },
+      "trademark": {
+        "en": "Noto is a trademark of Google Inc."
+      },
+      "manufacturer": {
+        "en": "Adobe"
+      },
+      "designer": {
+        "en": "Ryoko NISHIZUKA 西塚涼子 (kana, bopomofo & ideographs); Paul D. Hunt (Latin, Greek & Cyrillic); Sandoll Communications 산돌커뮤니케이션, Soo-young JANG 장수영 & Joo-yeon KANG 강주연 (hangul elements, letters & syllables)"
+      },
+      "description": {
+        "en": "Dr. Ken Lunde (project architect, glyph set definition & overall production); Masataka HATTORI 服部正貴 (production & ideograph elements)"
+      },
+      "manufacturerURL": {
+        "en": "http://www.google.com/get/noto/"
+      },
+      "designerURL": {
+        "en": "http://www.adobe.com/type/"
+      },
+      "license": {
+        "en": "This Font Software is licensed under the SIL Open Font License, Version 1.1. This Font Software is distributed on an \"AS IS\" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the SIL Open Font License for the specific language, permissions and limitations governing your use of this Font Software."
+      },
+      "licenseURL": {
+        "en": "http://scripts.sil.org/OFL"
+      }
+    }
+  }
+}

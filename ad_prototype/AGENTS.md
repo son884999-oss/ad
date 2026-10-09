@@ -39,3 +39,16 @@ This project uses **Tailwind CSS v4** through the `@tailwindcss/vite` plugin con
 - Use double quotes for strings containing apostrophes (`"We're here to help"`), or escape them in single-quoted strings. An unescaped apostrophe in a single-quoted string breaks the build.
 - Ensure JSX tags are closed and braces are balanced.
 - Export components as default exports.
+## Product Redesign Instructions
+
+For all UI/UX design, redesign, visual improvement, and frontend implementation tasks, read and follow `DESIGN_MASTER.md` in the project root.
+
+Treat `DESIGN_MASTER.md` as the authoritative source for product design goals, mobile-first accessibility, senior-friendly user experience, visual identity, illustration guidelines, and iterative design reviews.
+
+Preserve the existing Figma Make environment, React 19, Vite 8, Tailwind CSS v4, and all essential application functionality.
+
+Do not start another development server when the existing Vite server is already running.
+
+The existing instructions in this file govern technical environment compatibility. `DESIGN_MASTER.md` governs product experience and visual redesign decisions.
+
+Before completing any redesign task, verify responsiveness, functional parity, and the quality of generated-result layouts.

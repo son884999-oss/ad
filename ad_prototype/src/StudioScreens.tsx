@@ -6,6 +6,11 @@ import {
   type ReactNode,
 } from "react"
 
+import StudioIcon from "./Icon"
+import FeedbackSettings from "./FeedbackSettings"
+import BrandLogo from "./BrandLogo"
+import ServiceArt from "./ServiceArt"
+
 type Page = "login" | "home" | "create" | "records" | "plan"
 type CreationType = "all" | "poster" | "video" | "copy"
 type Navigation = (page: Page, type?: CreationType) => void
@@ -17,50 +22,7 @@ type Speech = {
   speechMessage: string
 }
 
-export function StudioIcon({
-  name,
-  size = 24,
-}: {
-  name: "home" | "plus" | "folder" | "picture" | "video" | "copy" | "arrow" | "menu"
-  size?: number
-}) {
-  const paths = {
-    home: "M3 10 12 3l9 7v10H3Zm5 10v-7h8v7",
-    plus: "M12 5v14M5 12h14",
-    folder: "M3 7V5h6l3 3h9v12H3Z",
-    picture: "M3 4h18v16H3ZM3 16l5-5 5 5 4-4 4 4M16 8h.01",
-    video: "M3 6h12v12H3Zm12 4 6-3v10l-6-3",
-    copy: "M7 3h14v14M3 7h14v14H3Z",
-    arrow: "M4 12h16m-6-6 6 6-6 6",
-    menu: "M4 6h16M4 12h16M4 18h16",
-  }
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.7"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d={paths[name]} />
-    </svg>
-  )
-}
-
-function Wordmark() {
-  return (
-    <span className="studio-wordmark">
-      <span className="studio-mark" aria-hidden="true">
-        ∞
-      </span>
-      홍보잇다<span className="studio-brand-note">우리 가게의 작은 작업실</span>
-    </span>
-  )
-}
+export { default as StudioIcon } from "./Icon"
 
 function ReadButton({
   speaking,
@@ -70,71 +32,19 @@ function ReadButton({
   return (
     <button
       type="button"
-      className="studio-tool"
+      className="studio-tool studio-read-button"
       onClick={onSpeak}
       aria-pressed={speaking || speechPreparing}
     >
-      {speechPreparing
-        ? "읽기 준비 취소"
-        : speaking
-          ? "읽어주기 멈추기"
-          : "화면 읽어주기"}
+      <StudioIcon name="sound" size={28} />
+      <span>
+        {speechPreparing
+          ? "읽기 준비 취소"
+          : speaking
+            ? "읽어주기 멈추기"
+            : "화면 읽어주기"}
+      </span>
     </button>
-  )
-}
-
-function SampleComposition() {
-  return (
-    <div className="studio-composition" aria-hidden="true">
-      <div className="composition-label">사진 한 장이, 세 가지 홍보물로</div>
-      <div className="composition-poster">
-        <div className="composition-photo">
-          <svg viewBox="0 0 220 170" fill="none">
-            <path
-              d="M34 136h152M68 136V77h84v59M58 78h104l-10-35H68Z"
-              fill="#f5d6bd"
-              stroke="#465e49"
-              strokeWidth="3"
-            />
-            <path
-              d="M81 78v58m28-58v58m28-58v58"
-              stroke="#fff8ed"
-              strokeWidth="9"
-            />
-            <path d="M99 106h27v30H99Z" fill="#496954" />
-            <path d="M59 43h104" stroke="#465e49" strokeWidth="3" />
-            <path
-              d="M29 137v-31m0 12-12-10m12-1 12-9m145 39v-37m0 11-12-10m12 0 12-13"
-              stroke="#748b64"
-              strokeWidth="5"
-              strokeLinecap="round"
-            />
-            <circle cx="173" cy="32" r="15" fill="#ebc985" />
-          </svg>
-        </div>
-        <div className="composition-poster-text">
-          우리 가게의 이야기를
-          <br />
-          <b>더 많은 사람에게.</b>
-        </div>
-        <span>포스터</span>
-      </div>
-      <div className="composition-copy">
-        <span>홍보 글</span>
-        <b>오늘도 정성껏 준비했어요.</b>
-        <div className="composition-lines">
-          <i />
-          <i />
-          <i />
-        </div>
-        <small>#우리동네 #오늘의추천</small>
-      </div>
-      <div className="composition-video">
-        <StudioIcon name="video" size={32} />
-        <span>짧은 영상</span>
-        <i>▶</i>
-      </div>
-    </div>
   )
 }
 
@@ -156,8 +66,11 @@ export function StudioLogin({
     <main
       className={`prototype-app studio-login ${easyMode ? "easy-mode" : ""}`}
     >
+      <div className="studio-reading-bar">
+        <ReadButton {...{ speaking, speechPreparing, onSpeak }} />
+      </div>
       <div className="studio-login-brand">
-        <Wordmark />
+        <BrandLogo stacked />
       </div>
       <div className="studio-login-layout">
         <section className="studio-login-form">
@@ -221,9 +134,6 @@ export function StudioLogin({
           <button className="studio-secondary" onClick={onEnter}>
             바로 시작하기 <StudioIcon name="arrow" />
           </button>
-          {easyMode && (
-            <ReadButton {...{ speaking, speechPreparing, onSpeak }} />
-          )}
           {speechMessage && <p role="status">{speechMessage}</p>}
           <p className="studio-login-note">
             현재는 화면과 기능을 확인하는 체험용 서비스예요.
@@ -271,8 +181,6 @@ export function StudioShell({
   setEasyMode: (value: boolean) => void
   children: ReactNode
 }) {
-  const isActive = (item: typeof pages[number]) =>
-    item.page === page && (item.page !== "create" || creationType === "all")
   const menuRef = useRef<HTMLElement>(null)
   const headerRef = useRef<HTMLElement>(null)
   useEffect(() => {
@@ -336,6 +244,9 @@ export function StudioShell({
     <div
       className={`prototype-app studio-shell ${easyMode ? "easy-mode" : ""}`}
     >
+      <div className="studio-reading-bar" inert={mobileOpen}>
+        <ReadButton {...{ speaking, speechPreparing, onSpeak }} />
+      </div>
       <header ref={headerRef} className="studio-header" inert={mobileOpen}>
         <div className="studio-header-inner">
           <button
@@ -343,8 +254,21 @@ export function StudioShell({
             onClick={() => navigate("home")}
             aria-label="홍보잇다 홈"
           >
-            <Wordmark />
+            <BrandLogo />
           </button>
+          <nav className="studio-desktop-nav" aria-label="주요 메뉴">
+            {pages.map((item) => (
+              <button
+                key={item.page}
+                onClick={() => navigate(item.page, item.type)}
+                className={item.page === page ? "is-active" : ""}
+                aria-current={item.page === page ? "page" : undefined}
+              >
+                <StudioIcon name={item.icon} />
+                {item.label}
+              </button>
+            ))}
+          </nav>
           <button
             className="studio-menu-button"
             onClick={() => setMobileOpen(true)}
@@ -356,59 +280,11 @@ export function StudioShell({
           </button>
         </div>
       </header>
-      <aside
-        className="studio-quickbar"
-        aria-label="컴퓨터 빠른 메뉴"
-        inert={mobileOpen}
-      >
-        <p>우리 가게 작업실</p>
-        {pages.map((item) => (
-          <button
-            key={item.page}
-            onClick={() => navigate(item.page, item.type)}
-            className={isActive(item) ? "is-active" : ""}
-            aria-current={isActive(item) ? "page" : undefined}
-          >
-            <StudioIcon name={item.icon} />
-            {item.label}
-          </button>
-        ))}
-        <p>필요한 것만 만들기</p>
-        {[
-          {
-            type: "poster" as CreationType,
-            label: "이미지 만들기",
-            icon: "picture" as const,
-          },
-          {
-            type: "video" as CreationType,
-            label: "동영상 만들기",
-            icon: "video" as const,
-          },
-          {
-            type: "copy" as CreationType,
-            label: "홍보 글 만들기",
-            icon: "copy" as const,
-          },
-        ].map((item) => (
-          <button
-            key={item.type}
-            onClick={() => navigate("create", item.type)}
-            className={
-              page === "create" && creationType === item.type ? "is-active" : ""
-            }
-          >
-            <StudioIcon name={item.icon} />
-            {item.label}
-          </button>
-        ))}
-        <p>이용하기</p>
-        <button onClick={() => navigate("plan")}>
-          <StudioIcon name="folder" />
-          구독·건당 플랜
-        </button>
-      </aside>
-      <div className="studio-accessibility" inert={mobileOpen}>
+      <details className="studio-accessibility" inert={mobileOpen}>
+        <summary>
+          <StudioIcon name="settings" size={20} />
+          글씨·알림 설정
+        </summary>
         <div>
           <span className="studio-current-page">{title}</span>
           <button
@@ -427,11 +303,9 @@ export function StudioShell({
             </span>
             <span>{easyMode ? "켜짐" : "꺼짐"}</span>
           </button>
-          {easyMode && (
-            <ReadButton {...{ speaking, speechPreparing, onSpeak }} />
-          )}
         </div>
-      </div>
+        <FeedbackSettings />
+      </details>
       {mobileOpen && (
         <div className="studio-menu-layer">
           <button
@@ -448,7 +322,7 @@ export function StudioShell({
             aria-label="전체 메뉴"
           >
             <div className="studio-menu-heading">
-              <Wordmark />
+              <BrandLogo />
               <button
                 onClick={() => setMobileOpen(false)}
                 className="studio-tool"
@@ -499,7 +373,7 @@ export function StudioShell({
                 내 홍보물 보기
               </button>
               <button onClick={() => navigate("plan")}>구독·건당 플랜</button>
-              <button onClick={onLogout}>로그아웃</button>
+              <button onClick={onLogout}>로그인 화면 보기</button>
             </div>
           </aside>
         </div>
@@ -534,7 +408,13 @@ export function StudioShell({
         ))}
       </nav>
       <footer className="studio-footer">
-        홍보잇다 <span>우리 가게의 이야기를 잇다.</span>
+        <img
+          src="/assets/branding/selected/wordmark.svg"
+          width="421"
+          height="130"
+          alt="홍보잇다"
+        />
+        <span>우리 가게의 이야기를 잇다.</span>
       </footer>
     </div>
   )
@@ -552,58 +432,79 @@ export function StudioHome({
         className="studio-start-guide"
         aria-labelledby="start-guide-title"
       >
-        <div className="studio-guide-intro">
-          <p className="studio-eyebrow">반가워요, 사장님 · 이렇게 진행해요</p>
+        <div className="studio-hero-copy">
+          <p className="studio-eyebrow">우리 가게의 쉬운 홍보 도우미</p>
           <h1 id="start-guide-title" data-screen-heading tabIndex={-1}>
-            사진 한 장에서
+            <span className="hero-brand">홍보잇다</span>
+            사진 한 장으로
             <br />
-            <em>우리 가게 홍보물까지.</em>
+            <em>우리 가게를 알려요.</em>
           </h1>
-          <p>
-            처음부터 잘 만들 필요 없어요.
+          <p className="studio-hero-description">
+            포스터·짧은 영상·홍보 글을
             <br />
-            아래 세 단계에 따라 함께 시작해요.
+            차근차근 함께 만들어요.
           </p>
+          <div className="studio-guide-action">
+            <button
+              className="studio-primary"
+              onClick={() => navigate("create", "all")}
+            >
+              홍보물 만들기 <StudioIcon name="arrow" />
+            </button>
+            <p>가입 없이 시작 · 제품 사진 한 장이면 돼요</p>
+          </div>
+        </div>
+      </section>
+      <section className="studio-how" aria-labelledby="how-title">
+        <div className="studio-section-title">
+          <p className="studio-eyebrow">처음이어도 괜찮아요</p>
+          <h2 id="how-title">이렇게 세 단계면 돼요</h2>
         </div>
         <ol className="studio-guide-steps">
-          <li>
-            <span>1</span>
-            <div>
-              <h2>사진을 넣어요</h2>
-              <p>제품 사진을 넣고, 만들 종류와 홍보할 곳을 골라요.</p>
-            </div>
-            <StudioIcon name="picture" size={30} />
-          </li>
-          <li>
-            <span>2</span>
-            <div>
-              <h2>설명을 확인해요</h2>
-              <p>제품 설명을 고치고, 함께 사용할 검색어(#)를 확인해요.</p>
-            </div>
-            <StudioIcon name="copy" size={30} />
-          </li>
-          <li>
-            <span>3</span>
-            <div>
-              <h2>홍보물을 저장해요</h2>
-              <p>
-                완성된 이미지를 저장하고, 영상을 내려받거나 홍보 글을 복사해요.
-              </p>
-            </div>
-            <StudioIcon name="folder" size={30} />
-          </li>
+          {[
+            {
+              image: "workflow-photo" as const,
+              title: "사진을 넣어요",
+              text: "제품이나 가게 사진 한 장",
+            },
+            {
+              image: "workflow-details" as const,
+              title: "설명을 적어요",
+              text: "제품의 특징을 짧게 적어요",
+            },
+            {
+              image: "workflow-results" as const,
+              title: "결과를 확인해요",
+              text: "만든 결과를 저장해요",
+            },
+          ].map((step, index) => (
+            <li key={step.image}>
+              <ServiceArt name={step.image} />
+              <div>
+                <span className="studio-step-number">{index + 1}단계</span>
+                <h3>{step.title}</h3>
+                <p>{step.text}</p>
+              </div>
+            </li>
+          ))}
         </ol>
-        <div className="studio-guide-action">
-          <div>
-            <strong>준비물은 제품 사진 한 장이에요.</strong>
-            <p>지금은 예시 결과로 사용 방법을 체험할 수 있어요.</p>
-          </div>
-          <button
-            className="studio-primary"
-            onClick={() => navigate("create", "all")}
-          >
-            만들러 가기 <StudioIcon name="arrow" />
-          </button>
+      </section>
+      <section className="studio-example" aria-labelledby="example-title">
+        <div className="studio-section-title">
+          <h2 id="example-title">사진 한 장으로 이런 홍보물을 만들어요</h2>
+          <p className="studio-demo-note">
+            사진과 설명으로 예시 결과를 만드는 체험 서비스예요.
+          </p>
+        </div>
+        <div className="studio-hero-art">
+          <ServiceArt
+            name="service-hero"
+            alt="제품 사진에서 포스터·짧은 영상·홍보 글로 이어지는 결과 화면과 작은 가게"
+          />
+          <span className="studio-art-caption">
+            포스터 · 짧은 영상 · 홍보 글
+          </span>
         </div>
       </section>
       <section className="studio-shortcuts">
@@ -618,27 +519,28 @@ export function StudioHome({
               title: "이미지 만들기",
               note: "사진과 글을 담은 포스터",
               icon: "picture" as const,
+              art: "service-poster" as const,
             },
             {
               type: "video" as CreationType,
               title: "동영상 만들기",
               note: "움직이는 짧은 홍보 영상",
               icon: "video" as const,
+              art: "service-video" as const,
             },
             {
               type: "copy" as CreationType,
               title: "홍보 글 만들기",
               note: "홍보할 곳에 어울리는 말투",
               icon: "copy" as const,
+              art: "service-copy" as const,
             },
           ].map((item) => (
             <button
               key={item.type}
               onClick={() => navigate("create", item.type)}
             >
-              <span className="studio-shortcut-icon">
-                <StudioIcon name={item.icon} />
-              </span>
+              <ServiceArt name={item.art} className="shortcut-art" />
               <span>
                 <strong>{item.title}</strong>
                 <small>{item.note}</small>

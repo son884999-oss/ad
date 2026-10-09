@@ -1,0 +1,212 @@
+[
+  {
+    "id": "a",
+    "brand": "홍보잇다",
+    "original": "design-assets/branding/concept-a/selected.png",
+    "symbol": "concept-a/symbol.webp",
+    "wordmark": "concept-a/wordmark.svg",
+    "horizontal": "concept-a/horizontal.svg",
+    "originalWidth": 1254,
+    "originalHeight": 1254,
+    "originalSha256": "ad8b6078cf154a9f5bce936786eeac7f3c75d6c290477a7e030534dbcc010caa",
+    "webpWidth": 512,
+    "webpHeight": 512,
+    "webpBytes": 26118,
+    "alphaCorner": 0,
+    "bounds": {
+      "x0": 128,
+      "y0": 166,
+      "width": 1001,
+      "height": 923
+    },
+    "glyphs": [
+      {
+        "character": "홍",
+        "glyph": 58440
+      },
+      {
+        "character": "보",
+        "glyph": 51951
+      },
+      {
+        "character": "잇",
+        "glyph": 54658
+      },
+      {
+        "character": "다",
+        "glyph": 49375
+      }
+    ],
+    "symbolFormat": "생성 raster",
+    "wordmarkFormat": "윤곽 path SVG",
+    "combinationFormat": "raster 심볼을 내장한 혼합 SVG"
+  },
+  {
+    "id": "b",
+    "brand": "홍보잇다",
+    "original": "design-assets/branding/concept-b/selected.png",
+    "symbol": "concept-b/symbol.webp",
+    "wordmark": "concept-b/wordmark.svg",
+    "horizontal": "concept-b/horizontal.svg",
+    "originalWidth": 1254,
+    "originalHeight": 1254,
+    "originalSha256": "698a08a2a7acf926c3c3c49ab4b40dd3b2cd9b46a023ff2b3bfb09c94b9c1784",
+    "webpWidth": 512,
+    "webpHeight": 512,
+    "webpBytes": 28130,
+    "alphaCorner": 0,
+    "bounds": {
+      "x0": 125,
+      "y0": 237,
+      "width": 1004,
+      "height": 824
+    },
+    "glyphs": [
+      {
+        "character": "홍",
+        "glyph": 58440
+      },
+      {
+        "character": "보",
+        "glyph": 51951
+      },
+      {
+        "character": "잇",
+        "glyph": 54658
+      },
+      {
+        "character": "다",
+        "glyph": 49375
+      }
+    ],
+    "symbolFormat": "생성 raster",
+    "wordmarkFormat": "윤곽 path SVG",
+    "combinationFormat": "raster 심볼을 내장한 혼합 SVG"
+  },
+  {
+    "id": "c",
+    "brand": "홍보잇다",
+    "original": "design-assets/branding/concept-c/selected.png",
+    "symbol": "concept-c/symbol.webp",
+    "wordmark": "concept-c/wordmark.svg",
+    "horizontal": "concept-c/horizontal.svg",
+    "originalWidth": 1254,
+    "originalHeight": 1254,
+    "originalSha256": "e024860b3582b94902411f873e24d39a1e9490f69f67ef0bcb0f4cbd88e639d8",
+    "webpWidth": 512,
+    "webpHeight": 512,
+    "webpBytes": 25202,
+    "alphaCorner": 1,
+    "bounds": {
+      "x0": 50,
+      "y0": 398,
+      "width": 1154,
+      "height": 487
+    },
+    "glyphs": [
+      {
+        "character": "홍",
+        "glyph": 58440
+      },
+      {
+        "character": "보",
+        "glyph": 51951
+      },
+      {
+        "character": "잇",
+        "glyph": 54658
+      },
+      {
+        "character": "다",
+        "glyph": 49375
+      }
+    ],
+    "symbolFormat": "생성 raster",
+    "wordmarkFormat": "윤곽 path SVG",
+    "combinationFormat": "raster 심볼을 내장한 혼합 SVG"
+  },
+  {
+    "id": "d",
+    "brand": "홍보잇다",
+    "original": "design-assets/branding/concept-d/selected.png",
+    "symbol": "concept-d/symbol.webp",
+    "wordmark": "concept-d/wordmark.svg",
+    "horizontal": "concept-d/horizontal.svg",
+    "originalWidth": 1254,
+    "originalHeight": 1254,
+    "originalSha256": "e442d8963cb6e4732477018968fecfd84879d543d067cce5ec159c6b3ca4adb2",
+    "webpWidth": 512,
+    "webpHeight": 512,
+    "webpBytes": 28372,
+    "alphaCorner": 0,
+    "bounds": {
+      "x0": 208,
+      "y0": 309,
+      "width": 831,
+      "height": 637
+    },
+    "glyphs": [
+      {
+        "character": "홍",
+        "glyph": 58440
+      },
+      {
+        "character": "보",
+        "glyph": 51951
+      },
+      {
+        "character": "잇",
+        "glyph": 54658
+      },
+      {
+        "character": "다",
+        "glyph": 49375
+      }
+    ],
+    "symbolFormat": "생성 raster",
+    "wordmarkFormat": "윤곽 path SVG",
+    "combinationFormat": "raster 심볼을 내장한 혼합 SVG"
+  },
+  {
+    "id": "e",
+    "brand": "홍보잇다",
+    "original": "design-assets/branding/concept-e/selected.png",
+    "symbol": "concept-e/symbol.webp",
+    "wordmark": "concept-e/wordmark.svg",
+    "horizontal": "concept-e/horizontal.svg",
+    "originalWidth": 1254,
+    "originalHeight": 1254,
+    "originalSha256": "6e308e4a461d1076d29fb71ab38f5a0f4ee079e1b23285ff6ca3a943bb90c9ec",
+    "webpWidth": 512,
+    "webpHeight": 512,
+    "webpBytes": 19088,
+    "alphaCorner": 0,
+    "bounds": {
+      "x0": 104,
+      "y0": 324,
+      "width": 1047,
+      "height": 620
+    },
+    "glyphs": [
+      {
+        "character": "홍",
+        "glyph": 58440
+      },
+      {
+        "character": "보",
+        "glyph": 51951
+      },
+      {
+        "character": "잇",
+        "glyph": 54658
+      },
+      {
+        "character": "다",
+        "glyph": 49375
+      }
+    ],
+    "symbolFormat": "생성 raster",
+    "wordmarkFormat": "윤곽 path SVG",
+    "combinationFormat": "raster 심볼을 내장한 혼합 SVG"
+  }
+]

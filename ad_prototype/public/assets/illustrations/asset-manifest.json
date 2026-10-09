@@ -1,0 +1,51 @@
+[
+  {
+    "filename": "shop-marketing-hero.webp",
+    "transparent": true,
+    "width": 960,
+    "height": 640,
+    "bytes": 100670
+  },
+  {
+    "filename": "shop-marketing-hero-640.webp",
+    "transparent": true,
+    "width": 640,
+    "height": 427,
+    "bytes": 59646
+  },
+  {
+    "filename": "marketing-workspace-hero.webp",
+    "transparent": false,
+    "width": 960,
+    "height": 640,
+    "bytes": 67912
+  },
+  {
+    "filename": "marketing-workspace-hero-640.webp",
+    "transparent": false,
+    "width": 640,
+    "height": 427,
+    "bytes": 40984
+  },
+  {
+    "filename": "step-photo.webp",
+    "transparent": true,
+    "width": 400,
+    "height": 400,
+    "bytes": 30432
+  },
+  {
+    "filename": "step-details.webp",
+    "transparent": true,
+    "width": 400,
+    "height": 400,
+    "bytes": 24032
+  },
+  {
+    "filename": "step-ready.webp",
+    "transparent": true,
+    "width": 400,
+    "height": 400,
+    "bytes": 32646
+  }
+]

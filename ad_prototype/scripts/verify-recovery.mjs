@@ -9,18 +9,18 @@ const reports = []
 try {
   const page = await browser.newPage({ viewport: { width: 390, height: 844 } })
   await page.goto("http://127.0.0.1:5173/")
-  await page.getByRole("button", { name: "바로 시작하기", exact: true }).click()
-  await page.getByRole("button", { name: "만들러 가기", exact: true }).click()
+  await page.locator(".studio-accessibility > summary").click()
+  await page.getByRole("button", { name: "홍보물 만들기", exact: true }).click()
   const fileInput = page.locator("input[type=file]")
   await fileInput.setInputFiles(
     fileURLToPath(
-      new URL("../../D_고혜숙/public/sample-product.png", import.meta.url),
+      new URL("../design-assets/illustrations/step-photo.png", import.meta.url),
     ),
   )
   await page
     .getByRole("button", { name: "사진 확인하고 다음", exact: true })
     .waitFor()
-  const original = await page.locator("main img").getAttribute("src")
+  const original = await page.locator(".selected-photo").getAttribute("src")
   for (const file of [
     {
       name: "not-photo.txt",
@@ -41,7 +41,8 @@ try {
     await fileInput.setInputFiles(file)
     await page.getByText(/기존 사진은 그대로예요/).waitFor()
     if (
-      (await page.locator("main img").getAttribute("src")) !== original ||
+      (await page.locator(".selected-photo").getAttribute("src")) !==
+        original ||
       !(await page
         .getByRole("button", { name: "사진 확인하고 다음", exact: true })
         .isEnabled()) ||
@@ -82,11 +83,11 @@ try {
     buffer: Buffer.from("invalid latest request"),
   })
   await page.waitForTimeout(1250)
-  if ((await page.locator("main img").getAttribute("src")) !== original)
+  if ((await page.locator(".selected-photo").getAttribute("src")) !== original)
     throw Error("stale decode committed after newer selection")
   await fileInput.setInputFiles(replacement)
   await page.getByText("사진이 준비됐어요.", { exact: true }).waitFor()
-  if ((await page.locator("main img").getAttribute("src")) === original)
+  if ((await page.locator(".selected-photo").getAttribute("src")) === original)
     throw Error("valid replacement not committed")
   reports.push({
     pendingBlocksNext: true,
@@ -144,6 +145,7 @@ try {
     )
     await p.clock.install()
     await p.goto("http://127.0.0.1:5173/")
+    await p.locator(".studio-accessibility > summary").click()
     await p.getByRole("button", { name: "화면 읽어주기", exact: true }).click()
     if (scenario === "unsupported") {
       await p.getByText(/읽어주기를 사용할 수 없어요/).waitFor()

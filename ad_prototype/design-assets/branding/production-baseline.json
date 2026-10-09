@@ -1,0 +1,126 @@
+[
+  {
+    "file": "src/App.tsx",
+    "sha256": "63a80f566e223a01164468effacaff559540d6290ee7c5a67679dee32d8bbbda"
+  },
+  {
+    "file": "src/canvasText.ts",
+    "sha256": "27a9e6b53703b748224a573ab4433a9f1357e3f8d2cc7a228352cc720e226f0b"
+  },
+  {
+    "file": "src/ChannelPicker.tsx",
+    "sha256": "a44aa47f12d45a32587fab984549bed9d7351e8188bd96563e73a931ad690e40"
+  },
+  {
+    "file": "src/channels.ts",
+    "sha256": "a419f8c190575bb6a2634abb760759a21d2e463378b3007dd4dd06bb37289fb4"
+  },
+  {
+    "file": "src/design-tokens.css",
+    "sha256": "9cb909834ab6d8579c4fbd13b4f5d950f2960a1482b908b0559100c2ce35fe78"
+  },
+  {
+    "file": "src/experience.css",
+    "sha256": "984407bcc0babc533daf264f474ed7c1287f89febc7104359323822f4af9af9e"
+  },
+  {
+    "file": "src/FeedbackProvider.tsx",
+    "sha256": "88ea9cc823936bfa57a9f62381ad0793a25b04cd5f06d90228b31cbb20e91253"
+  },
+  {
+    "file": "src/FeedbackSettings.tsx",
+    "sha256": "e5f315af5c38f9db3ae59513bdde2a55d0c31342591abf3b6663514c56adaad3"
+  },
+  {
+    "file": "src/Icon.tsx",
+    "sha256": "1959a56ee20681b6fb958d779f6a74e1180cc9657c0edebb9fefcf0bf6386d28"
+  },
+  {
+    "file": "src/index.css",
+    "sha256": "36db33de2277eab2158857737f103318dad2a896c52ebd9ee68c99db5816f17a"
+  },
+  {
+    "file": "src/main.tsx",
+    "sha256": "2c85fe08a0463b8f1cd709310871c06f131be08ac390a6da80975724119eca5b"
+  },
+  {
+    "file": "src/PhotoStep.tsx",
+    "sha256": "7e574615e13c6f0e271e4e4863a13189e3a03be21adcc49b215897ca8dff9ec5"
+  },
+  {
+    "file": "src/PublishingGuide.tsx",
+    "sha256": "e47baa8055f314f8feafafe59c00f25bd04300f6a2d29d576317107f8a748df0"
+  },
+  {
+    "file": "src/StepProgress.tsx",
+    "sha256": "679ce0ab414543bb4a514b1fa9e4d582f16aa342943b08b40b56b87fb51243f1"
+  },
+  {
+    "file": "src/studio.css",
+    "sha256": "45fcf93c1c958bf92c4e3e6e90f34fa961178e0f1248c5f467d2612b490050f5"
+  },
+  {
+    "file": "src/StudioScreens.tsx",
+    "sha256": "6a883f843130dcebdbd7bb50e7bac2f32c62fe10f5fe1ff743ec4b377c120493"
+  },
+  {
+    "file": "src/vite-env.d.ts",
+    "sha256": "424faf9241dd699dda995b367ed36665732da1e6ec1f33b2fd40394488ecac92"
+  },
+  {
+    "file": "public/assets/illustrations/asset-manifest.json",
+    "sha256": "8701c95e5341b7f1e9a5d2048e61c5b4abf166674b7ef8cda1a8d145ac9a4a31"
+  },
+  {
+    "file": "public/assets/illustrations/marketing-workspace-hero-640.webp",
+    "sha256": "56e3f5a2f2c0632c9296768c73ac8fd92da0b1d0e7e0e2e08aae923901c72a46"
+  },
+  {
+    "file": "public/assets/illustrations/marketing-workspace-hero.webp",
+    "sha256": "02db467641a0f0b248f7bbb09f9a84014b52397f109887706dde4b1fb95d047b"
+  },
+  {
+    "file": "public/assets/illustrations/shop-marketing-hero-640.webp",
+    "sha256": "4212c72dff2a26b300f7ee4b9757d10a7433caca74943ac25247f185fedd87d2"
+  },
+  {
+    "file": "public/assets/illustrations/shop-marketing-hero.webp",
+    "sha256": "72f6b123b1f0b879764e0bb061cadab711362b29f0981ad83f6ae9d015d987aa"
+  },
+  {
+    "file": "public/assets/illustrations/step-details.webp",
+    "sha256": "2f3294b6f040560a0fff6f8c939843249b328e0c068a6373a4e6262f4acc7676"
+  },
+  {
+    "file": "public/assets/illustrations/step-photo.webp",
+    "sha256": "a195da13ba73dfe0f2bcb175bf4e9b33ea312d6c834ea3fc9206068992321817"
+  },
+  {
+    "file": "public/assets/illustrations/step-ready.webp",
+    "sha256": "3a8165d43b25164918864e11f7d990f09924320365110451721122ddd77072f1"
+  },
+  {
+    "file": "public/favicon.svg",
+    "sha256": "306a441fec885f7ef60e8b91afadc203e423c6fa028270b05037b40732521069"
+  },
+  {
+    "file": "index.html",
+    "sha256": "27a8c009d3f255191c589337c6064f7bcca9cbb4ffac806138a21d47c825b0ce"
+  },
+  {
+    "file": "package.json",
+    "sha256": "b58968df3a717ea58420411fe3a1196fac6d75edfd4a2918da799c5c83530adb"
+  },
+  {
+    "file": "vite.config.ts",
+    "sha256": "7d1341be4d42dd2d4cde3394572c0e0c01cc0e5dad7b8c6159a1a918d4f0f7b2"
+  },
+  {
+    "file": "AGENTS.md",
+    "sha256": "a399c53aa4a05a8f30760c09ea05e1fe4f3af94d01ccf0b95ba05b1a598e13bb"
+  },
+  {
+    "file": "DESIGN_MASTER.md",
+    "sha256": "eb3891909a5e0fe1ca34a49731791a3c8d1de024ebc5d6238429f02070378b06"
+  }
+]

@@ -1,66 +1,22 @@
 @import "tailwindcss";
+@import "./design-tokens.css";
 @import "./studio.css";
+@import "./experience.css";
+@import "./brand-assets.css";
+@import "./senior-hierarchy.css";
 
 @font-face {
-  font-family: "Inter:Regular";
-  src: url("https://static.figma.com/font/Inter_1") format("woff2");
-  font-style: normal;
-  font-weight: 400;
-}
-
-@font-face {
-  font-family: "Noto Sans KR:Bold";
+  font-family: "Noto Sans KR";
   src: url("https://static.figma.com/font/NotoSansKR-VF_2") format("woff2");
   font-style: normal;
-  font-weight: 700;
-}
-
-@font-face {
-  font-family: "Noto Sans KR:Medium";
-  src: url("https://static.figma.com/font/NotoSansKR-VF_2") format("woff2");
-  font-style: normal;
-  font-weight: 500;
-}
-
-@font-face {
-  font-family: "Noto Sans KR:Regular";
-  src: url("https://static.figma.com/font/NotoSansKR-VF_2") format("woff2");
-  font-style: normal;
-  font-weight: 400;
-}
-
-@font-face {
-  font-family: "Noto Sans Math:Regular";
-  src: url("https://static.figma.com/font/NotoSansMath-Regular_1") format("woff2");
-  font-style: normal;
-  font-weight: 400;
-}
-
-@font-face {
-  font-family: "Noto Sans Symbols2:Regular";
-  src: url("https://static.figma.com/font/NotoSansSymbols2-Regular_5") format("woff2");
-  font-style: normal;
-  font-weight: 400;
-}
-
-@font-face {
-  font-family: "Noto Sans Symbols:Medium";
-  src: url("https://static.figma.com/font/NotoSansSymbols-VF_2") format("woff2");
-  font-style: normal;
-  font-weight: 500;
-}
-
-@font-face {
-  font-family: "Noto Sans:Medium";
-  src: url("https://static.figma.com/font/NotoSans-VF_3") format("woff2");
-  font-style: normal;
-  font-weight: 500;
+  font-weight: 100 900;
+  font-display: swap;
 }
 
 :root {
-  font-family: "Noto Sans KR:Regular", "Noto Sans KR", sans-serif;
-  color: #222222;
-  background: #f6f5f3;
+  font-family: "Noto Sans KR", "Malgun Gothic", sans-serif;
+  color: var(--color-ink);
+  background: var(--color-canvas);
   font-synthesis: none;
 }
 
@@ -88,12 +44,12 @@ h1,
 h2,
 h3,
 .font-bold {
-  font-family: "Noto Sans KR:Bold", "Noto Sans KR", sans-serif;
+  font-family: inherit;
 }
 
 ::selection {
   color: white;
-  background: #c64f12;
+  background: var(--color-brand);
 }
 
 .prototype-app main p,
@@ -152,7 +108,7 @@ h3,
     border-top: 1px solid #d5d0cb;
     background: rgb(255 255 255 / 96%);
     box-shadow: 0 -6px 20px rgb(34 34 34 / 10%);
-    backdrop-filter: blur(8px);
+    backdrop-filter: none;
   }
 
   .mobile-primary-bar > button {
@@ -166,23 +122,8 @@ h3,
 .login-screen button { font-size: 18px; line-height: 1.6; }
 .login-screen.easy-mode label, .login-screen.easy-mode input, .login-screen.easy-mode button { font-size: 22px; line-height: 1.65; }
 
-/* Warm surfaces, readable ink, and predictable mobile reading order. */
-:root { color: #382f2b; background: #faf6f0; }
-.prototype-app { background-color: #faf6f0; color: #382f2b; }
-.prototype-app :is(input, textarea) { color: #382f2b; background-color: #fffefd; }
-.prototype-app :is(button, a, input, textarea):focus-visible {
-  outline: 3px solid #904222;
-  outline-offset: 4px;
-}
-.prototype-app [class*="border-[#dedbd7]"] { border-color: #e3d8ce; }
-.prototype-app [class*="bg-[#fff1e7]"] { background-color: #fbe8da; }
-.prototype-app [class*="bg-[#c64f12]"] { background-color: #a94f2b; }
-.welcome-panel { background: linear-gradient(125deg, #fff8ed, #f6ede6 60%, #eff4e9); }
-.prototype-app main .welcome-eyebrow { margin-bottom: 12px; color: #83513d; font-size: 16px; font-weight: 700; }
-.shortcut-grid { grid-template-columns: minmax(0, 1fr); }
-.shortcut-grid > button:nth-child(1) { background-color: #f9ece4; }
-.shortcut-grid > button:nth-child(2) { background-color: #edf2e8; }
-.shortcut-grid > button:nth-child(3) { background-color: #f0edf7; }
+.prototype-app { background:var(--color-canvas); color:var(--color-ink); }
+.prototype-app :is(button,a,input,textarea,select,summary):focus-visible { outline:3px solid var(--color-focus); outline-offset:4px; }
 .result-summary { display: flex; align-items: flex-start; gap: 14px; padding: 20px; border: 1px solid #c7d6be; border-radius: 20px; background: #edf3e8; }
 .result-check { display: grid; place-items: center; flex: 0 0 36px; height: 36px; border-radius: 50%; background: #496044; color: white; font-size: 22px; }
 .result-summary strong { font-size: 21px; }
@@ -206,7 +147,7 @@ h3,
 .easy-mode .result-jump-links a { font-size: 22px; min-height: 60px; }
 .easy-mode .mobile-navigation button { font-size: 20px; }
 .result-card-actions { margin-top: auto; padding: 18px; }
-.result-card-actions button, .result-copy-action { border-color: #a94f2b; background: #a94f2b; color: #fff; }
+.result-card-actions button, .result-copy-action { border-color: var(--color-brand); background: var(--color-brand); color: #fff; }
 .result-copy > :not(.result-card-heading) { margin-left: 20px; margin-right: 20px; }
 .result-copy > span { align-self: flex-start; margin-top: 20px; }
 .result-copy > .result-copy-action { width: auto; margin-top: auto; margin-bottom: 18px; padding: 12px; }
@@ -243,7 +184,7 @@ h3,
 .prototype-app main .media-copy-note { font-size:16px; color:#65715f; }
 .result-next-link { display:flex; align-items:center; justify-content:center; min-height:48px; padding:12px; margin-top:18px; border-top:1px solid #d7dfd0; color:#345042; font-size:18px; font-weight:700; }
 .easy-mode .media-full-copy summary,.easy-mode .result-next-link { font-size:22px; min-height:60px; }
-.media-full-copy summary:focus-visible { outline:3px solid #b46740; outline-offset:4px; }
+.media-full-copy summary:focus-visible { outline:3px solid var(--color-focus); outline-offset:4px; }
 .result-copy > .result-copy-action { margin:18px 20px 8px; }
 .result-copy > [role="status"] { margin-top:6px; }
 .result-poster .result-media > div { padding-top: 32px; padding-bottom: 20px; }
@@ -255,8 +196,8 @@ h3,
 }
 @media (max-width: 1023px) {
   .prototype-app main[data-app-scroll-container] { padding-bottom: 190px; }
-  .prototype-app:has(main input:focus, main textarea:focus) .mobile-navigation { display: none; }
-  .prototype-app:has(main input:focus, main textarea:focus) .mobile-primary-bar {
+  .prototype-app:has(main input:not([type="radio"]):not([type="file"]):focus, main textarea:focus) .mobile-navigation { display: none; }
+  .prototype-app:has(main input:not([type="radio"]):not([type="file"]):focus, main textarea:focus) .mobile-primary-bar {
     position: static;
     box-shadow: none;
     backdrop-filter: none;
@@ -276,3 +217,5 @@ h3,
   .prototype-app .mobile-navigation { position: static; }
   .prototype-app header { position: static; }
 }
+
+.prototype-app .studio-primary:disabled { background:#DDE2DF; color:#56645E; border-color:#DDE2DF; }

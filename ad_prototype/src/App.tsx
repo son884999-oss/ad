@@ -7,6 +7,18 @@ import {
   useState,
 } from "react"
 import { wrapCanvasText } from "./canvasText"
+import PhotoStep from "./PhotoStep"
+import StepProgress from "./StepProgress"
+import Icon from "./Icon"
+import { useFeedback } from "./FeedbackProvider"
+import PublishingGuide from "./PublishingGuide"
+import ServiceArt from "./ServiceArt"
+import {
+  channels as channelThemes,
+  channelNames,
+  mapChannels,
+  type Channel,
+} from "./channels"
 import {
   StudioShell as Shell,
   StudioHome as Home,
@@ -16,8 +28,6 @@ import {
 type Page = "login" | "home" | "create" | "records" | "plan"
 
 type CreationType = "all" | "poster" | "video" | "copy"
-
-type Channel = "instagram" | "x" | "threads"
 
 type Step = 1 | 2 | 3
 
@@ -72,49 +82,6 @@ const creationNames: Record<CreationType, string> = {
   copy: "홍보 글 만들기",
 }
 
-const channelNames: Record<Channel, string> = {
-  instagram: "인스타그램",
-
-  x: "엑스(X)",
-
-  threads: "쓰레드(Threads)",
-}
-
-const channelIcons: Record<Channel, string> = {
-  instagram: "📸",
-
-  x: "✕",
-
-  threads: "💬",
-}
-
-// Channel-specific composition samples, independent of future AI providers.
-const channelThemes: Record<Channel, {
-  guide: string
-  heading: string
-  rgb: string
-  accent: string
-}> = {
-  instagram: {
-    guide: "인스타그램은 사진을 돋보이게, 짧고 감성적인 말투로 보여줘요.",
-    heading: "오늘의 추천",
-    rgb: "42, 59, 45",
-    accent: "#f1d598",
-  },
-  x: {
-    guide: "엑스는 핵심 특징과 행동을 짧고 또렷하게 전달해요.",
-    heading: "한눈에 보는 핵심",
-    rgb: "38, 45, 69",
-    accent: "#d7dcf1",
-  },
-  threads: {
-    guide: "쓰레드는 손님에게 이야기하듯 편안하고 친근한 말투를 사용해요.",
-    heading: "우리 가게 이야기",
-    rgb: "74, 47, 38",
-    accent: "#f4d1bf",
-  },
-}
-
 const initialDetails = {
   description: "정성을 담아 만든 우리 가게의 대표 제품입니다.",
 
@@ -129,14 +96,6 @@ const outputFormatNames: Record<OutputFormat, string> = {
   video: "영상",
 
   both: "포스터와 영상 둘 다",
-}
-
-const outputFormatIcons: Record<OutputFormat, string> = {
-  poster: "🖼️",
-
-  video: "🎬",
-
-  both: "✨",
 }
 
 const easyUiDictionary: Record<string, string> = {
@@ -392,17 +351,9 @@ function makeHashtags(
     ...extractHashtagKeywords(details.audience),
   ]
 
-  const limits: Record<Channel, number> = {
-    instagram: 8,
-
-    x: 3,
-
-    threads: 4,
-  }
-
   return [...new Set(keywords)]
 
-    .slice(0, limits[channel])
+    .slice(0, channelThemes[channel].tagLimit)
 
     .map((tag) => `#${tag}`)
 }
@@ -416,13 +367,7 @@ function initialHashtagValues(
     audience: string
   } = initialDetails,
 ) {
-  return {
-    instagram: makeHashtags("instagram", details).join(" "),
-
-    x: makeHashtags("x", details).join(" "),
-
-    threads: makeHashtags("threads", details).join(" "),
-  }
+  return mapChannels((channel) => makeHashtags(channel, details).join(" "))
 }
 
 function normalizeHashtagValues(
@@ -443,19 +388,9 @@ function normalizeHashtagValues(
       ? value as Partial<Record<Channel, unknown>>
       : {}
 
-  return {
-    instagram:
-      typeof candidate.instagram === "string"
-        ? candidate.instagram
-        : fallback.instagram,
-
-    x: typeof candidate.x === "string" ? candidate.x : fallback.x,
-
-    threads:
-      typeof candidate.threads === "string"
-        ? candidate.threads
-        : fallback.threads,
-  }
+  return mapChannels((id) =>
+    typeof candidate[id] === "string" ? candidate[id] as string : fallback[id],
+  )
 }
 
 function parseHashtags(value: unknown) {
@@ -580,7 +515,7 @@ function PrimaryButton({
       type={type}
       onClick={onClick}
       disabled={disabled}
-      className={`min-h-13 w-full rounded-[14px] bg-[#c64f12] px-7 py-3 text-[16px] font-bold text-white shadow-sm transition hover:bg-[#a63f0b] focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[#2b2b2b] disabled:cursor-not-allowed disabled:bg-[#aaa49e] sm:w-auto ${className}`}
+      className={`studio-primary w-full sm:w-auto ${className}`}
     >
       {children}
     </button>
@@ -589,11 +524,11 @@ function PrimaryButton({
 
 function StepHeader({
   step,
-
+  onBack,
   easyMode,
 }: {
   step: Step
-
+  onBack: (step: Step) => void
   easyMode: boolean
 }) {
   const stepGuides: Record<Step, {
@@ -604,15 +539,13 @@ function StepHeader({
     1: {
       title: "사진을 넣어 주세요",
 
-      description:
-        "홍보할 곳과 만들 종류를 고르고 제품 사진 한 장을 넣어 주세요.",
+      description: "제품이나 가게 사진 한 장을 준비해 주세요.",
     },
 
     2: {
-      title: "설명을 확인하고 고쳐 주세요",
+      title: "설명을 적어요",
 
-      description:
-        "예시 초안을 제품에 맞게 수정하고, 추천 해시태그도 결과를 만들기 전에 직접 고쳐 주세요.",
+      description: "제품의 특징을 적어 주세요.",
     },
 
     3: {
@@ -623,49 +556,9 @@ function StepHeader({
     },
   }
 
-  const stepLabels: Record<Step, string> = {
-    1: "사진",
-
-    2: "설명",
-
-    3: "결과",
-  }
-
   return (
-    <div className="mb-7">
-      <div
-        className="flex items-center justify-center gap-2"
-        aria-label={`현재 ${step}단계`}
-        role="list"
-      >
-        {([1, 2, 3] as Step[]).map((number) => (
-          <div key={number} className="contents">
-            <div
-              role="listitem"
-              aria-current={number === step ? "step" : undefined}
-              className={`rounded-full border py-1.5 font-bold ${
-                easyMode ? "px-2 text-[18px]" : "px-3 text-[16px]"
-              } ${
-                number === step
-                  ? "border-[#c64f12] bg-[#fff1e7] text-[#7f340d]"
-                  : "border-[#dedbd7] bg-white text-[#626262]"
-              }`}
-            >
-              {number} {stepLabels[number]}
-            </div>
-            {number < 3 && (
-              <span
-                className={`${
-                  easyMode ? "text-[18px]" : "text-[16px]"
-                } text-[#817a74]`}
-                aria-hidden="true"
-              >
-                →
-              </span>
-            )}
-          </div>
-        ))}
-      </div>
+    <div className="creation-header">
+      <StepProgress step={step} onBack={onBack} />
       <div className="mt-5">
         <h2
           data-screen-heading
@@ -783,6 +676,7 @@ function CreateFlow({
   canUndoReset: boolean
   onUndoReset: () => void
 }) {
+  const { notify } = useFeedback()
   const [playing, setPlaying] = useState(false)
 
   const [copyMessage, setCopyMessage] = useState("")
@@ -915,6 +809,7 @@ function CreateFlow({
           setUploadPending(false)
 
           setUploadMessage("사진이 준비됐어요.")
+          notify("upload")
 
           onDraftTouched()
         } catch {
@@ -931,6 +826,15 @@ function CreateFlow({
   }
 
   const resultCopy: Record<Channel, string> = {
+    ...mapChannels(
+      () =>
+        `${details.description}\n\n${details.features}\n\n${details.audience}께 추천해요.`,
+    ),
+    naver_place: `${details.description}\n\n${details.features}\n\n추천 대상: ${details.audience}`,
+    kakao: `우리 가게 소식을 전해요.\n\n${details.description}\n${details.features}\n\n궁금한 점은 편하게 문의해 주세요.`,
+    naver_blog: `${details.description}\n\n이런 특징이 있어요\n${details.features}\n\n이런 분께 추천해요\n${details.audience}`,
+    daangn: `이웃 여러분께 우리 가게를 소개해요.\n\n${details.description}\n${details.features}\n\n궁금한 점은 문의해 주세요.`,
+    youtube: `${details.features}\n\n${details.description}\n\n추천 대상: ${details.audience}`,
     instagram: `오늘을 더 특별하게 만드는 ${details.description}\n\n${details.features}\n지금 사진으로 만나보세요.`,
 
     x: `${details.features} — 필요한 분은 바로 확인해 보세요. ${details.audience}에게 추천합니다.`,
@@ -953,18 +857,9 @@ function CreateFlow({
 
   const hashtags = parseHashtags(safeUserHashtags[channel])
 
-  const recommendationMinimum: Record<Channel, number> = {
-    instagram: 5,
-
-    x: 1,
-
-    threads: 2,
-  }
-
   const recommendationTags = parseHashtags(safeRecommendations[channel])
 
-  const needsMoreKeywords =
-    recommendationTags.length < recommendationMinimum[channel]
+  const needsMoreKeywords = recommendationTags.length < channelTheme.minimum
 
   const showPoster =
     type === "poster" ||
@@ -1031,6 +926,7 @@ function CreateFlow({
       if (!copied) throw new Error("copy-failed")
 
       setCopyMessage(uiText("문구와 확정 해시태그를 복사했어요.", easyMode))
+      notify("copy")
     } catch {
       setCopyMessage(uiText("복사하지 못했어요. 다시 시도해 주세요.", easyMode))
     }
@@ -1094,7 +990,10 @@ function CreateFlow({
 
       setPosterStatus("ready")
 
-      if (download) triggerFileDownload(file)
+      if (download) {
+        triggerFileDownload(file)
+        notify("download")
+      }
 
       return file
     } catch {
@@ -1312,7 +1211,10 @@ function CreateFlow({
           : `${extension} 확인용 예시 영상이 준비됐어요.`,
       )
 
-      if (download) triggerFileDownload(result)
+      if (download) {
+        triggerFileDownload(result)
+        notify("download")
+      }
 
       return result
     } catch {
@@ -1332,7 +1234,7 @@ function CreateFlow({
         step === 3 ? "results-flow" : "max-w-[920px]"
       }`}
     >
-      <StepHeader step={step} easyMode={easyMode} />
+      <StepHeader step={step} onBack={setStep} easyMode={easyMode} />
       {step === 1 && canUndoReset && (
         <div className="draft-undo-notice" role="status">
           <p>
@@ -1346,250 +1248,43 @@ function CreateFlow({
           입력한 사진과 설명을 이어서 사용해요.
         </p>
       )}
-      {type === "all" && step === 2 && (
-        <div className="mb-7">
-          <p className="mb-2 text-[16px] font-bold text-[#545454]">
-            {uiText("선택한 결과 형식", easyMode)}
-          </p>
-          <div className="grid grid-cols-3 gap-2">
-            {(Object.keys(outputFormatNames) as OutputFormat[]).map(
-              (format) => (
-                <span
-                  key={format}
-                  className={`flex min-h-14 items-center justify-center gap-1 rounded-[12px] border px-2 text-center text-[16px] font-bold ${
-                    outputFormat === format
-                      ? "border-[#c64f12] bg-[#fff1e7] text-[#9f3e0d]"
-                      : "border-[#dedbd7] bg-white text-[#696969]"
-                  }`}
-                >
-                  <span aria-hidden="true">{outputFormatIcons[format]}</span>
-                  <span className="sm:hidden">
-                    {format === "both"
-                      ? "둘 다"
-                      : uiText(outputFormatNames[format], easyMode)}
-                  </span>
-                  <span className="hidden sm:inline">
-                    {uiText(outputFormatNames[format], easyMode)}
-                  </span>
-                </span>
-              ),
-            )}
-          </div>
-        </div>
-      )}
       {step === 1 && (
-        <div>
-          <h3 className="mt-8 text-[20px] font-bold text-[#222222]">
-            제품 사진을 올려 주세요
-          </h3>
-          <p id="upload-help" className="mt-2 text-[#545454]">
-            20MB 이하의 JPG·PNG 등 사진 한 장을 선택하세요.
-          </p>
-          {uploadMessage && (
-            <p
-              id="upload-feedback"
-              role="status"
-              className="mt-2 font-bold text-[#7f340d]"
-            >
-              {uploadMessage}
-            </p>
-          )}
-          <div className="mt-3 rounded-[22px] border-2 border-dashed border-[#817a74] bg-white p-5 sm:p-7">
-            {imageUrl ? (
-              <div className="grid items-center gap-6 sm:grid-cols-[220px_1fr]">
-                <img
-                  src={imageUrl}
-                  alt={
-                    easyMode
-                      ? "넣은 제품 사진 미리보기"
-                      : "업로드한 제품 미리보기"
-                  }
-                  className="aspect-square w-full rounded-[16px] bg-[#f1efec] object-cover"
-                />
-                <div>
-                  <strong className="text-[20px]">
-                    {uploadPending ? "새 사진 확인 중" : "사진이 준비됐어요"}
-                  </strong>
-                  <p className="mt-2 text-[18px] leading-6 text-[#545454]">
-                    제품이 잘 보이는지 확인해 주세요.
-                  </p>
-                  <label className="mt-5 inline-flex min-h-12 cursor-pointer items-center rounded-[12px] border-2 border-[#2b2b2b] px-5 font-bold text-[#2b2b2b] hover:bg-[#fff1e7]">
-                    사진 바꾸기
-                    <input
-                      type="file"
-                      aria-describedby="upload-help upload-feedback"
-                      accept="image/*"
-                      onChange={upload}
-                      className="sr-only"
-                    />
-                  </label>
-                </div>
-              </div>
-            ) : (
-              <label className="flex min-h-[300px] cursor-pointer flex-col items-center justify-center text-center">
-                <span className="flex h-14 w-14 items-center justify-center rounded-full bg-[#fff1e7] text-3xl text-[#c9541a]">
-                  ＋
-                </span>
-                <strong className="mt-4 text-[20px]">제품 사진 올리기</strong>
-                <span className="mt-2 text-[16px] text-[#626262]">
-                  {uiText("JPG, PNG 등 이미지 파일을 선택해 주세요", easyMode)}
-                </span>
-                <input
-                  type="file"
-                  aria-describedby="upload-help upload-feedback"
-                  accept="image/*"
-                  onChange={upload}
-                  className="sr-only"
-                />
-              </label>
-            )}
-          </div>
-
-          {type === "all" ? (
-            <div>
-              <h3 className="text-[19px] font-bold">
-                {uiText("결과 형식을 선택해 주세요", easyMode)}
-              </h3>
-              <p className="mt-1 text-[16px] text-[#545454]">
-                어떤 형식을 골라도 홍보 문구가 함께 만들어집니다.
-              </p>
-              <div
-                className="mt-4 grid grid-cols-3 gap-2 sm:gap-3"
-                role="radiogroup"
-                aria-label={uiText("결과 형식", easyMode)}
-              >
-                {(Object.keys(outputFormatNames) as OutputFormat[]).map(
-                  (format) => (
-                    <button
-                      key={format}
-                      onClick={() => setOutputFormat(format)}
-                      role="radio"
-                      aria-checked={outputFormat === format}
-                      aria-label={uiText(outputFormatNames[format], easyMode)}
-                      className={`relative flex min-h-24 flex-col items-center justify-center gap-1 rounded-[14px] border-2 px-2 text-[16px] font-bold transition sm:px-5 sm:text-[18px] ${
-                        outputFormat === format
-                          ? "border-[#c64f12] bg-[#fff1e7] text-[#7f340d] shadow-[inset_0_0_0_1px_#c64f12]"
-                          : "border-[#aaa39d] bg-white text-[#333333]"
-                      }`}
-                    >
-                      {outputFormat === format && (
-                        <span
-                          className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-full bg-[#c64f12] text-[16px] text-white"
-                          aria-hidden="true"
-                        >
-                          ✓
-                        </span>
-                      )}
-                      <span className="text-[24px]" aria-hidden="true">
-                        {outputFormatIcons[format]}
-                      </span>
-                      <span className="whitespace-nowrap sm:hidden">
-                        {format === "both"
-                          ? "둘 다"
-                          : uiText(outputFormatNames[format], easyMode)}
-                      </span>
-                      <span className="hidden sm:inline">
-                        {uiText(outputFormatNames[format], easyMode)}
-                      </span>
-                    </button>
-                  ),
-                )}
-              </div>
-              {easyMode && (
-                <p className="mt-3 text-[18px] text-[#545454]">
-                  포스터는 사진과 글을 한 장에 담은 결과예요.
-                </p>
-              )}
-            </div>
-          ) : (
-            <div className="mt-7 rounded-[14px] border border-[#aaa39d] bg-white px-5 py-4">
-              <span className="text-[16px] text-[#626262]">
-                {uiText("선택된 결과 형식", easyMode)}
-              </span>
-              <strong className="mt-1 block text-[18px]">
-                {type === "copy"
-                  ? "✍️ 홍보 문구"
-                  : `${outputFormatIcons[type]} ${uiText(creationNames[type], easyMode)}`}
-              </strong>
-            </div>
-          )}
-          {easyMode && type === "poster" && (
-            <p className="mt-3 text-[18px] text-[#545454]">
-              포스터는 사진과 글을 한 장에 담은 결과예요.
-            </p>
-          )}
-          <h3 className="mt-8 text-[19px] font-bold">
-            {uiText("홍보 채널을 선택해 주세요", easyMode)}
-          </h3>
-          <div
-            className="mt-6 grid gap-3 sm:grid-cols-3"
-            role="radiogroup"
-            aria-label={uiText("홍보 채널", easyMode)}
-            aria-describedby="channel-tone-guide"
-          >
-            {(Object.keys(channelNames) as Channel[]).map((item) => (
-              <button
-                key={item}
-                onClick={() => setChannel(item)}
-                role="radio"
-                aria-checked={channel === item}
-                className={`relative min-h-16 rounded-[14px] border-2 px-4 text-[18px] font-bold transition ${
-                  channel === item
-                    ? "border-[#c64f12] bg-[#fff1e7] text-[#7f340d] shadow-[inset_0_0_0_1px_#c64f12]"
-                    : "border-[#aaa39d] bg-white text-[#333333] hover:border-[#77706a]"
-                }`}
-              >
-                {channel === item && (
-                  <span className="mr-1 text-[#c64f12]" aria-hidden="true">
-                    ✓
-                  </span>
-                )}
-                <span className="mr-1" aria-hidden="true">
-                  {channelIcons[item]}
-                </span>
-                {uiText(channelNames[item], easyMode)}
-              </button>
-            ))}
-          </div>
-          <p
-            id="channel-tone-guide"
-            className="channel-tone-guide"
-            role="status"
-          >
-            {channelTheme.guide}
-          </p>
-          <div className="mobile-primary-bar mt-7 flex justify-end">
-            <PrimaryButton
-              disabled={!imageUrl || uploadPending}
-              onClick={() => setStep(2)}
-            >
-              {uploadPending ? "사진 확인 중" : "사진 확인하고 다음"}
-            </PrimaryButton>
-          </div>
-        </div>
+        <PhotoStep
+          imageUrl={imageUrl}
+          pending={uploadPending}
+          message={uploadMessage}
+          onUpload={upload}
+          type={type}
+          format={outputFormat}
+          onFormat={setOutputFormat}
+          channel={channel}
+          onChannel={setChannel}
+          onNext={() => setStep(2)}
+        />
       )}
       {step === 2 && (
-        <div>
-          <p className="rounded-[12px] border border-[#dda77f] bg-[#fff1e7] px-4 py-3 text-[18px] leading-7 text-[#7f340d]">
-            {uiText(
-              "아래 내용은 실제 AI 분석이 아닌 예시 초안입니다. 제품에 맞게 자유롭게 고쳐 주세요.",
-
-              easyMode,
-            )}
+        <div className="details-step step-panel">
+          <p className="description-example-note">
+            자동 분석이 아닌 예시예요. 제품에 맞게 고쳐 주세요.
           </p>
           {type !== "all" && (
             <p className="mt-3 text-[16px] font-bold text-[#2b2b2b]">
               {uiText("결과 형식", easyMode)}:{" "}
               {type === "copy"
-                ? "✍️ 홍보 문구"
+                ? "홍보 글"
                 : uiText(creationNames[type], easyMode)}
             </p>
           )}
-          <div className="mt-7 space-y-5 rounded-[22px] border border-[#dedbd7] bg-white p-5 sm:p-7">
+          <div className="details-fields mt-7 space-y-5">
             <label className="block text-[18px] font-bold">
-              제품 설명
+              제품 설명{" "}
+              <span className="field-hint" id="description-help">
+                예: 매장에서 굽는 단팥빵
+              </span>
               <textarea
                 aria-label="제품 설명"
+                aria-invalid={!details.description.trim()}
+                aria-describedby="description-help"
                 value={details.description}
                 onChange={(event) =>
                   updateDetails({ ...details, description: event.target.value })
@@ -1599,9 +1294,14 @@ function CreateFlow({
               />
             </label>
             <label className="block text-[18px] font-bold">
-              강조할 특징
+              강조할 특징{" "}
+              <span className="field-hint" id="features-help">
+                꼭 알리고 싶은 점을 적어요. 예: 오늘 만든 빵만 판매해요
+              </span>
               <textarea
                 aria-label="강조할 특징"
+                aria-invalid={!details.features.trim()}
+                aria-describedby="features-help"
                 value={details.features}
                 onChange={(event) =>
                   updateDetails({ ...details, features: event.target.value })
@@ -1611,9 +1311,14 @@ function CreateFlow({
               />
             </label>
             <label className="block text-[18px] font-bold">
-              주요 고객
+              주요 고객{" "}
+              <span className="field-hint" id="audience-help">
+                누구에게 추천하나요? 예: 간식을 찾는 동네 손님
+              </span>
               <textarea
                 aria-label="주요 고객"
+                aria-invalid={!details.audience.trim()}
+                aria-describedby="audience-help"
                 value={details.audience}
                 onChange={(event) =>
                   updateDetails({ ...details, audience: event.target.value })
@@ -1622,6 +1327,29 @@ function CreateFlow({
                 className="mt-2 w-full rounded-[12px] border-2 border-[#817a74] p-4 text-[18px] font-normal outline-none focus:border-[#c64f12] focus:ring-3 focus:ring-[#c64f12]/15"
               />
             </label>
+            <details className="draft-review">
+              <summary>선택한 사진·홍보물 확인</summary>
+              <div className="draft-context">
+                <img
+                  src={imageUrl}
+                  alt="선택한 제품 사진"
+                  width="88"
+                  height="88"
+                />
+                <div>
+                  <span>사진과 선택한 내용</span>
+                  <strong>
+                    {type === "all"
+                      ? outputFormatNames[outputFormat] + " · 홍보 글"
+                      : creationNames[type]}
+                  </strong>
+                  <p>{channelNames[channel]}</p>
+                </div>
+                <button className="studio-secondary" onClick={() => setStep(1)}>
+                  사진·설정 수정
+                </button>
+              </div>
+            </details>
             <details className="optional-hashtags rounded-[14px] border border-[#817a74] bg-white p-4">
               <summary>
                 검색어(#) 수정하기 · 선택
@@ -1737,6 +1465,7 @@ function CreateFlow({
                 disabled={missingFields.length > 0}
                 onClick={() => {
                   onResultCreated()
+                  notify("result")
 
                   setStep(3)
                 }}
@@ -1748,11 +1477,9 @@ function CreateFlow({
         </div>
       )}
       {step === 3 && (
-        <div>
+        <div className="results-step step-panel">
           <div className="result-summary">
-            <span className="result-check" aria-hidden="true">
-              ✓
-            </span>
+            <ServiceArt name="result-complete" className="result-ready-image" />
             <div>
               <strong>
                 {[showPoster, showCopy, showVideo].filter(Boolean).length}개의
@@ -1765,8 +1492,10 @@ function CreateFlow({
             </div>
           </div>
           <p className="mt-2 text-[16px] text-[#545454]">
-            {uiText(channelNames[channel], easyMode)}에 어울리는 말투로 구성한
-            미리보기입니다.
+            {channel === "download"
+              ? "입력한 내용으로 만든 기본 문구예요."
+              : `${channelNames[channel]}에 사용할 문구 예시예요.`}{" "}
+            게시 전 내용을 확인해 주세요.
           </p>
           {[showPoster, showCopy, showVideo].filter(Boolean).length > 1 && (
             <nav className="result-jump-links" aria-label="결과 종류로 이동">
@@ -1818,7 +1547,9 @@ function CreateFlow({
                 className="result-card result-poster overflow-hidden rounded-[22px] border border-[#dedbd7] bg-white"
               >
                 <div className="result-card-heading">
-                  <span aria-hidden="true">🖼️</span>
+                  <span aria-hidden="true">
+                    <Icon name="picture" size={28} />
+                  </span>
                   <div>
                     <h3 id="poster-title" tabIndex={-1}>
                       포스터
@@ -1915,13 +1646,23 @@ function CreateFlow({
                 className="result-card result-copy rounded-[22px] border border-[#dedbd7] bg-white p-6"
               >
                 <div className="result-card-heading">
-                  <span aria-hidden="true">✍️</span>
+                  <span aria-hidden="true">
+                    <Icon name="copy" size={28} />
+                  </span>
                   <div>
                     <h3 id="copy-title" tabIndex={-1}>
                       홍보 글
                     </h3>
                     <p>복사해서 원하는 곳에 붙여 넣으세요</p>
                   </div>
+                </div>
+                <div className="copy-art-guide">
+                  <ServiceArt name="guide-copy" />
+                  <p>
+                    글과 검색어를 함께 복사해요.
+                    <br />
+                    올릴 곳에서 붙여 넣어 주세요.
+                  </p>
                 </div>
                 <button
                   onClick={() => void copyFinalText()}
@@ -1938,7 +1679,10 @@ function CreateFlow({
                   </p>
                 )}
                 <span className="rounded-full bg-[#fff1e7] px-3 py-1.5 text-[16px] font-bold text-[#2b2b2b]">
-                  {uiText(channelNames[channel], easyMode)} 문구
+                  {channel === "download"
+                    ? "기본 홍보"
+                    : uiText(channelNames[channel], easyMode)}{" "}
+                  문구
                 </span>
                 <p className="mt-5 whitespace-pre-line text-[18px] leading-8">
                   {resultCopy[channel]}
@@ -1983,7 +1727,9 @@ function CreateFlow({
                 className="result-card result-video rounded-[22px] border border-[#dedbd7] bg-white p-5"
               >
                 <div className="result-card-heading">
-                  <span aria-hidden="true">🎬</span>
+                  <span aria-hidden="true">
+                    <Icon name="video" size={28} />
+                  </span>
                   <div>
                     <h3 id="video-title" tabIndex={-1}>
                       영상
@@ -2066,6 +1812,7 @@ function CreateFlow({
               </article>
             )}
           </div>
+          <PublishingGuide channel={channel} hasVideo={showVideo} />
           <div className="mt-7 flex flex-col gap-3 border-t border-[#dedbd7] pt-7 sm:flex-row sm:items-center sm:justify-between">
             <button
               onClick={() => setStep(2)}
@@ -2100,12 +1847,14 @@ function Records({
   records,
 
   onOpen,
+  onCreate,
 }: {
   easyMode: boolean
 
   records: GeneratedRecord[]
 
   onOpen: (record: GeneratedRecord) => void
+  onCreate: () => void
 }) {
   return (
     <section>
@@ -2123,12 +1872,16 @@ function Records({
         </p>
       )}
       {records.length === 0 ? (
-        <div className="rounded-[18px] border border-[#dedbd7] bg-white p-7 text-center">
+        <div className="empty-results rounded-[18px] border border-[#dedbd7] bg-white p-7 text-center">
+          <ServiceArt name="records-empty" />
           <strong className="text-[20px]">아직 만든 결과가 없어요</strong>
           <p className="mt-2 text-[16px] text-[#545454]">
             이 창에서 만든 홍보물을 다시 볼 수 있어요. 새로고침하거나 창을
             닫으면 기록이 사라지니 파일을 먼저 저장하세요.
           </p>
+          <button className="studio-primary" onClick={onCreate}>
+            첫 홍보물 만들기
+          </button>
         </div>
       ) : (
         <div className="grid gap-4">
@@ -2224,7 +1977,7 @@ function Plan({ easyMode }: { easyMode: boolean }) {
 }
 
 export default function App() {
-  const [page, setPage] = useState<Page>("login")
+  const [page, setPage] = useState<Page>("home")
 
   const [creationType, setCreationType] = useState<CreationType>("all")
 
@@ -2232,7 +1985,7 @@ export default function App() {
 
   const [step, setStep] = useState<Step>(1)
 
-  const [channel, setChannel] = useState<Channel>("instagram")
+  const [channel, setChannel] = useState<Channel>("download")
 
   const [imageUrl, setImageUrl] = useState("")
 
@@ -2255,11 +2008,7 @@ export default function App() {
   const [easyMode, setEasyModeState] = useState(true)
   const [undoDraft, setUndoDraft] = useState<DraftSnapshot | null>(null)
   const [editedHashtags, setEditedHashtags] =
-    useState<Record<Channel, boolean>>({
-      instagram: false,
-      x: false,
-      threads: false,
-    })
+    useState<Record<Channel, boolean>>(() => mapChannels(() => false))
   const [draftRestoreMessage, setDraftRestoreMessage] = useState("")
 
   const [speaking, setSpeaking] = useState(false)
@@ -2373,8 +2122,8 @@ export default function App() {
 
     if (page === "home") {
       return easyMode
-        ? "첫 화면입니다. 사진 한 장으로 홍보물을 만들어 보세요. 1단계, 사진 넣기. 홍보할 제품 사진을 넣어 주세요. 2단계, 설명과 검색어 확인. 정리된 설명과 추천 검색어를 확인하고 고쳐 주세요. 3단계, 홍보물 만들기. 고른 홍보물을 만들고 결과를 확인해 주세요. 홍보물 만들기 시작 버튼을 누르면 1단계로 이동합니다."
-        : "메인 대시보드입니다. 사진 한 장으로 홍보물을 만들어 보세요. 1단계, 사진 넣기. 홍보할 제품 사진을 넣어 주세요. 2단계, 설명과 해시태그 확인. 정리된 설명과 추천 해시태그를 확인하고 고쳐 주세요. 3단계, 홍보물 만들기. 선택한 홍보물을 만들고 결과를 확인해 주세요. 홍보물 만들기 시작 버튼을 누르면 1단계로 이동합니다."
+        ? "첫 화면입니다. 사진 한 장으로 홍보물을 만들어 보세요. 1단계, 사진 넣기. 홍보할 제품 사진을 넣어 주세요. 2단계, 설명과 검색어 확인. 정리된 설명과 추천 검색어를 확인하고 고쳐 주세요. 3단계, 홍보물 만들기. 고른 홍보물을 만들고 결과를 확인해 주세요. 홍보물 만들기 버튼을 누르면 1단계로 이동합니다."
+        : "메인 대시보드입니다. 사진 한 장으로 홍보물을 만들어 보세요. 1단계, 사진 넣기. 홍보할 제품 사진을 넣어 주세요. 2단계, 설명과 해시태그 확인. 정리된 설명과 추천 해시태그를 확인하고 고쳐 주세요. 3단계, 홍보물 만들기. 선택한 홍보물을 만들고 결과를 확인해 주세요. 홍보물 만들기 버튼을 누르면 1단계로 이동합니다."
     }
 
     if (page === "records") {
@@ -2596,7 +2345,7 @@ export default function App() {
       touched: userTouched,
       editedHashtags: { ...editedHashtags },
     })
-    setEditedHashtags({ instagram: false, x: false, threads: false })
+    setEditedHashtags(mapChannels(() => false))
     setDraftRestoreMessage("")
     setImageUrl("")
 
@@ -2666,9 +2415,7 @@ export default function App() {
   const openRecord = (record: GeneratedRecord) => {
     setUndoDraft(null)
     setDraftRestoreMessage("")
-    setEditedHashtags(
-      record.editedHashtags ?? { instagram: true, x: true, threads: true },
-    )
+    setEditedHashtags(mapChannels((id) => record.editedHashtags?.[id] ?? true))
     setCreationType(record.type)
 
     if (record.type === "all") setAllOutputFormat(record.outputFormat)
@@ -2770,15 +2517,9 @@ export default function App() {
             setRecommendedHashtagsByChannel(recommendations)
             setUserHashtagsByChannel((current) => {
               const existing = normalizeHashtagValues(current, next)
-              return {
-                instagram: editedHashtags.instagram
-                  ? existing.instagram
-                  : recommendations.instagram,
-                x: editedHashtags.x ? existing.x : recommendations.x,
-                threads: editedHashtags.threads
-                  ? existing.threads
-                  : recommendations.threads,
-              }
+              return mapChannels((id) =>
+                editedHashtags[id] ? existing[id] : recommendations[id],
+              )
             })
             setDraftRestoreMessage("")
           }}
@@ -2811,7 +2552,12 @@ export default function App() {
         />
       )}
       {page === "records" && (
-        <Records easyMode={easyMode} records={records} onOpen={openRecord} />
+        <Records
+          easyMode={easyMode}
+          records={records}
+          onOpen={openRecord}
+          onCreate={() => navigate("create", "all")}
+        />
       )}
       {page === "plan" && <Plan easyMode={easyMode} />}
     </Shell>

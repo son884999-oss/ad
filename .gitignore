@@ -1,0 +1,3 @@
+# 로컬 복원 사본은 저장소와 배포에 포함하지 않는다.
+.phase*-checkpoint-*/
+.phase*-verified-*/

@@ -12,7 +12,10 @@
     "verify:studio": "node scripts/verify-studio.mjs",
     "verify:zoom": "node scripts/verify-native-zoom.mjs",
     "verify:recovery": "node scripts/verify-recovery.mjs",
-    "format": "oxfmt"
+    "verify:phase2": "node scripts/verify-phase2.mjs",
+    "assets:optimize": "node scripts/optimize-illustrations.mjs",
+    "format": "oxfmt",
+    "verify:phase3": "node scripts/verify-phase3.mjs"
   },
   "dependencies": {
     "react": "^19.0.0",

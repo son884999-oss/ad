@@ -1,0 +1,40 @@
+/* 서비스 화면·결과물 중심의 삽화. 실제 입력 사진과 출력 미리보기는 그대로 둔다. */
+.service-art { display:block; max-width:100%; height:auto; object-fit:contain; }
+.studio-brand-logo.is-stacked { width:160px; }
+.studio-login-brand { text-align:center; }
+.studio-footer > img { width:100px; height:auto; }
+.studio-shell .studio-shortcuts button { display:grid; grid-template-columns:76px minmax(0,1fr) 24px; gap:16px; }
+.studio-shell .studio-shortcuts .shortcut-art { width:76px; height:76px; }
+.studio-shell .studio-shortcuts button > span { min-width:0; }
+.studio-shell .studio-shortcuts strong { display:block; }
+.studio-shell .studio-shortcuts small { display:block; font-size:16px; line-height:1.6; }
+.studio-shell .upload-target .upload-art { width:128px; height:128px; }
+.studio-shell .upload-target strong { display:inline-flex; align-items:center; justify-content:center; min-height:52px; padding:10px 22px; border-radius:12px; background:var(--color-brand); color:white; }
+.draft-review { margin:8px 0 12px; }
+.draft-review > summary { min-height:48px; padding:10px 0; font-size:18px; font-weight:700; color:var(--color-brand); cursor:pointer; }
+.draft-review .draft-context { margin-top:8px; }
+.draft-review + p { margin-top:12px; }
+@media (max-width:639px) {
+  .studio-shell .upload-target { min-height:240px; gap:12px; padding:24px 16px; }
+  .studio-shell .upload-target .upload-art { width:88px; height:88px; }
+}
+.channel-intro, .copy-art-guide { display:flex; align-items:center; gap:18px; margin-bottom:20px; }
+.studio-shell .channel-intro p, .studio-shell .copy-art-guide p { font-size:17px; line-height:1.65; color:var(--muted); }
+.channel-intro > img { width:144px; height:96px; flex-shrink:0; }
+.copy-art-guide { margin:20px 0 0; padding:12px; border-radius:12px; background:var(--color-canvas); }
+.copy-art-guide > img { width:72px; height:72px; flex-shrink:0; }
+.publishing-guide .save-guide-art { width:112px; height:112px; }
+.publishing-guide > div { min-width:0; }
+.empty-results .service-art { width:220px; height:auto; }
+@media (min-width:768px) {
+  .studio-shell .studio-shortcuts button { grid-template-columns:minmax(0,1fr) 24px; }
+  .studio-shell .studio-shortcuts .shortcut-art { grid-column:1 / -1; width:112px; height:112px; }
+  .publishing-guide { display:grid; grid-template-columns:112px minmax(0,1fr); align-items:center; }
+  .publishing-guide > a { grid-column:2; justify-self:start; }
+}
+@media (max-width:359px) {
+  .studio-shell .studio-shortcuts button { grid-template-columns:64px minmax(0,1fr) 20px; gap:12px; padding:16px; }
+  .studio-shell .studio-shortcuts .shortcut-art { width:64px; height:64px; }
+  .channel-intro { align-items:flex-start; gap:12px; }
+  .channel-intro > img { width:96px; height:64px; }
+}

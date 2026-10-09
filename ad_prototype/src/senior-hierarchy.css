@@ -1,0 +1,35 @@
+/* 시니어 우선: 읽기 도움 → 시작 → 세 단계 → 예시 결과. */
+.studio-reading-bar { display:flex; align-items:center; width:100%; padding:8px 20px; background:white; border-bottom:1px solid var(--color-line); }
+.studio-read-button { display:inline-flex; align-items:center; justify-content:center; gap:12px; min-height:60px; padding:10px 20px; color:var(--color-brand); border:2px solid var(--color-brand); background:var(--color-brand-soft); font-size:20px; font-weight:700; }
+.studio-read-button svg { flex-shrink:0; }
+.studio-read-button[aria-pressed=true] { background:var(--color-brand); color:white; }
+.studio-login .studio-reading-bar { max-width:460px; border:0; background:transparent; padding:0; margin-bottom:24px; }
+.studio-shell .studio-start-guide { display:block; min-height:0; }
+.studio-shell .studio-hero-copy { padding:0; }
+.studio-shell .studio-how { margin-top:24px; }
+.studio-shell .studio-how .studio-section-title { margin-bottom:12px; }
+.studio-shell .studio-guide-steps { margin-top:12px; }
+.studio-shell .studio-example { margin-top:40px; }
+.studio-shell .studio-example h2 { font-size:26px; line-height:1.4; }
+.studio-shell .studio-example .studio-hero-art { max-width:960px; margin:20px auto 0; min-height:0; }
+.studio-shell .studio-example .studio-demo-note { margin-top:8px; }
+.studio-shell .studio-example .studio-art-caption { margin-top:8px; font-size:17px; color:var(--color-ink); }
+.studio-shell .description-example-note { margin-top:8px; color:var(--color-muted); font-size:18px; line-height:1.6; }
+.studio-shell .details-fields { margin-top:16px; }
+@media (max-width:767px) {
+  .studio-read-button { width:100%; }
+  .studio-shell .studio-guide-steps li { grid-template-columns:56px minmax(0,1fr); gap:14px; padding:12px 0; }
+  .studio-shell .studio-guide-steps img { width:56px; height:56px; border-radius:12px; }
+  .studio-shell .studio-guide-steps li:not(:last-child)::after { left:27px; height:16px; bottom:-8px; }
+  .studio-shell .studio-guide-steps h3 { font-size:22px; }
+  .studio-shell .studio-guide-steps p { font-size:18px; line-height:1.6; }
+  .studio-shell .studio-how .studio-step-number { margin-bottom:0; }
+}
+@media (min-width:768px) {
+  .studio-shell .studio-hero-copy { max-width:900px; margin-inline:auto; text-align:center; }
+  .studio-shell .studio-guide-action { margin-top:20px; }
+  .studio-shell .studio-guide-action .studio-primary { min-width:320px; }
+  .studio-shell .studio-how .studio-section-title, .studio-shell .studio-example .studio-section-title { text-align:center; }
+  .studio-shell .studio-guide-steps { padding-block:16px; }
+}
+@media (min-width:1024px) { .studio-reading-bar { padding-inline:max(40px,calc((100vw - 1360px)/2)); } }

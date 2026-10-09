@@ -26,6 +26,7 @@ for (const zoom of [100, 200]) {
     })
     const page = await context.newPage()
     await page.goto("http://127.0.0.1:5173/")
+    await page.locator(".studio-accessibility > summary").click()
     const metrics = await page.evaluate(() => ({
       dpr: devicePixelRatio,
       cssWidth: innerWidth,
@@ -34,14 +35,16 @@ for (const zoom of [100, 200]) {
       visualScale: visualViewport.scale,
     }))
     await page
-      .getByRole("button", { name: "바로 시작하기", exact: true })
+      .getByRole("button", { name: "홍보물 만들기", exact: true })
       .click()
-    await page.getByRole("button", { name: "만들러 가기", exact: true }).click()
     await page
       .locator("input[type=file]")
       .setInputFiles(
         fileURLToPath(
-          new URL("../../D_고혜숙/public/sample-product.png", import.meta.url),
+          new URL(
+            "../design-assets/illustrations/step-photo.png",
+            import.meta.url,
+          ),
         ),
       )
     await page
@@ -157,12 +160,14 @@ for (const zoom of [100, 200]) {
     await page.getByRole("button", { name: "메뉴 열기", exact: true }).click()
     await page
       .getByRole("dialog")
-      .getByRole("button", { name: "로그아웃", exact: true })
+      .getByRole("button", { name: "로그인 화면 보기", exact: true })
       .click()
     await page
       .getByRole("button", { name: "바로 시작하기", exact: true })
       .click()
-    await page.getByRole("button", { name: "만들러 가기", exact: true }).click()
+    await page
+      .getByRole("button", { name: "홍보물 만들기", exact: true })
+      .click()
     if (
       await page
         .getByRole("button", { name: "이전 내용 되돌리기", exact: true })

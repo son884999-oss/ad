@@ -1,0 +1,35 @@
+/* 홍보잇다: 파스텔은 배경에, 진한 잉크는 글자와 행동에 사용한다. */
+:root {
+  --color-canvas: #FFF8EF;
+  --color-surface: #FFFFFF;
+  --color-ink: #26364A;
+  --color-muted: #625E59;
+  --color-brand: #AD4A19;
+  --color-brand-hover: #893A14;
+  --color-brand-accent: #E88942;
+  --color-brand-soft: #FAEDE2;
+  --color-mint: #DCEDE3;
+  --color-peach: #F8E4D4;
+  --color-sky: #DCE8F5;
+  --color-line: #E4D7CC;
+  --color-control: #897465;
+  --color-error: #963B32;
+  --color-error-soft: #FBECE8;
+  --color-focus: #255C9A;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+  --radius-control: 12px;
+  --radius-card: 20px;
+  --radius-section: 28px;
+  --control-height: 52px;
+  --font-body: 18px;
+  --font-body-large: 22px;
+  --font-small: 16px;
+  --line-body: 1.65;
+  --shadow-card: 0 6px 24px rgb(32 50 74 / 4%);
+}

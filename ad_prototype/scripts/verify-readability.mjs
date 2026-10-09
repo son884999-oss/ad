@@ -12,15 +12,18 @@ try {
   for (const width of [320, 390, 768]) {
     const page = await browser.newPage({ viewport: { width, height: 844 } })
     await page.goto("http://127.0.0.1:5173/")
+    await page.locator(".studio-accessibility > summary").click()
     await page
-      .getByRole("button", { name: "바로 시작하기", exact: true })
+      .getByRole("button", { name: "홍보물 만들기", exact: true })
       .click()
-    await page.getByRole("button", { name: "만들러 가기", exact: true }).click()
     await page
       .locator("input[type=file]")
       .setInputFiles(
         fileURLToPath(
-          new URL("../../D_고혜숙/public/sample-product.png", import.meta.url),
+          new URL(
+            "../design-assets/illustrations/step-photo.png",
+            import.meta.url,
+          ),
         ),
       )
     await page
@@ -54,7 +57,20 @@ try {
     await page
       .getByRole("button", { name: "이 내용으로 결과 보기", exact: true })
       .click()
-    await page.locator("#result-copy").waitFor()
+    await page
+      .locator("#result-copy")
+      .waitFor()
+      .catch(async (error) => {
+        await page.screenshot({
+          path: fileURLToPath(new URL("readability-failure.png", output)),
+          fullPage: true,
+        })
+        console.log({
+          width,
+          text: (await page.locator("main").innerText()).slice(0, 1200),
+        })
+        throw error
+      })
     const screenFocus = await page.evaluate(() =>
       document.activeElement.hasAttribute("data-screen-heading"),
     )

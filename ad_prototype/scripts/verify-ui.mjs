@@ -14,15 +14,18 @@ try {
     const errors = []
     page.on("pageerror", (e) => errors.push(e.message))
     await page.goto("http://127.0.0.1:5173/")
+    await page.locator(".studio-accessibility > summary").click()
     await page
-      .getByRole("button", { name: "바로 시작하기", exact: true })
+      .getByRole("button", { name: "홍보물 만들기", exact: true })
       .click()
-    await page.getByRole("button", { name: "만들러 가기", exact: true }).click()
     await page
       .locator("input[type=file]")
       .setInputFiles(
         fileURLToPath(
-          new URL("../../D_고혜숙/public/sample-product.png", import.meta.url),
+          new URL(
+            "../design-assets/illustrations/step-photo.png",
+            import.meta.url,
+          ),
         ),
       )
     await page
@@ -33,6 +36,7 @@ try {
       .click()
     await page.locator(".result-grid").waitFor()
     for (const large of [false, true]) {
+      await page.locator(".result-grid").waitFor()
       const modeSwitch = page.getByRole("switch", {
         name: "간편모드",
         exact: true,
@@ -94,10 +98,10 @@ try {
       viewport: { width: 390, height: 844 },
     })
     await page.goto("http://127.0.0.1:5173/")
+    await page.locator(".studio-accessibility > summary").click()
     await page
-      .getByRole("button", { name: "바로 시작하기", exact: true })
+      .getByRole("button", { name: "홍보물 만들기", exact: true })
       .click()
-    await page.getByRole("button", { name: "만들러 가기", exact: true }).click()
     await page.getByRole("radio", { name: format, exact: true }).click()
     await page.locator("input[type=file]").setInputFiles({
       name: "wrong.txt",
@@ -117,7 +121,10 @@ try {
       .locator("input[type=file]")
       .setInputFiles(
         fileURLToPath(
-          new URL("../../D_고혜숙/public/sample-product.png", import.meta.url),
+          new URL(
+            "../design-assets/illustrations/step-photo.png",
+            import.meta.url,
+          ),
         ),
       )
     await page
@@ -146,7 +153,13 @@ try {
       await modeSwitch.click()
     const count = await page.locator(".result-card").count()
     if (count !== (format === "포스터와 영상 둘 다" ? 3 : 2))
-      throw Error("wrong result count")
+      throw Error(
+        JSON.stringify({
+          format,
+          count,
+          text: await page.locator("main").innerText(),
+        }),
+      )
     await page
       .getByRole("link", { name: "홍보 글 보기 ↓", exact: true })
       .click()

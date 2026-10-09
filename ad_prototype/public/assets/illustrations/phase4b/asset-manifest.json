@@ -1,0 +1,362 @@
+{
+  "distinctCreativeCount": 20,
+  "resizeCounted": false,
+  "assets": [
+    {
+      "creativeId": "service-hero",
+      "category": "illustration",
+      "purpose": "홈 대표 장면",
+      "selector": ".studio-hero-art",
+      "original": "design-assets/illustrations/phase4b/service-hero.png",
+      "sourceSha256": "e782310cf2e1b4cec7c0c5ae7a3d0e6b830d3ce8b51a8d8903fec3ab37f5c32d",
+      "files": [
+        {
+          "filename": "service-hero.webp",
+          "width": 960,
+          "height": 640,
+          "bytes": 55600,
+          "alphaCorner": 255,
+          "alphaShare": 0
+        },
+        {
+          "filename": "service-hero-640.webp",
+          "width": 640,
+          "height": 427,
+          "bytes": 35848,
+          "alphaCorner": 255,
+          "alphaShare": 0
+        }
+      ],
+      "integration": "React ServiceArt",
+      "creation": "내장 image_gen 원본 · 크기/포맷 최적화",
+      "count": 1
+    },
+    {
+      "creativeId": "service-poster",
+      "category": "illustration",
+      "purpose": "홈 이미지 만들기",
+      "selector": ".studio-shortcuts",
+      "original": "design-assets/illustrations/phase4b/service-poster.png",
+      "sourceSha256": "cf65b011b322d1ff45e3872af902e131d761c55d2ba2121eb6970a7a315c7b62",
+      "files": [
+        {
+          "filename": "service-poster.webp",
+          "width": 480,
+          "height": 480,
+          "bytes": 39242,
+          "alphaCorner": 0,
+          "alphaShare": 0.556
+        }
+      ],
+      "integration": "React ServiceArt",
+      "creation": "내장 image_gen 원본 · 크기/포맷 최적화",
+      "count": 1
+    },
+    {
+      "creativeId": "service-video",
+      "category": "illustration",
+      "purpose": "홈 동영상 만들기",
+      "selector": ".studio-shortcuts",
+      "original": "design-assets/illustrations/phase4b/service-video.png",
+      "sourceSha256": "302b5dfae02b4ee4e24764fdfa0c9af5e56a4b88c81d5fd4349dfd9f1d7dbbbf",
+      "files": [
+        {
+          "filename": "service-video.webp",
+          "width": 480,
+          "height": 480,
+          "bytes": 36710,
+          "alphaCorner": 0,
+          "alphaShare": 0.493
+        }
+      ],
+      "integration": "React ServiceArt",
+      "creation": "내장 image_gen 원본 · 크기/포맷 최적화",
+      "count": 1
+    },
+    {
+      "creativeId": "service-copy",
+      "category": "illustration",
+      "purpose": "홈 홍보 글 만들기",
+      "selector": ".studio-shortcuts",
+      "original": "design-assets/illustrations/phase4b/service-copy.png",
+      "sourceSha256": "49acb9a90242e521ab3217b4402088af8fd78f290eb7e86e0dda7b1bd90fa50c",
+      "files": [
+        {
+          "filename": "service-copy.webp",
+          "width": 480,
+          "height": 480,
+          "bytes": 36200,
+          "alphaCorner": 0,
+          "alphaShare": 0.672
+        }
+      ],
+      "integration": "React ServiceArt",
+      "creation": "내장 image_gen 원본 · 크기/포맷 최적화",
+      "count": 1
+    },
+    {
+      "creativeId": "workflow-photo",
+      "category": "illustration",
+      "purpose": "홈 1단계·사진 업로드",
+      "selector": ".studio-guide-steps,.upload-target",
+      "original": "design-assets/illustrations/phase4b/workflow-photo.png",
+      "sourceSha256": "45fc309368ae9d0b65599932cffd487f6aa74b75fde8b2753bb762cc7bb61236",
+      "files": [
+        {
+          "filename": "workflow-photo.webp",
+          "width": 480,
+          "height": 480,
+          "bytes": 51544,
+          "alphaCorner": 0,
+          "alphaShare": 0.483
+        }
+      ],
+      "integration": "React ServiceArt",
+      "creation": "내장 image_gen 원본 · 크기/포맷 최적화",
+      "count": 1
+    },
+    {
+      "creativeId": "workflow-details",
+      "category": "illustration",
+      "purpose": "홈 2단계 설명 안내",
+      "selector": ".studio-guide-steps",
+      "original": "design-assets/illustrations/phase4b/workflow-details.png",
+      "sourceSha256": "f2f33dc904144bbbd3b0903602ad86f5824b62306cdbf83a5128ddb57525fd1d",
+      "files": [
+        {
+          "filename": "workflow-details.webp",
+          "width": 480,
+          "height": 480,
+          "bytes": 36064,
+          "alphaCorner": 0,
+          "alphaShare": 0.516
+        }
+      ],
+      "integration": "React ServiceArt",
+      "creation": "내장 image_gen 원본 · 크기/포맷 최적화",
+      "count": 1
+    },
+    {
+      "creativeId": "workflow-results",
+      "category": "illustration",
+      "purpose": "홈 3단계",
+      "selector": ".studio-guide-steps",
+      "original": "design-assets/illustrations/phase4b/workflow-results.png",
+      "sourceSha256": "7d9b76e943dcf307224f7587e8d23f0306d2c21c2c74acd06d84e544cc3b4380",
+      "files": [
+        {
+          "filename": "workflow-results.webp",
+          "width": 480,
+          "height": 480,
+          "bytes": 38408,
+          "alphaCorner": 0,
+          "alphaShare": 0.56
+        }
+      ],
+      "integration": "React ServiceArt",
+      "creation": "내장 image_gen 원본 · 크기/포맷 최적화",
+      "count": 1
+    },
+    {
+      "creativeId": "workflow-channel",
+      "category": "illustration",
+      "purpose": "선택 사항인 홍보할 곳 안내",
+      "selector": ".channel-intro",
+      "original": "design-assets/illustrations/phase4b/workflow-channel.png",
+      "sourceSha256": "4766548ae797b58881d7e70b4cdd9ecc4b0c0f005c9daf8b41ea5aacc2e62a25",
+      "files": [
+        {
+          "filename": "workflow-channel.webp",
+          "width": 640,
+          "height": 427,
+          "bytes": 55488,
+          "alphaCorner": 0,
+          "alphaShare": 0.55
+        }
+      ],
+      "integration": "React ServiceArt",
+      "creation": "내장 image_gen 원본 · 크기/포맷 최적화",
+      "count": 1
+    },
+    {
+      "creativeId": "records-empty",
+      "category": "illustration",
+      "purpose": "내 홍보물 빈 상태",
+      "selector": ".empty-results",
+      "original": "design-assets/illustrations/phase4b/records-empty.png",
+      "sourceSha256": "ea3314e990b43f6d8a1507950493b09b407f667354ce9a9be91631d502c8e01a",
+      "files": [
+        {
+          "filename": "records-empty.webp",
+          "width": 640,
+          "height": 427,
+          "bytes": 38416,
+          "alphaCorner": 0,
+          "alphaShare": 0.427
+        }
+      ],
+      "integration": "React ServiceArt",
+      "creation": "내장 image_gen 원본 · 크기/포맷 최적화",
+      "count": 1
+    },
+    {
+      "creativeId": "guide-save",
+      "category": "illustration",
+      "purpose": "결과 저장 후 수동 게시 안내",
+      "selector": ".publishing-guide",
+      "original": "design-assets/illustrations/phase4b/guide-save.png",
+      "sourceSha256": "90a41686a62f8f30e2cd60c8c4b4c9a696773ff21f53f089012149fa1f69afe0",
+      "files": [
+        {
+          "filename": "guide-save.webp",
+          "width": 480,
+          "height": 480,
+          "bytes": 43162,
+          "alphaCorner": 0,
+          "alphaShare": 0.607
+        }
+      ],
+      "integration": "React ServiceArt",
+      "creation": "내장 image_gen 원본 · 크기/포맷 최적화",
+      "count": 1
+    },
+    {
+      "creativeId": "guide-copy",
+      "category": "illustration",
+      "purpose": "홍보 글 복사 안내",
+      "selector": ".copy-art-guide",
+      "original": "design-assets/illustrations/phase4b/guide-copy.png",
+      "sourceSha256": "e185ca76e025423a8cdf590a3679fafd32388c063fb105dbba30b7065dca90c5",
+      "files": [
+        {
+          "filename": "guide-copy.webp",
+          "width": 480,
+          "height": 480,
+          "bytes": 23944,
+          "alphaCorner": 0,
+          "alphaShare": 0.569
+        }
+      ],
+      "integration": "React ServiceArt",
+      "creation": "내장 image_gen 원본 · 크기/포맷 최적화",
+      "count": 1
+    },
+    {
+      "creativeId": "result-complete",
+      "category": "illustration",
+      "purpose": "준비된 결과 요약",
+      "selector": ".result-summary",
+      "original": "design-assets/illustrations/phase4b/result-complete.png",
+      "sourceSha256": "e385a923cfc740bcc970d2ed7b587666594bf37f24fe06dd438ab1dd9b723af7",
+      "files": [
+        {
+          "filename": "result-complete.webp",
+          "width": 480,
+          "height": 480,
+          "bytes": 38504,
+          "alphaCorner": 0,
+          "alphaShare": 0.561
+        }
+      ],
+      "integration": "React ServiceArt",
+      "creation": "내장 image_gen 원본 · 크기/포맷 최적화",
+      "count": 1
+    },
+    {
+      "creativeId": "horizontal",
+      "category": "branding",
+      "purpose": "기본 가로 조합",
+      "screen": "헤더·전체 메뉴",
+      "file": "public/assets/branding/selected/horizontal.svg",
+      "bytes": 2918,
+      "sourceSha256": "22ddd883748daa42e0e55081e576a107d3d4911e69c643fefa53cc637506c661",
+      "integration": "헤더·전체 메뉴",
+      "creation": "승인 C안 기반 SVG 구성",
+      "count": 1
+    },
+    {
+      "creativeId": "primary-stacked",
+      "category": "branding",
+      "purpose": "세로 기본 조합",
+      "screen": "로그인",
+      "file": "public/assets/branding/selected/primary-stacked.svg",
+      "bytes": 2907,
+      "sourceSha256": "50ba2cc92128c80be286d0d004304f9bb9a3fbb426cad839289df842216e8581",
+      "integration": "로그인",
+      "creation": "승인 C안 기반 SVG 구성",
+      "count": 1
+    },
+    {
+      "creativeId": "wordmark",
+      "category": "branding",
+      "purpose": "한글 워드마크",
+      "screen": "푸터",
+      "file": "public/assets/branding/selected/wordmark.svg",
+      "bytes": 2294,
+      "sourceSha256": "dda908606a3e67107eb656470403b3750352b4c1f08b355fc0c3f6a5d656202b",
+      "integration": "푸터",
+      "creation": "승인 C안 기반 SVG 구성",
+      "count": 1
+    },
+    {
+      "creativeId": "symbol",
+      "category": "branding",
+      "purpose": "컬러 심볼",
+      "screen": "브랜드 사용 기준",
+      "file": "public/assets/branding/selected/symbol.svg",
+      "bytes": 772,
+      "sourceSha256": "3f8114439afb4e3a72d3470df17b15b4d07ea6948d85a95ce18b04b6deccc1d8",
+      "integration": "브랜드 사용 기준",
+      "creation": "승인 C안 기반 SVG 구성",
+      "count": 1
+    },
+    {
+      "creativeId": "symbol-mono",
+      "category": "branding",
+      "purpose": "남색 단색 심볼",
+      "screen": "단색 매체·브랜드 사용 기준",
+      "file": "public/assets/branding/selected/symbol-mono.svg",
+      "bytes": 640,
+      "sourceSha256": "9a642e9aeb45beeb392e624e7e6263224804d5d749d91091bd2c65c0f5bb5c86",
+      "integration": "단색 매체·브랜드 사용 기준",
+      "creation": "승인 C안 기반 SVG 구성",
+      "count": 1
+    },
+    {
+      "creativeId": "symbol-reverse",
+      "category": "branding",
+      "purpose": "반전 단색 심볼",
+      "screen": "어두운 매체·브랜드 사용 기준",
+      "file": "public/assets/branding/selected/symbol-reverse.svg",
+      "bytes": 640,
+      "sourceSha256": "d0c2c97b61627e716682b7341f057eeebbc49e0b7f377ac6fe8f65bbebfbc16d",
+      "integration": "어두운 매체·브랜드 사용 기준",
+      "creation": "승인 C안 기반 SVG 구성",
+      "count": 1
+    },
+    {
+      "creativeId": "horizontal-reverse",
+      "category": "branding",
+      "purpose": "반전 가로 조합",
+      "screen": "어두운 매체·브랜드 사용 기준",
+      "file": "public/assets/branding/selected/horizontal-reverse.svg",
+      "bytes": 2918,
+      "sourceSha256": "1f955771be2b466160a2d5b9ed724fa3cfdd83ac0003b3f80bd7a4ab774c5917",
+      "integration": "어두운 매체·브랜드 사용 기준",
+      "creation": "승인 C안 기반 SVG 구성",
+      "count": 1
+    },
+    {
+      "creativeId": "icon",
+      "category": "branding",
+      "purpose": "정사각 앱 아이콘",
+      "screen": "favicon·홈 화면 저장",
+      "file": "public/assets/branding/selected/icon.svg",
+      "bytes": 805,
+      "sourceSha256": "9cfed04e6640a620c1b0fc292ce275dccbf00368340432accd4fcafebd7ef622",
+      "integration": "favicon·홈 화면 저장",
+      "creation": "승인 C안 기반 SVG 구성",
+      "count": 1
+    }
+  ]
+}
