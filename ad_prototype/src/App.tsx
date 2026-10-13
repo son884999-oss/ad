@@ -517,16 +517,16 @@ function PrimaryButton({
 }
 
 function ResultPreview({
-  toolbar,
+  control,
   children,
 }: {
-  toolbar: ReactNode
+  control?: ReactNode
   children: ReactNode
 }) {
   return (
     <div className="result-preview">
-      <div className="result-preview-toolbar">{toolbar}</div>
       {children}
+      {control && <div className="result-preview-controls">{control}</div>}
     </div>
   )
 }
@@ -1736,9 +1736,7 @@ function CreateFlow({
                   <small>확인용 예시</small>
                 </div>
                 <ResultPreview
-                  toolbar={
-                    <>
-                      <span>이미지 미리보기</span>
+                  control={
                       <button
                         type="button"
                         className="result-preview-action"
@@ -1747,9 +1745,9 @@ function CreateFlow({
                         disabled={!posterPreviewUrl}
                         onClick={() => setPosterExpanded(!posterExpanded)}
                       >
-                        {posterExpanded ? "한눈에 보기" : "크게 보기"}
+                        <Icon name={posterExpanded ? "zoom-out" : "zoom-in"} size={34} />
+                        <span>{posterExpanded ? "작게 보기" : "크게 보기"}</span>
                       </button>
-                    </>
                   }
                 >
                   <div
@@ -1813,9 +1811,7 @@ function CreateFlow({
                   <small>확인용 예시</small>
                 </div>
                 <ResultPreview
-                  toolbar={
-                    <>
-                      <span>영상 미리보기</span>
+                  control={
                       <button
                         type="button"
                         className="result-preview-action"
@@ -1823,9 +1819,9 @@ function CreateFlow({
                         aria-pressed={playing}
                         onClick={() => setPlaying(!playing)}
                       >
-                        {playing ? "일시 정지" : "재생하기"}
+                        <Icon name={playing ? "pause" : "play"} size={34} />
+                        <span>{playing ? "일시 정지" : "재생하기"}</span>
                       </button>
-                    </>
                   }
                 >
                   <div
@@ -1874,16 +1870,7 @@ function CreateFlow({
                   <h3>홍보 문구</h3>
                   <small>확인용 예시</small>
                 </div>
-                <ResultPreview
-                  toolbar={
-                    <>
-                      <span>
-                        {channel === "download" ? "기본 홍보 문구" : channelNames[channel]}
-                      </span>
-                      <span className="result-copy-length">{finalText.length}자</span>
-                    </>
-                  }
-                >
+                <ResultPreview>
                   <div className="result-main-preview result-text-preview">
                     <textarea
                       className="copy-result-text"
