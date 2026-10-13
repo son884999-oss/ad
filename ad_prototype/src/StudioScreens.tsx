@@ -28,7 +28,22 @@ function keepFocusedControlVisible() {
   const field = document.activeElement
   if (!(field instanceof HTMLElement) || !field.matches("input, textarea, select, button, summary, a[href]")) return
   const shell = field.closest<HTMLElement>(".studio-shell")
-  if (!shell || !field.closest("main[data-app-scroll-container]") || field.closest("[inert]")) return
+  if (!shell || field.closest("[inert]")) return
+  const menu = field.closest<HTMLElement>(".studio-menu-panel")
+  if (menu) {
+    if (field.closest(".studio-menu-bottom-nav")) return
+    const box = field.getBoundingClientRect()
+    const top = menu.getBoundingClientRect().top + 12
+    const bottom = (menu.querySelector(".studio-menu-bottom-nav")?.getBoundingClientRect().top ?? window.innerHeight) - 12
+    const delta = box.top < top
+      ? box.top - top
+      : box.height <= bottom - top && box.bottom > bottom
+        ? box.bottom - bottom
+        : 0
+    if (Math.abs(delta) > 1) menu.scrollBy({ top: delta, behavior: "instant" })
+    return
+  }
+  if (!field.closest("main[data-app-scroll-container]")) return
   const viewport = window.visualViewport
   const reading = (shell.querySelector(".studio-reading-bar") ?? shell.querySelector(".studio-header"))?.getBoundingClientRect()
   const nav = shell.querySelector(".studio-bottom-nav")?.getBoundingClientRect()
@@ -183,11 +198,10 @@ export function StudioLogin({
 const pages: {
   label: string
   page: Page
-  type?: CreationType
   icon: "home" | "plus" | "folder"
 }[] = [
   { label: "홈", page: "home", icon: "home" },
-  { label: "만들기", page: "create", type: "all", icon: "plus" },
+  { label: "만들기", page: "create", icon: "plus" },
   { label: "내 홍보물", page: "records", icon: "folder" },
 ]
 
@@ -240,7 +254,7 @@ export function StudioShell({
             key={item.page}
             type="button"
             onClick={() =>
-              navigate(item.page, item.type)
+              navigate(item.page)
             }
             className={active ? "is-active" : ""}
             aria-current={active ? "page" : undefined}
@@ -252,10 +266,10 @@ export function StudioShell({
       })}
       <button
         type="button"
-        onClick={() => openMenu()}
+        onClick={() => setMobileOpen(!mobileOpen)}
         className={mobileOpen ? "is-active" : ""}
         aria-expanded={mobileOpen}
-        aria-label="전체 메뉴 열기"
+        aria-label={mobileOpen ? "전체 메뉴 닫기" : "전체 메뉴 열기"}
       >
         <StudioIcon name="menu" />
         <span>메뉴</span>
@@ -454,13 +468,13 @@ export function StudioShell({
                     description: "사진과 글을 담은 포스터를 만들어요.",
                   },
                   {
-                    label: "동영상 만들기",
+                    label: "영상 만들기",
                     type: "video" as CreationType,
                     icon: "video" as const,
                     description: "사진을 활용한 짧은 영상 예시를 만들어요.",
                   },
                   {
-                    label: "홍보 글 만들기",
+                    label: "문구 만들기",
                     type: "copy" as CreationType,
                     icon: "copy" as const,
                     description: "복사해서 사용할 홍보 문구를 만들어요.",
@@ -557,10 +571,12 @@ export function StudioShell({
 
 export function StudioHome({
   onChooseCreation,
+  hasDraft,
 }: {
   navigate: Navigation
   easyMode: boolean
   onChooseCreation: () => void
+  hasDraft: boolean
 }) {
   return (
     <div className="studio-home studio-home-simple">
@@ -575,16 +591,16 @@ export function StudioHome({
             <em>우리 가게를 알려요.</em>
           </h1>
           <p className="studio-hero-description">
-            포스터·영상·홍보 글을 쉽게 만들어요.
+            이미지·영상·문구를 쉽게 만들어요.
           </p>
           <div className="studio-guide-action">
             <button className="studio-primary" onClick={onChooseCreation}>
-              홍보물 만들기 <StudioIcon name="arrow" />
+              {hasDraft ? "홍보물 이어 만들기" : "홍보물 만들기"} <StudioIcon name="arrow" />
             </button>
             <p>가입 없이 시작할 수 있어요.</p>
           </div>
           <figure className="home-sample-art">
-            <ServiceArt name="service-hero" alt="사진에서 포스터·영상·홍보 글로 이어지는 체험 예시" priority />
+            <ServiceArt name="service-hero" alt="사진에서 이미지·영상·문구로 이어지는 체험 예시" priority />
           </figure>
         </div>
       </section>

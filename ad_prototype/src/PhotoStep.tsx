@@ -20,11 +20,11 @@ export default function PhotoStep({
       ref={inputRef}
       id="product-photo"
       type="file"
+      hidden
       accept="image/*"
       aria-label={imageUrl ? "사진 바꾸기" : "제품 사진 올리기"}
       aria-describedby={"upload-help" + (message ? " upload-feedback" : "")}
       onChange={onUpload}
-      className="sr-only"
     />
   )
   return (
@@ -54,9 +54,14 @@ export default function PhotoStep({
                     사진이 준비됐어요
                   </span>
                   <p>제품이 잘 보이는지 확인해 주세요.</p>
-                  <label htmlFor="product-photo" className="studio-secondary">
+                  <button
+                    type="button"
+                    className="studio-secondary photo-change-button"
+                    disabled={pending}
+                    onClick={selectPhoto}
+                  >
                     사진 바꾸기
-                  </label>
+                  </button>
                   {input}
                 </div>
               </>
@@ -88,14 +93,10 @@ export default function PhotoStep({
           {message && (
             <p
               id="upload-feedback"
-              className={`upload-feedback ${
-                pending
-                  ? "is-pending"
-                  : message === "사진이 준비됐어요."
-                    ? "is-success"
-                    : "is-error"
-              }`}
-              role="status"
+              className={message === "사진이 준비됐어요."
+                ? "sr-only"
+                : `upload-feedback ${pending ? "is-pending" : "is-error"}`}
+              role={pending || message === "사진이 준비됐어요." ? "status" : "alert"}
               aria-atomic="true"
             >
               {pending && <span className="activity-dot" aria-hidden="true" />}

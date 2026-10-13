@@ -110,7 +110,7 @@ try{
   assert.equal(await page.getByRole('tab',{name:'영상',exact:true}).getAttribute('aria-selected'),'true')
   await page.keyboard.press('End')
   assert.equal(await page.getByRole('tab',{name:'문구',exact:true}).getAttribute('aria-selected'),'true')
-  const text=await page.getByLabel('홍보 문구 원문').inputValue()
+  const text=await page.getByRole('region',{name:'홍보 문구 원문',exact:true}).innerText()
   await page.getByRole('button',{name:'문구 전체 복사하기',exact:true}).click()
   assert.equal(await page.evaluate(()=>navigator.clipboard.readText()),text)
   await page.locator('#result-copy .result-inline-status[role="status"]').waitFor()
