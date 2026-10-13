@@ -577,7 +577,6 @@ function CreateFlow({
 
   channel,
 
-  setChannel,
 
   imageUrl,
 
@@ -597,7 +596,6 @@ function CreateFlow({
 
   outputFormat,
 
-  setOutputFormat,
 
   continuationNotice,
 
@@ -620,7 +618,6 @@ function CreateFlow({
 
   channel: Channel
 
-  setChannel: (channel: Channel) => void
 
   imageUrl: string
 
@@ -654,7 +651,6 @@ function CreateFlow({
 
   outputFormat: OutputFormat
 
-  setOutputFormat: (format: OutputFormat) => void
 
   continuationNotice: boolean
 
@@ -1326,11 +1322,6 @@ function CreateFlow({
           pending={uploadPending}
           message={uploadMessage}
           onUpload={upload}
-          type={type}
-          format={outputFormat}
-          onFormat={setOutputFormat}
-          channel={channel}
-          onChannel={setChannel}
           onNext={() => setStep(2)}
         />
       )}
@@ -1439,7 +1430,7 @@ function CreateFlow({
                 className="mt-2 w-full rounded-[12px] border-2 border-[#817a74] p-4 text-[18px] font-normal leading-7 outline-none focus:border-[#c64f12] focus:ring-3 focus:ring-[#c64f12]/15"
               />
             </label>
-            <details className="information-more-settings">
+            {false && <details className="information-more-settings">
               <summary>
                 <span>추가 설정 · 고객·검색어</span>
                 <small className="setting-summary-hint">
@@ -1588,7 +1579,7 @@ function CreateFlow({
                   </div>
                 </div>
               </details>
-            </details>
+            </details>}
           </div>
           <div className="details-actions mt-7 flex flex-col-reverse gap-3 sm:flex-row sm:justify-between">
             <button
@@ -2584,12 +2575,9 @@ export default function App() {
         <CreateFlow
           initialResultTab={preferredResultTab}
           type={creationType}
+          channel={channel}
           step={step}
           setStep={setStep}
-          channel={channel}
-          setChannel={(next) => {
-            setChannel(next)
-          }}
           imageUrl={imageUrl}
           setImageUrl={setImageUrl}
           details={details}
@@ -2612,9 +2600,6 @@ export default function App() {
             setEditedHashtags((current) => ({ ...current, [channel]: true }))
           }}
           outputFormat={outputFormat}
-          setOutputFormat={(next) => {
-            setAllOutputFormat(next)
-          }}
           continuationNotice={continuationNotice}
           onDraftTouched={() => {
             setUserTouched(true)

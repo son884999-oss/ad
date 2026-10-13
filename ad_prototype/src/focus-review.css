@@ -168,32 +168,21 @@ body { background:var(--color-brand-soft); }
 }
 .studio-shell .studio-home-simple .studio-how { width:100%; }
 
-/* Once the photo is ready, expose the next action above the persistent navigation. */
-.studio-shell .photo-step.is-ready { padding-bottom:110px; }
-.prototype-app.studio-shell .photo-step.is-ready .photo-next-action {
-  position:fixed;
-  left:50%;
-  bottom:calc(81px + env(safe-area-inset-bottom));
-  transform:translateX(-50%);
-  width:min(100%,560px);
-  z-index:35;
-  display:flex;
-  flex-direction:column;
-  gap:6px;
-  margin:0;
-  padding:10px 16px;
-  border-top:1px solid var(--color-line);
-  background:var(--color-surface);
-  box-shadow:0 -5px 18px #26364a0c;
+/* Photo -> next: no optional channel panel or floating prompt. */
+.studio-shell .photo-step .photo-next-action {
+  position:static;
+  display:block;
+  margin-top:18px;
+  padding:0;
+  border:0;
+  background:transparent;
+  box-shadow:none;
 }
-.studio-shell .photo-step.is-ready .photo-next-action > span {
-  max-width:none;
-  text-align:center;
-  font-size:16px;
-}
-.studio-shell .photo-step.is-ready .photo-next-action > button {
+.studio-shell .photo-next-action > span { display:none; }
+.studio-shell .photo-step .photo-next-action > button {
   width:100%;
   min-height:56px;
   padding:10px 16px;
   font-size:22px;
 }
+.studio-shell .photo-step.is-ready .selected-photo { height:180px; }

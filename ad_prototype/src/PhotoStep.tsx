@@ -1,43 +1,19 @@
-import { useState, type ChangeEvent } from "react"
+import type { ChangeEvent } from "react"
 import Icon from "./Icon"
-import ChannelPicker from "./ChannelPicker"
 import ServiceArt from "./ServiceArt"
-import { channelNames, type Channel } from "./channels"
-type Format = "poster" | "video" | "both"
-type Kind = "all" | "poster" | "video" | "copy"
-const formats = [
-  { id: "poster" as const, title: "포스터", icon: "picture" as const },
-  { id: "video" as const, title: "영상", icon: "video" as const },
-  {
-    id: "both" as const,
-    title: "포스터와 영상 둘 다",
-    icon: "window" as const,
-  },
-]
 export default function PhotoStep({
   imageUrl,
   pending,
   message,
   onUpload,
-  type,
-  format,
-  onFormat,
-  channel,
-  onChannel,
   onNext,
 }: {
   imageUrl: string
   pending: boolean
   message: string
   onUpload: (event: ChangeEvent<HTMLInputElement>) => void
-  type: Kind
-  format: Format
-  onFormat: (format: Format) => void
-  channel: Channel
-  onChannel: (channel: Channel) => void
   onNext: () => void
 }) {
-  const [destinationOpen, setDestinationOpen] = useState(false)
   const input = (
     <input
       id="product-photo"
@@ -108,7 +84,7 @@ export default function PhotoStep({
               {message}
             </p>
           )}
-          <figure className="photo-example">
+          {!imageUrl && <figure className="photo-example">
             <img
               src="/assets/samples/latte-product-sample.png"
               alt="제품 전체가 또렷하게 보이는 사진 예시"
@@ -119,123 +95,16 @@ export default function PhotoStep({
               <strong>이런 사진이 좋아요</strong>
               <span>제품 전체가 또렷하게 보이는 사진을 골라 주세요.</span>
             </figcaption>
-          </figure>
+          </figure>}
         </section>
-        <details className="format-section photo-format-settings">
-          <summary>
-            <span>만들 결과 고르기 · 선택</span>
-            <strong>
-              {type === "all"
-                ? formats.find((item) => item.id === format)?.title
-                : type === "poster"
-                  ? "포스터"
-                  : type === "video"
-                    ? "영상"
-                    : "홍보 글"}
-            </strong>
-          </summary>
-          <div className="section-heading">
-            <span className="section-kicker">사진으로 만들 홍보물</span>
-            <h3 id="format-title">
-              {type === "all"
-                ? "어떤 홍보물이 필요하세요?"
-                : "이번에 만들 홍보물"}
-            </h3>
-          </div>
-          {type === "all" ? (
-            <fieldset className="format-picker">
-              <legend className="sr-only">결과 형식</legend>
-              {formats.map((item) => (
-                <label
-                  key={item.id}
-                  className={
-                    "format-option " + (format === item.id ? "is-selected" : "")
-                  }
-                >
-                  <input
-                    type="radio"
-                    name="output-format"
-                    value={item.id}
-                    checked={format === item.id}
-                    onChange={() => onFormat(item.id)}
-                    aria-label={item.title}
-                  />
-                  <Icon name={item.icon} size={28} />
-                  <strong>
-                    {item.id === "both" ? "포스터 + 영상" : item.title}
-                  </strong>
-                  <span>{format === item.id ? "선택됨" : "선택하기"}</span>
-                </label>
-              ))}
-              <p>어느 것을 골라도 홍보 글을 함께 만들어요.</p>
-            </fieldset>
-          ) : (
-            <div className="single-format">
-              <Icon
-                name={
-                  type === "poster"
-                    ? "picture"
-                    : type === "video"
-                      ? "video"
-                      : "copy"
-                }
-                size={32}
-              />
-              <strong>
-                {type === "poster"
-                  ? "포스터"
-                  : type === "video"
-                    ? "동영상"
-                    : "홍보 글"}{" "}
-                만들기
-              </strong>
-              <span>사진과 설명으로 예시 결과를 만들어요.</span>
-            </div>
-          )}
-          <div className="photo-next-summary">
-            <Icon name="copy" />
-            <p>
-              다음 단계에서 제품 설명을 적어요.
-              <br />
-              사진과 선택한 내용은 그대로 이어져요.
-            </p>
-          </div>
-        </details>
       </div>
-      <details
-        className="destination-settings"
-        onToggle={(event) => setDestinationOpen(event.currentTarget.open)}
-      >
-        <summary>
-          <span>
-            홍보할 곳 고르기 <small>선택 사항</small>
-          </span>
-          <strong>{channelNames[channel]}</strong>
-          <span className="details-action">{destinationOpen ? "접기" : "펼치기"}</span>
-          <span className="setting-summary-hint">
-            {channel === "download"
-              ? "홍보할 곳은 나중에 정해도 돼요."
-              : "선택한 곳에 맞춰 홍보 글을 만들어요."}
-          </span>
-        </summary>
-        <ChannelPicker value={channel} onChange={onChannel} />
-      </details>
-      <div
-        className="mobile-primary-bar photo-next-action"
-        role="region"
-        aria-label="사진 등록 후 다음 단계"
-      >
-        <span>
-          {imageUrl
-            ? "사진이 준비됐어요. 설명을 적어 볼까요?"
-            : "사진을 올리면 다음으로 갈 수 있어요."}
-        </span>
+      <div className="photo-next-action">
         <button
           className="studio-primary"
           disabled={!imageUrl || pending}
           onClick={onNext}
         >
-          {pending ? "사진 확인 중" : "설명 적기"}
+          {pending ? "사진 확인 중" : "다음 단계"}
           <Icon name="arrow" />
         </button>
       </div>
