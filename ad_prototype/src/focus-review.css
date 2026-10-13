@@ -1,0 +1,199 @@
+/* 2026-10-13: professor reference 1; one clear task and its primary action. */
+.prototype-app .studio-reading-bar { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:6px 16px; }
+.prototype-app .studio-read-button { width:auto; min-height:44px; padding:7px 10px; gap:6px; font-size:16px; line-height:1.4; }
+.prototype-app .studio-read-button svg { width:20px; height:20px; flex-shrink:0; }
+.studio-shell .studio-reading-bar .studio-read-button { width:auto; min-height:44px; padding:7px 10px; gap:6px; font-size:16px; }
+.studio-reading-context { color:var(--color-ink); font-size:18px; font-weight:700; }
+.studio-shell.is-home .studio-header { position:sticky; top:0; z-index:50; }
+.studio-shell.is-home .studio-header-inner { min-height:64px; padding:8px 16px; gap:10px; }
+.studio-shell.is-home .studio-brand-button { min-height:44px; }
+.studio-shell.is-home .studio-header .studio-read-button { width:auto; min-height:44px; margin-left:auto; flex-shrink:0; }
+.studio-shell.is-home .studio-main[data-app-scroll-container] { padding:12px 16px calc(96px + env(safe-area-inset-bottom)); }
+.studio-shell.is-home .studio-footer { display:none; }
+.studio-shell .studio-home-simple .studio-start-guide { display:block; min-height:0; max-width:680px; margin-inline:auto; }
+.studio-shell .studio-home-simple .studio-hero-copy { max-width:none; text-align:center; }
+.studio-shell .studio-home-simple .studio-start-guide h1 { margin:0; font-size:32px; line-height:1.3; }
+.studio-shell .studio-home-simple .studio-hero-description { margin:10px 0 14px; font-size:20px; line-height:1.5; }
+.studio-shell .studio-home-simple .studio-guide-action { margin:0; }
+.studio-shell .studio-home-simple .studio-guide-action .studio-primary { width:100%; max-width:360px; min-height:60px; padding:12px 18px; font-size:22px; }
+.studio-shell .studio-home-simple .studio-guide-action p { margin:8px 0 0; font-size:16px; line-height:1.5; }
+.home-sample-art { position:relative; margin:14px auto 0; max-width:560px; border-radius:16px; background:var(--color-brand-soft); overflow:hidden; }
+.home-sample-art > img { display:block; width:100%; height:auto; object-fit:contain; }
+.studio-shell .studio-home-simple .studio-how { max-width:680px; margin:18px auto 0; padding:0; }
+.studio-shell .studio-home-simple .studio-section-title { margin:0 0 10px; text-align:center; }
+.studio-shell .studio-home-simple .studio-how h2 { font-size:20px; line-height:1.4; margin:0; }
+.studio-shell .studio-home-simple .studio-guide-steps { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; }
+.studio-shell .studio-home-simple .studio-guide-steps li { display:flex; flex-direction:column; align-items:center; justify-content:start; gap:7px; padding:0; text-align:center; }
+.studio-shell .studio-home-simple .studio-guide-steps li::after { display:none; }
+.studio-shell .studio-home-simple .studio-step-number { display:grid; place-items:center; width:28px; height:28px; margin:0; border-radius:50%; background:var(--color-brand-soft); color:var(--color-brand); font-size:18px; font-weight:700; }
+.studio-shell .studio-home-simple .studio-guide-steps h3 { font-size:18px; line-height:1.4; margin:0; white-space:nowrap; }
+
+/* Keep the selected photo secondary to the information being entered. */
+.studio-shell .creation-flow:has(.compact-information) .journey-progress { margin-bottom:8px; }
+.studio-shell .creation-flow:has(.compact-information) .journey-node { width:24px; height:24px; font-size:16px; }
+.studio-shell .creation-flow:has(.compact-information) .journey-progress :is(button,.journey-static) { min-height:48px; gap:2px; }
+.studio-shell .creation-flow:has(.compact-information) .journey-progress li:not(:last-child)::after { top:11px; left:calc(50% + 15px); right:calc(-50% + 15px); }
+.studio-shell .creation-flow:has(.compact-information) > .creation-header { margin-bottom:8px; }
+.studio-shell .compact-information .information-photo { grid-template-columns:42px minmax(0,1fr) auto; height:56px; padding:6px 10px; gap:8px; }
+.studio-shell .compact-information .information-photo img { width:42px; height:42px; }
+.studio-shell .compact-information .information-photo .studio-secondary { min-height:44px; padding:6px 10px; }
+.studio-shell .compact-information .description-example-note { margin:8px 0 0; font-size:16px; line-height:1.5; }
+.studio-shell .compact-information .details-fields { gap:4px; margin-top:8px; }
+.studio-shell .compact-information .details-fields > label > input { margin-top:4px; padding:8px 10px; height:52px; min-height:52px; }
+.studio-shell .compact-information .details-fields > label > textarea { margin-top:4px; padding:8px 10px; height:80px; min-height:80px; line-height:1.45; }
+.studio-shell.easy-mode .compact-information .details-fields > label > :is(input,textarea) { font-size:22px; }
+.studio-shell.easy-mode .compact-information .details-fields > label > input { height:52px; min-height:52px; }
+.studio-shell.easy-mode .compact-information .details-fields > label > textarea { height:80px; min-height:80px; }
+.studio-shell.has-creation-view .studio-main:has(.compact-information) { padding-top:8px; }
+.studio-shell .creation-flow:has(.compact-information) > .creation-header { margin-bottom:4px; }
+.studio-shell .creation-flow:has(.compact-information) > .creation-header > div { margin-top:6px; }
+.studio-shell .compact-information .information-more-settings > summary { padding-block:6px; gap:2px 8px; min-height:44px; }
+.studio-shell .compact-information .details-actions { display:grid; grid-template-columns:96px minmax(0,1fr); gap:8px; align-items:stretch; margin-top:6px; }
+.studio-shell .compact-information .details-actions > button { padding:8px; font-size:17px; min-height:56px; }
+.studio-shell .compact-information .details-primary-bar { min-width:0; }
+.studio-shell .compact-information .details-primary-bar > button { width:100%; min-height:56px; padding:8px 10px; }
+.studio-shell.easy-mode .compact-information .details-primary-bar > button { min-height:56px; padding:8px 10px; }
+
+/* A normal-flow target works even when the tab bar is already sticky. */
+.studio-shell .results-step { min-height:calc(100dvh - var(--studio-reading-height,57px)); scroll-margin-top:var(--studio-reading-height,57px); }
+.studio-shell .result-poster .result-main-preview { height:clamp(180px,calc(100dvh - var(--studio-reading-height,57px) - 330px),480px); min-height:0; }
+.studio-shell .result-poster .result-main-preview > img { width:auto; height:100%; max-width:100%; object-fit:contain; }
+.studio-shell .result-poster .result-main-preview.is-expanded { height:clamp(280px,65dvh,720px); min-height:0; overflow:auto; justify-content:flex-start; align-items:flex-start; }
+.studio-shell .result-poster .result-main-preview.is-expanded > img { width:200%; max-width:none; height:auto; flex-shrink:0; }
+.studio-shell .image-zoom-hint { margin:0; padding:8px 16px; font-size:16px; line-height:1.5; color:var(--color-muted); }
+.result-image-buttons { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:8px; }
+.studio-shell .result-image-buttons .result-secondary-action { min-height:52px; padding:8px 10px; border:1px solid var(--color-control); border-radius:12px; background:var(--color-surface); color:var(--color-ink); font-size:16px; font-weight:700; }
+.studio-shell .result-image-buttons .result-primary-action { font-size:20px; padding-inline:10px; }
+
+@media (max-width:1023px) {
+  .studio-shell.is-home .studio-header-inner { flex-wrap:nowrap; }
+  .studio-shell.is-home .studio-brand-button .studio-brand-logo { width:144px; height:auto; }
+  .studio-shell .compact-information .information-photo { grid-template-columns:42px minmax(0,1fr); }
+}
+@media (max-width:359px) {
+  .studio-shell .studio-home-simple .studio-start-guide h1 { font-size:30px; }
+}
+@media (max-height:650px) {
+  .studio-shell .result-main-preview { min-height:180px; }
+}
+@media (max-height:820px) {
+  .studio-shell .compact-information { padding-bottom:76px; }
+  .studio-shell .compact-information .details-actions { position:sticky; bottom:calc(81px + env(safe-area-inset-bottom)); z-index:20; padding:8px 0; background:var(--color-canvas); border-top:1px solid var(--color-line); }
+  .studio-shell .result-card-actions { position:sticky; bottom:calc(81px + env(safe-area-inset-bottom)); z-index:20; background:var(--color-surface); }
+}
+
+/* One mobile composition on every device; wide screens only gain a wider frame. */
+body { background:var(--color-brand-soft); }
+.prototype-app.studio-shell, .prototype-app.studio-login { width:100%; max-width:560px; min-height:100dvh; margin-inline:auto; box-shadow:0 0 40px #26364a12; }
+.studio-shell:not(.is-home) .studio-header, .studio-shell .studio-accessibility, .studio-shell .studio-desktop-nav, .studio-shell .studio-footer { display:none; }
+.studio-shell.is-home .studio-header-inner { flex-wrap:nowrap; }
+.studio-shell .studio-brand-note { display:none; }
+.studio-shell.is-home .studio-brand-button .studio-brand-logo { width:144px; height:auto; }
+.prototype-app.studio-shell .studio-main[data-app-scroll-container] { padding:16px 16px calc(112px + env(safe-area-inset-bottom)); max-width:560px; }
+.prototype-app.studio-shell.is-home .studio-main[data-app-scroll-container] { padding:12px 16px calc(96px + env(safe-area-inset-bottom)); }
+.prototype-app.studio-shell .studio-reading-bar { padding:6px 16px; }
+.prototype-app.studio-shell .studio-bottom-nav { position:fixed; inset:auto auto 0 50%; transform:translateX(-50%); width:min(100%,560px); display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); z-index:40; padding:4px 4px env(safe-area-inset-bottom); box-shadow:0 -4px 18px #26364a0a; }
+.prototype-app.studio-shell .studio-bottom-nav button { min-height:76px; padding:6px 2px; border-radius:12px; font-size:16px; line-height:1.35; }
+.prototype-app.studio-shell.easy-mode .studio-bottom-nav button { font-size:18px; }
+.prototype-app.studio-shell .studio-menu-bottom-nav { z-index:70; }
+.prototype-app.studio-shell .unified-menu-panel { inset:0 auto 0 50%; transform:translateX(-50%); width:min(100%,560px); max-height:none; padding:16px 18px calc(112px + env(safe-area-inset-bottom)); border-radius:0; }
+.studio-shell .unified-menu-panel .studio-menu-heading { margin-bottom:18px; }
+.studio-shell .unified-menu-panel .studio-panel-intro { font-size:16px; font-weight:400; }
+.studio-shell .unified-menu-panel .studio-menu-row { min-height:86px; padding:12px; margin-bottom:10px; }
+.studio-shell .unified-menu-panel .studio-menu-copy small { line-height:1.5; }
+.studio-shell .compact-information .information-photo { grid-template-columns:42px minmax(0,1fr); }
+.studio-shell .compact-information .information-photo > div { display:none; }
+.studio-shell .compact-information .information-photo .studio-secondary { justify-self:end; }
+.studio-shell .result-motion-preview { height:clamp(240px,40dvh,400px); }
+.studio-shell .copy-result-text { height:min(300px,35dvh); min-height:190px; }
+.studio-shell .result-followup-actions { grid-template-columns:minmax(0,1fr); }
+.studio-shell .channel-recommended, .studio-shell .channel-alternatives { grid-template-columns:minmax(0,1fr); }
+.studio-shell .channel-recommended .channel-option { padding-top:16px; }
+.studio-shell .channel-recommended .channel-selected { position:static; }
+.studio-shell .publishing-guide { flex-direction:column; align-items:stretch; }
+@media (max-width:359px) { .prototype-app.studio-shell.easy-mode .studio-bottom-nav button { font-size:16px; } }
+
+/* Secondary menu access next to reading; preserve the primary creation action. */
+.studio-shell .studio-header-tools { display:flex; align-items:center; gap:6px; flex-shrink:0; }
+.studio-shell .studio-menu-button { display:inline-flex; align-items:center; justify-content:center; width:44px; height:44px; min-height:44px; padding:8px; border:0; border-radius:10px; background:transparent; color:var(--color-ink); flex-shrink:0; }
+.studio-shell .studio-menu-button:hover { background:var(--color-brand-soft); }
+.studio-shell.is-home .studio-header-inner { gap:6px; }
+.studio-shell .studio-reading-context { flex:1; min-width:0; line-height:1.4; }
+.studio-shell .studio-home-simple .studio-guide-action .studio-primary { box-shadow:0 5px 14px #ad4a1918; }
+.studio-shell .studio-home-simple .studio-how { padding-top:14px; border-top:0; }
+.studio-shell .studio-home-simple .studio-how h2 { font-weight:700; }
+.studio-shell .studio-home-simple .studio-step-number { background:var(--color-brand); color:var(--color-surface); }
+.home-sample-art { border:0; border-radius:0; background:transparent; }
+.studio-shell .studio-home-simple .home-sample-art { width:100%; max-width:380px; }
+.studio-shell .studio-home-simple .home-sample-art > img { width:100%; height:auto; object-fit:contain; }
+.studio-shell .studio-home-simple .studio-guide-steps { gap:22px; padding:4px 0 8px; margin:0; }
+.studio-shell .studio-home-simple .studio-guide-steps li { position:relative; gap:10px; }
+.studio-shell .studio-home-simple .studio-step-number { position:static; width:38px; height:38px; font-size:20px; border:1px solid var(--color-brand); }
+.studio-shell .studio-home-simple .studio-guide-steps li:nth-child(1) .studio-step-number { background:var(--color-brand-soft); color:var(--color-brand); }
+.studio-shell .studio-home-simple .studio-guide-steps li:nth-child(2) .studio-step-number { background:var(--color-brand-accent); color:var(--color-ink); }
+.studio-shell .studio-home-simple .studio-guide-steps li:nth-child(3) .studio-step-number { background:var(--color-brand); color:white; }
+.studio-shell .studio-home-simple .studio-guide-steps h3 { font-size:18px; line-height:1.45; }
+.studio-shell .studio-guide-arrow { position:absolute; top:7px; right:-23px; display:flex; color:var(--color-brand); }
+.studio-guide-arrow svg { stroke-width:2.2; }
+@media (max-width:359px) {
+ .studio-shell.is-home .studio-header-inner { padding-inline:12px; }
+ .studio-shell.is-home .studio-brand-button .studio-brand-logo { width:104px; }
+ .studio-shell.is-home .studio-header .studio-read-button { padding-inline:8px; }
+ .studio-shell .studio-reading-bar { gap:6px; padding-inline:12px; }
+ .studio-shell .studio-reading-bar .studio-read-button { padding-inline:8px; }
+ .studio-shell .studio-reading-context { font-size:16px; }
+}
+
+/* Allocate the upper whitespace to the original coffee preview, per the home review. */
+.prototype-app.studio-shell.is-home .studio-main[data-app-scroll-container] {
+  padding-top:32px;
+  padding-bottom:calc(88px + env(safe-area-inset-bottom));
+}
+.studio-shell .studio-home-simple {
+  min-height:calc(100dvh - 65px - 32px - 88px);
+  display:flex;
+  flex-direction:column;
+  justify-content:flex-start;
+}
+.studio-shell .studio-home-simple .studio-how {
+  margin-top:18px;
+  margin-bottom:0;
+  padding-top:14px;
+  position:relative;
+  top:-16px;
+}
+.studio-shell .studio-home-simple .studio-start-guide {
+  width:100%;
+  margin-bottom:0;
+}
+.studio-shell .studio-home-simple .studio-how { width:100%; }
+
+/* Once the photo is ready, expose the next action above the persistent navigation. */
+.studio-shell .photo-step.is-ready { padding-bottom:110px; }
+.prototype-app.studio-shell .photo-step.is-ready .photo-next-action {
+  position:fixed;
+  left:50%;
+  bottom:calc(81px + env(safe-area-inset-bottom));
+  transform:translateX(-50%);
+  width:min(100%,560px);
+  z-index:35;
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  margin:0;
+  padding:10px 16px;
+  border-top:1px solid var(--color-line);
+  background:var(--color-surface);
+  box-shadow:0 -5px 18px #26364a0c;
+}
+.studio-shell .photo-step.is-ready .photo-next-action > span {
+  max-width:none;
+  text-align:center;
+  font-size:16px;
+}
+.studio-shell .photo-step.is-ready .photo-next-action > button {
+  width:100%;
+  min-height:56px;
+  padding:10px 16px;
+  font-size:22px;
+}

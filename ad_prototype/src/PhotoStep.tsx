@@ -54,8 +54,7 @@ export default function PhotoStep({
       <div className="photo-workspace">
         <section className="photo-section" aria-labelledby="photo-title">
           <div className="section-heading">
-            <span className="section-kicker">먼저, 사진 한 장</span>
-            <h3 id="photo-title">제품 사진을 올려 주세요</h3>
+            <h3 id="photo-title">가게·제품 사진을 골라 주세요</h3>
             <p id="upload-help">
               20MB 이하의 JPG·PNG 등 사진 한 장을 선택하세요.
             </p>
@@ -111,7 +110,7 @@ export default function PhotoStep({
           )}
           <figure className="photo-example">
             <img
-              src="/assets/samples/product-example.png"
+              src="/assets/samples/latte-product-sample.png"
               alt="제품 전체가 또렷하게 보이는 사진 예시"
               width="72"
               height="88"
@@ -213,10 +212,19 @@ export default function PhotoStep({
           </span>
           <strong>{channelNames[channel]}</strong>
           <span className="details-action">{destinationOpen ? "접기" : "펼치기"}</span>
+          <span className="setting-summary-hint">
+            {channel === "download"
+              ? "홍보할 곳은 나중에 정해도 돼요."
+              : "선택한 곳에 맞춰 홍보 글을 만들어요."}
+          </span>
         </summary>
         <ChannelPicker value={channel} onChange={onChannel} />
       </details>
-      <div className="mobile-primary-bar photo-next-action">
+      <div
+        className="mobile-primary-bar photo-next-action"
+        role="region"
+        aria-label="사진 등록 후 다음 단계"
+      >
         <span>
           {imageUrl
             ? "사진이 준비됐어요. 설명을 적어 볼까요?"
@@ -227,7 +235,7 @@ export default function PhotoStep({
           disabled={!imageUrl || pending}
           onClick={onNext}
         >
-          {pending ? "사진 확인 중" : "사진 확인하고 다음"}
+          {pending ? "사진 확인 중" : "설명 적기"}
           <Icon name="arrow" />
         </button>
       </div>
