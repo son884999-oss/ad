@@ -516,6 +516,65 @@ function PrimaryButton({
   )
 }
 
+function ResultPreview({
+  toolbar,
+  children,
+}: {
+  toolbar: ReactNode
+  children: ReactNode
+}) {
+  return (
+    <div className="result-preview">
+      <div className="result-preview-toolbar">{toolbar}</div>
+      {children}
+    </div>
+  )
+}
+
+function ResultActionBar({
+  label,
+  accessibleLabel,
+  icon,
+  onClick,
+  disabled = false,
+  busy = false,
+  message = "",
+  error = false,
+}: {
+  label: string
+  accessibleLabel: string
+  icon: "download" | "copy" | null
+  onClick: () => void
+  disabled?: boolean
+  busy?: boolean
+  message?: string
+  error?: boolean
+}) {
+  return (
+    <div className="result-card-actions" aria-busy={busy}>
+      <button
+        type="button"
+        className="result-primary-action"
+        aria-label={accessibleLabel}
+        disabled={disabled}
+        onClick={onClick}
+      >
+        {icon && <Icon name={icon} />}
+        <span>{label}</span>
+      </button>
+      {message && (
+        <p
+          className={`result-inline-status${error ? " is-error" : ""}`}
+          role={error ? "alert" : "status"}
+          aria-atomic="true"
+        >
+          {message}
+        </p>
+      )}
+    </div>
+  )
+}
+
 function StepHeader({
   step,
   onBack,
@@ -1676,53 +1735,59 @@ function CreateFlow({
                   <h3>이미지</h3>
                   <small>확인용 예시</small>
                 </div>
-                <div
-                  id="result-poster-preview"
-                  className={`result-main-preview ${posterExpanded ? "is-expanded" : ""}`}
-                  role="group"
-                  aria-label={posterExpanded ? "이미지 확대 미리보기" : "이미지 미리보기"}
-                  tabIndex={posterExpanded ? 0 : undefined}
+                <ResultPreview
+                  toolbar={
+                    <>
+                      <span>이미지 미리보기</span>
+                      <button
+                        type="button"
+                        className="result-preview-action"
+                        aria-controls="result-poster-preview"
+                        aria-pressed={posterExpanded}
+                        disabled={!posterPreviewUrl}
+                        onClick={() => setPosterExpanded(!posterExpanded)}
+                      >
+                        {posterExpanded ? "한눈에 보기" : "크게 보기"}
+                      </button>
+                    </>
+                  }
                 >
-                  {posterPreviewUrl ? (
-                    <img src={posterPreviewUrl} alt="저장될 포스터 미리보기" />
-                  ) : (
-                    <p role="status">
-                      {posterStatus === "failed"
-                        ? "미리보기를 준비하지 못했어요. 사진을 확인해 주세요."
-                        : "이미지 미리보기를 준비하고 있어요."}
-                    </p>
-                  )}
-                </div>
-                {posterExpanded && <p className="image-zoom-hint" role="status">이미지를 두 배로 키웠어요. 안에서 좌우·위아래로 움직여 보세요.</p>}
-                <div className="result-card-actions">
-                  <div className="result-image-buttons">
-                  <button
-                    className="result-primary-action"
-                    aria-label="이미지 저장하기"
-                    onClick={() => void createPosterFile(true)}
-                    disabled={posterStatus === "preparing" || !posterPreviewUrl}
+                  <div
+                    id="result-poster-preview"
+                    className={`result-main-preview ${posterExpanded ? "is-expanded" : ""}`}
+                    role="group"
+                    aria-label={posterExpanded ? "이미지 확대 미리보기" : "이미지 미리보기"}
+                    tabIndex={posterExpanded ? 0 : undefined}
                   >
-                    <Icon name="download" />
-                    저장하기
-                  </button>
-                  <button
-                    className="result-secondary-action"
-                    aria-controls="result-poster-preview"
-                    aria-pressed={posterExpanded}
-                    onClick={() => setPosterExpanded(!posterExpanded)}
-                  >
-                    {posterExpanded ? "한눈에 보기" : "크게 보기"}
-                  </button>
+                    {posterPreviewUrl ? (
+                      <img src={posterPreviewUrl} alt="저장될 포스터 미리보기" />
+                    ) : (
+                      <p role="status">
+                        {posterStatus === "failed"
+                          ? "미리보기를 준비하지 못했어요. 사진을 확인해 주세요."
+                          : "이미지 미리보기를 준비하고 있어요."}
+                      </p>
+                    )}
                   </div>
-                  {posterStatus === "ready" && (
-                    <p role="status">
-                      PNG 저장을 요청했어요. 다운로드 목록을 확인하세요.
-                    </p>
-                  )}
-                  {posterStatus === "failed" && (
-                    <p role="alert">저장에 실패했어요. 다시 시도해 주세요.</p>
-                  )}
-                </div>
+                </ResultPreview>
+                <ResultActionBar
+                  label={posterStatus === "preparing" ? "저장 준비 중" : "저장하기"}
+                  accessibleLabel="이미지 저장하기"
+                  icon="download"
+                  onClick={() => void createPosterFile(true)}
+                  disabled={posterStatus === "preparing" || !posterPreviewUrl}
+                  busy={posterStatus === "preparing"}
+                  error={posterStatus === "failed"}
+                  message={
+                    posterStatus === "failed"
+                      ? "저장에 실패했어요. 다시 시도해 주세요."
+                      : posterStatus === "ready"
+                        ? "PNG 저장을 요청했어요. 다운로드 목록을 확인하세요."
+                        : posterExpanded
+                          ? "이미지를 두 배로 키웠어요. 안에서 좌우·위아래로 움직여 보세요."
+                          : ""
+                  }
+                />
                 {RESULT_SECONDARY_FEATURES_ENABLED && <details className="media-full-copy">
                   <summary>이미지 문구 원문 보기</summary>
                   <p>{details.name}</p>
@@ -1747,45 +1812,45 @@ function CreateFlow({
                   <h3>영상</h3>
                   <small>확인용 예시</small>
                 </div>
-                <div className="result-main-preview result-motion-preview">
-                  <img
-                    src={imageUrl}
-                    alt="영상에 사용할 제품 사진"
-                    className={playing ? "is-playing" : ""}
-                  />
-                  <strong><span>{details.name?.trim() || details.features}</span></strong>
-                </div>
-                <div className="result-card-actions result-video-actions">
-                  <button
-                    className="result-secondary-action"
-                    onClick={() => setPlaying(!playing)}
-                    aria-pressed={playing}
+                <ResultPreview
+                  toolbar={
+                    <>
+                      <span>영상 미리보기</span>
+                      <button
+                        type="button"
+                        className="result-preview-action"
+                        aria-controls="result-video-preview"
+                        aria-pressed={playing}
+                        onClick={() => setPlaying(!playing)}
+                      >
+                        {playing ? "일시 정지" : "재생하기"}
+                      </button>
+                    </>
+                  }
+                >
+                  <div
+                    id="result-video-preview"
+                    className="result-main-preview result-motion-preview"
                   >
-                    {playing ? "일시 정지" : "미리보기 재생"}
-                  </button>
-                  {videoStatus === "preparing" ? (
-                    <button
-                      className="result-primary-action"
-                      onClick={cancelVideoPreparation}
-                    >
-                      영상 준비 취소
-                    </button>
-                  ) : (
-                    <button
-                      className="result-primary-action"
-                      onClick={() => void createVideoFile(true)}
-                      aria-label="영상 저장하기"
-                    >
-                      <Icon name="download" />
-                      영상 저장
-                    </button>
-                  )}
-                  {(videoMessage || playing) && (
-                    <p className="result-inline-status" role="status">
-                      {videoMessage || "사진 움직임을 미리 보고 있어요."}
-                    </p>
-                  )}
-                </div>
+                    <img
+                      src={imageUrl}
+                      alt="영상에 사용할 제품 사진"
+                      className={playing ? "is-playing" : ""}
+                    />
+                    <strong><span>{details.name?.trim() || details.features}</span></strong>
+                  </div>
+                </ResultPreview>
+                <ResultActionBar
+                  label={videoStatus === "preparing" ? "준비 취소" : "저장하기"}
+                  accessibleLabel={videoStatus === "preparing" ? "영상 준비 취소" : "영상 저장하기"}
+                  icon={videoStatus === "preparing" ? null : "download"}
+                  onClick={() => videoStatus === "preparing"
+                    ? cancelVideoPreparation()
+                    : void createVideoFile(true)}
+                  busy={videoStatus === "preparing"}
+                  error={videoStatus === "failed" || videoStatus === "unsupported"}
+                  message={videoMessage || (playing ? "사진 움직임을 미리 보고 있어요." : "")}
+                />
                 {RESULT_SECONDARY_FEATURES_ENABLED && <details className="media-full-copy">
                   <summary>영상 문구 원문 보기</summary>
                   <p>{details.features}</p>
@@ -1809,40 +1874,34 @@ function CreateFlow({
                   <h3>홍보 문구</h3>
                   <small>확인용 예시</small>
                 </div>
-                <div className="copy-result-content">
-                  <div className="copy-result-meta">
-                    <strong>
-                      {channel === "download"
-                        ? "기본 홍보 문구"
-                        : channelNames[channel]}
-                    </strong>
-                    <span>{finalText.length}자</span>
+                <ResultPreview
+                  toolbar={
+                    <>
+                      <span>
+                        {channel === "download" ? "기본 홍보 문구" : channelNames[channel]}
+                      </span>
+                      <span className="result-copy-length">{finalText.length}자</span>
+                    </>
+                  }
+                >
+                  <div className="result-main-preview result-text-preview">
+                    <textarea
+                      className="copy-result-text"
+                      aria-label="홍보 문구 원문"
+                      aria-describedby="copy-edit-help"
+                      readOnly
+                      value={finalText}
+                    />
                   </div>
-                  <textarea
-                    className="copy-result-text"
-                    aria-label="홍보 문구 원문"
-                    aria-describedby="copy-edit-help"
-                    readOnly
-                    value={finalText}
-                  />
-                  <p id="copy-edit-help" className="copy-edit-help">
-                    고치려면 아래의 ‘내용 다시 수정하기’를 눌러 주세요.
-                  </p>
-                </div>
-                <div className="result-card-actions">
-                  <button
-                    className="result-primary-action"
-                    onClick={() => void copyFinalText()}
-                  >
-                    <Icon name="copy" />
-                    문구 전체 복사하기
-                  </button>
-                  {copyMessage && (
-                    <p className="result-inline-status" role="status">
-                      {copyMessage}
-                    </p>
-                  )}
-                </div>
+                </ResultPreview>
+                <ResultActionBar
+                  label="복사하기"
+                  accessibleLabel="문구 전체 복사하기"
+                  icon="copy"
+                  onClick={() => void copyFinalText()}
+                  message={copyMessage}
+                  error={copyMessage.includes("못했어요")}
+                />
               </article>
             )}
           </div>
@@ -1854,6 +1913,9 @@ function CreateFlow({
             </p>
             <PublishingGuide channel={channel} hasVideo={showVideo} />
           </details>}
+          <p id="copy-edit-help" className="result-edit-help">
+            고치려면 아래의 ‘내용 다시 수정하기’를 눌러 주세요.
+          </p>
           <div className="result-followup-actions">
             <button className="studio-secondary" onClick={() => setStep(2)}>
               내용 다시 수정하기

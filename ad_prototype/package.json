@@ -8,6 +8,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "verify:ui": "node scripts/verify-ui.mjs",
+    "verify:results": "node scripts/verify-result-consistency.mjs",
     "verify:readability": "node scripts/verify-readability.mjs",
     "verify:studio": "node scripts/verify-studio.mjs",
     "verify:zoom": "node scripts/verify-native-zoom.mjs",
