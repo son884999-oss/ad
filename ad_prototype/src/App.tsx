@@ -72,6 +72,9 @@ const creationNames: Record<CreationType, string> = {
   copy: "홍보 글 만들기",
 }
 
+// Restore the result help menus by enabling this flag.
+const RESULT_SECONDARY_FEATURES_ENABLED = false
+
 const initialDetails = {
   name: "",
   description: "",
@@ -695,9 +698,7 @@ function CreateFlow({
   }, [type])
 
   const missingFields = [
-    !details.description.trim() && "제품 설명",
-
-    !details.features.trim() && "강조할 특징",
+    !details.name?.trim() && "상품명",
   ].filter(Boolean)
 
   const videoRecorderRef = useRef<MediaRecorder | null>(null)
@@ -1364,7 +1365,7 @@ function CreateFlow({
             id="details-example-note"
             className="description-example-note"
           >
-            제품 소개와 알릴 장점을 적어 주세요.
+            상품명을 적어 주세요.
           </p>
           {type !== "all" && (
             <p className="mt-3 text-[16px] font-bold text-[#2b2b2b]">
@@ -1376,11 +1377,13 @@ function CreateFlow({
           )}
           <div className="details-fields mt-7 space-y-5">
             <label className="block text-[18px] font-bold">
-              가게·제품 이름{" "}
-              <span className="field-requirement">선택</span>
-              <span className="field-hint">선택 · 예: 행복한 카페</span>
+              상품명{" "}
+              <span className="field-requirement">필수</span>
+              <span className="field-hint">예: 행복한 카페</span>
               <input
-                aria-label="가게·제품 이름"
+                aria-label="상품명"
+                aria-required="true"
+                aria-invalid={!details.name?.trim()}
                 value={details.name ?? ""}
                 maxLength={60}
                 onChange={(event) =>
@@ -1391,15 +1394,12 @@ function CreateFlow({
               />
             </label>
             <label className="block text-[18px] font-bold">
-              제품 소개{" "}
-              <span className="field-requirement">필수</span>
+              소개
               <span className="field-hint" id="description-help">
                 예: 따뜻한 카페라떼
               </span>
               <textarea
                 aria-label="제품 설명"
-                aria-required="true"
-                aria-invalid={!details.description.trim()}
                 aria-describedby="description-help details-example-note"
                 value={details.description}
                 placeholder="예: 따뜻한 카페라떼"
@@ -1411,15 +1411,12 @@ function CreateFlow({
               />
             </label>
             <label className="block text-[18px] font-bold">
-              알리고 싶은 점{" "}
-              <span className="field-requirement">필수</span>
+              알리고 싶은 점
               <span className="field-hint" id="features-help">
                 예: 고소한 우유와 진한 커피
               </span>
               <textarea
                 aria-label="강조할 특징"
-                aria-required="true"
-                aria-invalid={!details.features.trim()}
                 aria-describedby="features-help details-example-note"
                 value={details.features}
                 placeholder="예: 고소한 우유와 진한 커피"
@@ -1726,12 +1723,12 @@ function CreateFlow({
                     <p role="alert">저장에 실패했어요. 다시 시도해 주세요.</p>
                   )}
                 </div>
-                <details className="media-full-copy">
+                {RESULT_SECONDARY_FEATURES_ENABLED && <details className="media-full-copy">
                   <summary>이미지 문구 원문 보기</summary>
                   <p>{details.name}</p>
                   <p>{details.features}</p>
                   <p>{resultCopy[channel]}</p>
-                </details>
+                </details>}
               </article>
             )}
             {showVideo && (
@@ -1783,18 +1780,17 @@ function CreateFlow({
                       영상 저장
                     </button>
                   )}
-                  <p className="result-inline-status" role="status">
-                    {videoMessage ||
-                      (playing
-                        ? "사진 움직임을 미리 보고 있어요."
-                        : "사진 움직임 미리보기예요. 저장 파일에는 홍보 문구도 들어가요.")}
-                  </p>
+                  {(videoMessage || playing) && (
+                    <p className="result-inline-status" role="status">
+                      {videoMessage || "사진 움직임을 미리 보고 있어요."}
+                    </p>
+                  )}
                 </div>
-                <details className="media-full-copy">
+                {RESULT_SECONDARY_FEATURES_ENABLED && <details className="media-full-copy">
                   <summary>영상 문구 원문 보기</summary>
                   <p>{details.features}</p>
                   <p>{resultCopy[channel]}</p>
-                </details>
+                </details>}
               </article>
             )}
             {showCopy && (
@@ -1841,21 +1837,23 @@ function CreateFlow({
                     <Icon name="copy" />
                     문구 전체 복사하기
                   </button>
-                  <p className="result-inline-status" role="status">
-                    {copyMessage || "문구와 검색어를 함께 복사해요."}
-                  </p>
+                  {copyMessage && (
+                    <p className="result-inline-status" role="status">
+                      {copyMessage}
+                    </p>
+                  )}
                 </div>
               </article>
             )}
           </div>
-          <details className="result-publishing-help">
+          {RESULT_SECONDARY_FEATURES_ENABLED && <details className="result-publishing-help">
             <summary>게시 방법과 문구 확인</summary>
             <p>
               현재 결과는 사진과 입력한 내용으로 만든 예시예요. 게시 전에 내용을
               확인해 주세요.
             </p>
             <PublishingGuide channel={channel} hasVideo={showVideo} />
-          </details>
+          </details>}
           <div className="result-followup-actions">
             <button className="studio-secondary" onClick={() => setStep(2)}>
               내용 다시 수정하기
@@ -2232,9 +2230,9 @@ export default function App() {
 
     if (step === 2) {
       return (
-        "제품 소개와 알리고 싶은 점을 적는 화면입니다. 두 항목은 필수이고 이름은 선택입니다. " +
+        "상품명은 필수이고, 소개와 알리고 싶은 점은 비워 두어도 됩니다. " +
         (details.name?.trim()
-          ? "가게 또는 제품 이름은 " + details.name + ". "
+          ? "상품명은 " + details.name + ". "
           : "") +
         "제품 설명은 " +
         details.description +

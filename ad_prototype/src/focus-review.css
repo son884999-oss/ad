@@ -56,7 +56,7 @@
 
 /* A normal-flow target works even when the tab bar is already sticky. */
 .studio-shell .results-step { min-height:calc(100dvh - var(--studio-reading-height,57px)); scroll-margin-top:var(--studio-reading-height,57px); }
-.studio-shell .result-poster .result-main-preview { height:clamp(180px,calc(100dvh - var(--studio-reading-height,57px) - 330px),480px); min-height:0; }
+.studio-shell .result-poster .result-main-preview, .studio-shell .result-motion-preview { width:100%; height:clamp(240px,40dvh,400px); min-height:0; display:flex; align-items:center; justify-content:center; }
 .studio-shell .result-poster .result-main-preview > img { width:auto; height:100%; max-width:100%; object-fit:contain; }
 .studio-shell .result-poster .result-main-preview.is-expanded { height:clamp(280px,65dvh,720px); min-height:0; overflow:auto; justify-content:flex-start; align-items:flex-start; }
 .studio-shell .result-poster .result-main-preview.is-expanded > img { width:200%; max-width:none; height:auto; flex-shrink:0; }
@@ -104,7 +104,7 @@ body { background:var(--color-brand-soft); }
 .studio-shell .compact-information .information-photo { grid-template-columns:42px minmax(0,1fr); }
 .studio-shell .compact-information .information-photo > div { display:none; }
 .studio-shell .compact-information .information-photo .studio-secondary { justify-self:end; }
-.studio-shell .result-motion-preview { height:clamp(240px,40dvh,400px); }
+
 .studio-shell .copy-result-text { height:min(300px,35dvh); min-height:190px; }
 .studio-shell .result-followup-actions { grid-template-columns:minmax(0,1fr); }
 .studio-shell .channel-recommended, .studio-shell .channel-alternatives { grid-template-columns:minmax(0,1fr); }
