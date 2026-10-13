@@ -1,4 +1,10 @@
 /* 2026-10-13: professor reference 1; one clear task and its primary action. */
+.studio-shell .photo-upload-choices { cursor:default; gap:16px; }
+.studio-shell .photo-upload-icon-button { display:grid; place-items:center; width:96px; height:96px; padding:0; border:2px solid var(--color-brand); border-radius:50%; color:var(--color-brand); background:var(--color-surface); cursor:pointer; }
+.studio-shell .photo-upload-icon-button:hover { background:var(--color-peach); }
+.studio-shell .photo-upload-icon-button:focus-visible { outline:3px solid var(--color-focus); outline-offset:4px; }
+.studio-shell .photo-upload-choices .photo-upload-text-button { width:min(100%,300px); min-height:52px; justify-content:center; }
+.studio-shell .photo-upload-choices button:disabled { cursor:wait; opacity:.6; }
 .prototype-app .studio-reading-bar { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:6px 16px; }
 .prototype-app .studio-read-button { width:auto; min-height:44px; padding:7px 10px; gap:6px; font-size:16px; line-height:1.4; }
 .prototype-app .studio-read-button svg { width:20px; height:20px; flex-shrink:0; }

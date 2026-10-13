@@ -1,4 +1,4 @@
-export type IconName = "home" | "plus" | "folder" | "picture" | "video" | "copy" | "arrow" | "menu" | "check" | "upload" | "download" | "window" | "sound" | "settings"
+export type IconName = "home" | "plus" | "folder" | "picture" | "camera" | "video" | "copy" | "arrow" | "menu" | "check" | "upload" | "download" | "window" | "sound" | "settings"
 export default function Icon({
   name,
   size = 24,
@@ -11,6 +11,7 @@ export default function Icon({
     plus: "M12 5v14M5 12h14",
     folder: "M3 7V5h6l3 3h9v12H3Z",
     picture: "M3 4h18v16H3ZM3 16l5-5 5 5 4-4 4 4M16 8h.01",
+    camera: "M3 6h4l2-3h6l2 3h4v15H3ZM16 12a4 4 0 1 0-8 0 4 4 0 0 0 8 0",
     video: "M3 6h12v12H3Zm12 4 6-3v10l-6-3",
     copy: "M7 3h14v14M3 7h14v14H3Z",
     arrow: "M4 12h16m-6-6 6 6-6 6",

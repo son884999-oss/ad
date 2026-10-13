@@ -1,6 +1,5 @@
-import type { ChangeEvent } from "react"
+import { useRef, type ChangeEvent } from "react"
 import Icon from "./Icon"
-import ServiceArt from "./ServiceArt"
 export default function PhotoStep({
   imageUrl,
   pending,
@@ -14,8 +13,11 @@ export default function PhotoStep({
   onUpload: (event: ChangeEvent<HTMLInputElement>) => void
   onNext: () => void
 }) {
+  const inputRef = useRef<HTMLInputElement>(null)
+  const selectPhoto = () => inputRef.current?.click()
   const input = (
     <input
+      ref={inputRef}
       id="product-photo"
       type="file"
       accept="image/*"
@@ -59,12 +61,28 @@ export default function PhotoStep({
                 </div>
               </>
             ) : (
-              <label htmlFor="product-photo" className="upload-target">
-                <strong>제품 사진 올리기</strong>
-                <ServiceArt name="workflow-photo" className="upload-art" />
+              <div className="upload-target photo-upload-choices">
+                <button
+                  type="button"
+                  className="photo-upload-icon-button"
+                  aria-label="사진 선택창 열기"
+                  aria-describedby="upload-help"
+                  disabled={pending}
+                  onClick={selectPhoto}
+                >
+                  <Icon name="camera" size={44} />
+                </button>
+                <button
+                  type="button"
+                  className="studio-primary photo-upload-text-button"
+                  disabled={pending}
+                  onClick={selectPhoto}
+                >
+                  제품 사진 올리기
+                </button>
                 <span>이 기기에 있는 사진을 골라 주세요</span>
                 {input}
-              </label>
+              </div>
             )}
           </div>
           {message && (
