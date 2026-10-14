@@ -15,7 +15,6 @@ import StepProgress from "./StepProgress"
 import Icon from "./Icon"
 import { useFeedback } from "./FeedbackProvider"
 import PublishingGuide from "./PublishingGuide"
-import ServiceArt from "./ServiceArt"
 import {
   channels as channelThemes,
   channelNames,
@@ -67,7 +66,7 @@ type GeneratedRecord = {
 
 
 const creationNames: Record<CreationType, string> = {
-  all: "한 번에 만들기",
+  all: "한 번에 완성",
 
   poster: "이미지 만들기",
 
@@ -538,7 +537,7 @@ function ResultCardHeading({
     <div className="result-card-heading">
       <span aria-hidden="true"><Icon name={icon} size={22} /></span>
       <div className="result-card-title">
-        <h3>{title}</h3>
+        <h3>{title} 결과</h3>
         <small>확인용 예시</small>
       </div>
       {control && <div className="result-preview-controls">{control}</div>}
@@ -591,6 +590,9 @@ function ResultActionBar({
   busy = false,
   message = "",
   error = false,
+  onShare,
+  shareMessage = "",
+  shareDisabled = false,
 }: {
   label: string
   accessibleLabel: string
@@ -600,10 +602,14 @@ function ResultActionBar({
   busy?: boolean
   message?: string
   error?: boolean
+  onShare?: () => unknown
+  shareMessage?: string
+  shareDisabled?: boolean
 }) {
   const statusId = useId()
   return (
     <div className="result-card-actions" aria-busy={busy}>
+      <div className="result-action-buttons">
       <button
         type="button"
         className="result-primary-action"
@@ -624,6 +630,16 @@ function ResultActionBar({
         {icon && <Icon name={icon} />}
         <span>{label}</span>
       </button>
+      {onShare && <button type="button" className="result-share-action" disabled={shareDisabled || busy} onClick={async (event) => {
+        const button = event.currentTarget
+        try { await onShare() } finally {
+          if (button.isConnected && document.activeElement === document.body) button.focus({preventScroll:true})
+        }
+      }}>
+        <Icon name="share" /><span>공유하기</span>
+      </button>}
+      </div>
+      {shareMessage && <p className="result-share-status" role="status" aria-atomic="true">{shareMessage}</p>}
       {message && (
         <p
           id={statusId}
@@ -811,7 +827,7 @@ function CreateFlow({
   }, [type])
 
   const missingFields = [
-    !details.name?.trim() && "상품 이름",
+    !(details.description.trim() || details.name?.trim()) && "제품 설명",
   ].filter(Boolean)
 
   const videoRecorderRef = useRef<MediaRecorder | null>(null)
@@ -820,10 +836,14 @@ function CreateFlow({
 
   const videoCancelledRef = useRef(false)
   const videoTaskRef = useRef<Promise<File | null> | null>(null)
+  const videoShareFileRef = useRef<File | null>(null)
+  const [shareMessages, setShareMessages] = useState<Partial<Record<"poster" | "video" | "copy", string>>>({})
   const videoContextRef = useRef(0)
 
   useEffect(() => {
     videoContextRef.current += 1
+    videoShareFileRef.current = null
+    setShareMessages({})
     setPlaying(false)
     setPosterExpanded(false)
 
@@ -1009,7 +1029,7 @@ function CreateFlow({
         ?.focus({ preventScroll: true })
   }
 
-  const finalText = `${resultCopy[channel]}\n\n${hashtags.join(" ")}`.trim()
+  const finalText = `${resultCopy[channel].trim()}\n\n${hashtags.join(" ")}`.trim()
   const mediaText =
     details.name?.trim() &&
     resultCopy[channel].startsWith(details.name.trim() + "\n")
@@ -1118,7 +1138,7 @@ function CreateFlow({
 
       drawWrappedText(
         context,
-        details.name?.trim() || details.features,
+        details.shopName?.trim() || details.name?.trim() || details.description.trim() || details.features,
         76,
         960,
         928,
@@ -1175,7 +1195,7 @@ function CreateFlow({
       const context = document.createElement("canvas").getContext("2d")
       if (context) {
         context.font = '700 72px "Noto Sans KR", sans-serif'
-        const title = wrapCanvasText(context, details.name?.trim() || details.features, 928, 3).join(" ")
+        const title = wrapCanvasText(context, details.shopName?.trim() || details.name?.trim() || details.description.trim() || details.features, 928, 3).join(" ")
         context.font = '500 48px "Noto Sans KR", sans-serif'
         const copy = wrapCanvasText(context, mediaText, 928, 3).join(" ")
         setPosterVisibleText([title, copy].filter(Boolean).join(". "))
@@ -1379,7 +1399,7 @@ function CreateFlow({
 
           drawWrappedText(
             context,
-            details.name?.trim() || details.features,
+            details.shopName?.trim() || details.name?.trim() || details.description.trim() || details.features,
             48,
             900,
             624,
@@ -1406,6 +1426,7 @@ function CreateFlow({
       if (!result) return null
 
       setVideoStatus("ready")
+      videoShareFileRef.current = result
 
       const extension = result.name.endsWith(".mp4") ? "MP4" : "WebM"
 
@@ -1433,7 +1454,7 @@ function CreateFlow({
   }
 
   // Cancelled work settles before another preparation can reuse its recorder refs.
-  const prepareVideoDownload = async () => {
+  const prepareVideoDownload = async (download = true) => {
     const context = videoContextRef.current
     const previous = videoTaskRef.current
     if (previous) {
@@ -1443,7 +1464,7 @@ function CreateFlow({
     }
     if (context !== videoContextRef.current || step !== 3) return null
     if (videoTaskRef.current && !videoCancelledRef.current) return videoTaskRef.current
-    const task = createVideoFile(true)
+    const task = createVideoFile(download)
     videoTaskRef.current = task
     try {
       return await task
@@ -1452,15 +1473,33 @@ function CreateFlow({
     }
   }
 
-  const pendingFiles = (showPoster && posterStatus !== "ready") || (showVideo && videoStatus !== "ready")
-  const pendingCopy = showCopy && (!copyMessage || copyMessage.includes("못했어요"))
-  const retentionNotice = pendingFiles && pendingCopy
-    ? "새로고침하거나 창을 닫기 전에 필요한 이미지·영상은 저장하고 문구는 복사해 주세요."
-    : pendingFiles
-      ? "새로고침하거나 창을 닫기 전에 필요한 파일을 저장해 주세요."
-      : pendingCopy
-        ? "새로고침하거나 창을 닫기 전에 필요한 문구를 복사해 주세요."
-        : ""
+  const shareResult = async (kind: "poster" | "video" | "copy") => {
+    const update = (message: string) => setShareMessages(current => ({...current, [kind]: message}))
+    if (typeof navigator.share !== "function") {
+      update(kind === "copy" ? "이 브라우저는 공유창을 지원하지 않아요. 문구를 복사해 원하는 앱에 붙여 넣어 주세요." : "이 브라우저는 공유창을 지원하지 않아요. 파일을 다운로드한 뒤 원하는 앱에서 공유해 주세요.")
+      return
+    }
+    const title = details.shopName?.trim() || details.name?.trim() || "홍보잇다"
+    const file = kind === "poster" ? posterPreviewFileRef.current : videoShareFileRef.current
+    if (kind === "video" && !file) {
+      update("공유할 영상 파일을 준비하고 있어요.")
+      const prepared = await prepareVideoDownload(false)
+      update(prepared ? "파일이 준비됐어요. 공유하기를 다시 눌러 주세요." : "공유 파일 준비를 마치지 못했어요. 다시 시도해 주세요.")
+      return
+    }
+    const data: ShareData = kind === "copy" ? {title, text: finalText} : file ? {title, files: [file]} : {title}
+    if (kind !== "copy" && (!file || !navigator.canShare?.(data))) {
+      update("이 브라우저는 파일 공유를 지원하지 않아요. 다운로드한 뒤 원하는 앱에서 공유해 주세요.")
+      return
+    }
+    try {
+      await navigator.share(data)
+      update("공유 요청을 전달했어요.")
+    } catch (error) {
+      update(error instanceof DOMException && error.name === "AbortError" ? "공유를 취소했어요. 결과는 그대로 있어요." : "공유하지 못했어요. 다시 시도하거나 다운로드·복사로 가져가 주세요.")
+    }
+  }
+
 
   return (
     <section
@@ -1470,12 +1509,11 @@ function CreateFlow({
     >
       {step === 3 ? (
         <div className="result-screen-heading">
-          <StepProgress step={step} onBack={setStep} />
           <div className="sr-only">
             <h2 data-screen-heading tabIndex={-1}>
               결과 보기
             </h2>
-            <p>사진과 입력한 내용으로 만든 체험 결과예요. 새로고침 전에 저장하거나 복사하세요.</p>
+            <p>사진과 입력한 내용으로 만든 체험 결과예요. </p>
           </div>
         </div>
       ) : (
@@ -1503,7 +1541,7 @@ function CreateFlow({
             <img src={imageUrl} alt="선택한 제품 사진" width="88" height="88" />
             <div>
               <strong>선택한 사진</strong>
-              <span>설명은 그대로 두고 사진만 바꿀 수 있어요.</span>
+              <span>다른 사진으로 바꿀 수 있어요.</span>
             </div>
             <button
               type="button"
@@ -1511,7 +1549,8 @@ function CreateFlow({
               disabled={uploadPending}
               onClick={() => detailsPhotoRef.current?.click()}
             >
-              사진 바꾸기
+              <Icon name="camera" size={18} />
+              사진 변경
             </button>
             <input
               ref={detailsPhotoRef}
@@ -1542,7 +1581,7 @@ function CreateFlow({
             id="details-example-note"
             className="description-example-note sr-only"
           >
-            상품 이름만 필수예요.
+            제품 설명은 필수이고 가게 이름과 알리고 싶은 점은 선택이에요.
           </p>
           {type !== "all" && (
             <p className="sr-only">
@@ -1554,67 +1593,45 @@ function CreateFlow({
           )}
           <div className="details-fields mt-7 space-y-5">
             <label className="block text-[18px] font-bold">
-              <span className="field-label-line">
-                <span>상품 이름 <span className="field-requirement">필수</span></span>
-                {nameTouched && missingFields.length > 0 && (
-                  <span className="field-inline-error" aria-hidden="true">입력해 주세요.</span>
-                )}
-              </span>
-              <span className="field-hint">예: 카페라떼</span>
-              <input
-                aria-label="상품 이름"
-                aria-required="true"
-                aria-invalid={nameTouched && missingFields.length > 0 ? true : undefined}
-                aria-describedby="product-name-help details-example-note"
-                value={details.name ?? ""}
-                maxLength={60}
-                onBlur={() => setNameTouched(true)}
-                onChange={(event) =>
-                  updateDetails({ ...details, name: event.target.value })
-                }
-                placeholder="예: 카페라떼"
-                className="mt-2 w-full rounded-[12px] border p-4"
-              />
-              <span
-                id="product-name-help"
-                className="sr-only"
-                role={nameTouched && missingFields.length > 0 ? "alert" : undefined}
-              >
-                {nameTouched && missingFields.length > 0
-                  ? "상품 이름을 입력해 주세요."
-                  : "홍보물에 표시할 상품 이름을 적어 주세요."}
-              </span>
-            </label>
-            <label className="block text-[18px] font-bold">
               가게 이름
               <input
                 aria-label="가게 이름"
                 aria-required="false"
-                aria-describedby="details-example-note"
                 value={details.shopName ?? ""}
                 maxLength={60}
                 onChange={(event) => updateDetails({ ...details, shopName: event.target.value })}
-                placeholder="예: 행복한 카페"
+                placeholder="예) 행복한 카페"
                 className="mt-2 w-full rounded-[12px] border p-4"
               />
             </label>
             <label className="block text-[18px] font-bold">
-              소개 및 알리고 싶은 점
-              <span className="field-hint" id="description-help">
-                예: 신선한 우유로 만든 고소한 라떼
+              어떤 제품인가요?
+              <input
+                aria-label="제품 설명"
+                aria-required="true"
+                aria-invalid={nameTouched && missingFields.length > 0 ? true : undefined}
+                aria-describedby="product-name-help"
+                value={[details.name, details.description].filter(Boolean).join("\n")}
+                placeholder="예) 수제 쿠키와 커피"
+                onBlur={() => setNameTouched(true)}
+                onChange={(event) => updateDetails({ ...details, name: "", description: event.target.value })}
+                className="mt-2 w-full rounded-[12px] border-2 border-[#817a74] p-4 text-[18px] font-normal leading-7 outline-none"
+              />
+              <span id="product-name-help" className={nameTouched && missingFields.length > 0 ? "field-validation is-error" : "sr-only"} role={nameTouched && missingFields.length > 0 ? "alert" : undefined}>
+                {nameTouched && missingFields.length > 0 ? "어떤 제품인지 적어 주세요." : "제품 설명을 입력하면 홍보물을 만들 수 있어요."}
               </span>
+            </label>
+            <label className="block text-[18px] font-bold">
+              어떤 점을 알려주고 싶나요?
               <AutoSizeTextarea
-                aria-label="소개 및 알리고 싶은 점"
+                aria-label="알리고 싶은 점"
                 aria-required="false"
-                aria-describedby="description-help details-example-note"
-                value={[details.description, details.features].filter(Boolean).join("\n")}
-                placeholder="예: 신선하고 고소해요"
-                onChange={(event) =>
-                  updateDetails({ ...details, description: event.target.value, features: "" })
-                }
-                rows={1}
+                value={details.features}
+                placeholder={"예) 신선한 재료, 직접 만든 디저트,\n아늑한 분위기"}
+                onChange={(event) => updateDetails({ ...details, features: event.target.value })}
+                rows={2}
                 resizeKey={easyMode}
-                className="mt-2 w-full rounded-[12px] border-2 border-[#817a74] p-4 text-[18px] font-normal leading-7 outline-none focus:border-[#c64f12] focus:ring-3 focus:ring-[#c64f12]/15"
+                className="mt-2 w-full rounded-[12px] border-2 border-[#817a74] p-4 text-[18px] font-normal leading-7 outline-none"
               />
             </label>
             {false && <details className="information-more-settings">
@@ -1769,22 +1786,15 @@ function CreateFlow({
             </details>}
           </div>
           <div className="details-actions mt-7 flex flex-col-reverse gap-3 sm:flex-row sm:justify-between">
-            <button
-              onClick={() => setStep(1)}
-              className="studio-secondary"
-            >
-              이전으로
-            </button>
+
             <div className="mobile-primary-bar details-primary-bar">
-              {missingFields.length > 0 && (
-                <p
-                  id="missing-details"
-                  role="status"
-                  className="missing-details-note"
-                >
-                  {missingFields.join(", ")}을 입력하면 다음으로 갈 수 있어요.
-                </p>
-              )}
+              <p
+                id="missing-details"
+                role="status"
+                className="missing-details-note"
+              >
+                {missingFields.length > 0 ? "어떤 제품인지 적으면 만들 수 있어요." : ""}
+              </p>
               <PrimaryButton
                 disabled={missingFields.length > 0 || uploadPending}
                 onClick={() => {
@@ -1795,14 +1805,14 @@ function CreateFlow({
                   setStep(3)
                 }}
               >
-                결과 보기
+                홍보물 만들기 <Icon name="arrow" />
               </PrimaryButton>
             </div>
           </div>
         </div>
       )}
       {step === 3 && (
-        <div className="results-step step-panel">
+        <div className={`results-step step-panel${resultTabs.length === 1 ? " is-single" : ""}`}>
           <div className="result-tabs-bar">
             <div
               className="result-tabs"
@@ -1915,10 +1925,13 @@ function CreateFlow({
                 </ResultPreview>
                 {posterVisibleText && <p id="poster-visible-text" className="sr-only">그림에 표시된 문구: {posterVisibleText}</p>}
                 <ResultActionBar
-                  label={posterStatus === "preparing" ? "저장 준비 중" : "저장하기"}
+                  label={posterStatus === "preparing" ? "다운로드 준비" : "다운로드"}
                   accessibleLabel="이미지 저장하기"
                   icon="download"
                   onClick={() => createPosterFile(true)}
+                  onShare={() => shareResult("poster")}
+                  shareMessage={shareMessages.poster}
+                  shareDisabled={!posterPreviewUrl}
                   disabled={posterStatus === "preparing" || !posterPreviewUrl}
                   busy={posterStatus === "preparing"}
                   error={posterStatus === "failed" || posterPreviewStatus === "failed"}
@@ -1979,17 +1992,19 @@ function CreateFlow({
                       alt="영상에 사용할 제품 사진"
                       className={playing ? "is-playing" : ""}
                     />
-                    <strong><span>{details.name?.trim() || details.features}</span></strong>
+                    <strong><span>{details.shopName?.trim() || details.name?.trim() || details.description.trim() || details.features}</span></strong>
                   </div>
                 </ResultPreview>
                 <ResultActionBar
-                  label={videoStatus === "preparing" ? "준비 취소" : "저장하기"}
+                  label={videoStatus === "preparing" ? "준비 취소" : "다운로드"}
                   accessibleLabel={videoStatus === "preparing" ? "영상 준비 취소" : "영상 저장하기"}
                   icon={videoStatus === "preparing" ? null : "download"}
                   onClick={() => videoStatus === "preparing"
                     ? cancelVideoPreparation()
                     : prepareVideoDownload()}
                   busy={videoStatus === "preparing"}
+                  onShare={() => shareResult("video")}
+                  shareMessage={shareMessages.video}
                   error={videoStatus === "failed" || videoStatus === "unsupported"}
                   message={videoStatus === "preparing"
                     ? `${videoMessage} 다른 작업으로 이동하면 준비를 취소해요.`
@@ -2018,7 +2033,7 @@ function CreateFlow({
                       className="copy-result-text"
                       role="region"
                       aria-label="홍보 문구 원문"
-                      aria-describedby="copy-edit-help"
+                      
                       tabIndex={0}
                     >
                       {finalText}
@@ -2030,6 +2045,8 @@ function CreateFlow({
                   accessibleLabel="문구 전체 복사하기"
                   icon="copy"
                   onClick={copyFinalText}
+                  onShare={() => shareResult("copy")}
+                  shareMessage={shareMessages.copy}
                   message={copyMessage && !copyMessage.includes("못했어요") ? "문구를 복사했어요." : copyMessage}
                   error={copyMessage.includes("못했어요")}
                 />
@@ -2044,20 +2061,8 @@ function CreateFlow({
             </p>
             <PublishingGuide channel={channel} hasVideo={showVideo} />
           </details>}
-          <p id="copy-edit-help" className="result-edit-help">
-            고치려면 아래의 ‘내용 다시 수정하기’를 눌러 주세요.
-          </p>
-          {retentionNotice && <p className="result-retention-note">{retentionNotice}</p>}
           <div className="result-followup-actions">
-            <button className="studio-secondary" onClick={() => setStep(2)}>
-              내용 다시 수정하기
-            </button>
-            <button className="studio-secondary" onClick={onStartNew}>
-              새 홍보물 만들기
-            </button>
-            <button className="studio-text-button" onClick={onDashboard}>
-              홈으로 돌아가기
-            </button>
+            <button className="studio-secondary" onClick={onDashboard}><Icon name="home" size={22} />홈으로</button>
           </div>
         </div>
       )}
@@ -2101,7 +2106,7 @@ function Records({
         내 홍보물
       </h2>
       <p className="records-retention-note">
-        이 창에서 만든 결과예요. 새로고침하거나 창을 닫기 전에 이미지·영상은 저장하고 문구는 복사해 주세요.
+        이 창에서 만든 홍보물을 확인할 수 있어요.
       </p>
       <div
         className="records-filters"
@@ -2114,7 +2119,8 @@ function Records({
             aria-pressed={filter === kind}
             onClick={() => setFilter(kind)}
           >
-            {labels[kind]}
+            <Icon name={kind === "all" ? "grid" : kind === "poster" ? "picture" : kind} size={24} />
+            <span>{labels[kind]}</span>
           </button>
         ))}
       </div>
@@ -2150,7 +2156,7 @@ function Records({
                 <small>
                   {labels[kind]} · {record.createdAt}
                 </small>
-                <span>결과 다시 보기</span>
+                <span className="sr-only">결과 다시 보기</span>
               </span>
               <Icon name="arrow" size={20} />
             </button>
@@ -2158,7 +2164,7 @@ function Records({
         </div>
       ) : (
         <div className="empty-results">
-          <ServiceArt name="records-empty" />
+          <span className="empty-results-icon" aria-hidden="true"><Icon name="folder" size={34} /></span>
           <h3>
             {records.length
               ? "이 종류의 결과는 아직 없어요"
@@ -2179,18 +2185,18 @@ function Plan({ easyMode }: { easyMode: boolean }) {
   )
 
   return (
-    <section className="mx-auto max-w-[900px]">
-      <h2 data-screen-heading tabIndex={-1} className="text-[26px] font-bold">
+    <section className="plan-screen">
+      <h2 data-screen-heading tabIndex={-1}>
         {uiText("내게 맞는 이용 방식을 골라 보세요", easyMode)}
       </h2>
-      <p className="mt-2 text-[16px] leading-7 text-[#545454]">
+      <p className="plan-note">
         {uiText(
           "현재는 구조를 확인하는 프로토타입이며, 가격과 제공 수량은 아직 정해지지 않았습니다.",
 
           easyMode,
         )}
       </p>
-      <div className="mt-7 grid gap-4 sm:grid-cols-2">
+      <div className="plan-options">
         {[
           [
             "subscription",
@@ -2208,26 +2214,14 @@ function Plan({ easyMode }: { easyMode: boolean }) {
             key={value}
             onClick={() => setSelected(value as "subscription" | "single")}
             aria-pressed={selected === value}
-            className={`rounded-[22px] border-2 p-7 text-left transition ${
-              selected === value
-                ? "border-[#c64f12] bg-[#fff8f3]"
-                : "border-[#dedbd7] bg-white"
-            }`}
+            className="plan-option"
           >
-            <span
-              className={`flex h-6 w-6 items-center justify-center rounded-full border-2 ${
-                selected === value ? "border-[#c64f12]" : "border-[#77706a]"
-              }`}
-            >
-              {selected === value && (
-                <span className="h-3 w-3 rounded-full bg-[#c64f12]" />
-              )}
-            </span>
-            <strong className="mt-6 block text-[22px]">
+            <span className="plan-radio" aria-hidden="true" />
+            <strong>
               {uiText(title, easyMode)}
             </strong>
-            <p className="mt-2 text-[18px] leading-6 text-[#545454]">{note}</p>
-            <span className="mt-6 block font-bold text-[#9f3e0d]">
+            <span className="plan-option-note">{note}</span>
+            <span className="plan-status">
               세부 조건은 준비 중
             </span>
           </button>
@@ -2341,6 +2335,8 @@ export default function App() {
       if (scrollingElement) scrollingElement.scrollTop = 0
 
       window.scrollTo({ top: 0, left: 0, behavior: "auto" })
+      const previewFrame = document.querySelector<HTMLElement>(".studio-shell")
+      if (previewFrame) previewFrame.scrollTop = 0
 
       const appMain = document.querySelector<HTMLElement>(
         "[data-app-scroll-container]",
@@ -2397,11 +2393,11 @@ export default function App() {
     }
 
     if (page === "home") {
-      return `첫 화면입니다. ${userTouched ? "홍보물 이어 만들기를 누르면 현재 작업으로 돌아갑니다." : "홍보물 만들기를 누르면 사진 올리기로 이동합니다."} 가입 없이 체험할 수 있어요. 사진을 넣고 상품 이름을 적으면 이미지, 영상, 문구를 확인할 수 있어요. 결과를 저장하거나 복사하세요. 개별 제작과 사용 방법은 메뉴에서 볼 수 있어요.`
+      return "첫 화면입니다. 홍보물 만들기를 누르면 만들 종류를 고를 수 있어요. 사진을 넣고 제품 설명을 적으면 이미지, 영상, 문구를 확인할 수 있어요. 결과를 다운로드하거나 복사하고 공유할 수 있어요. 가입 없이 체험할 수 있어요."
     }
 
     if (page === "records") {
-      return "내 홍보물 화면입니다. 이 창에서 만든 결과를 다시 열 수 있어요. 새로고침하거나 창을 닫기 전에 이미지·영상은 저장하고 문구는 복사해 주세요."
+      return "내 홍보물 화면입니다. 이 창에서 만든 결과를 다시 열 수 있어요. "
     }
 
     if (page === "plan") {
@@ -2419,24 +2415,24 @@ export default function App() {
       return `${speakUi(creationNames[creationType])} 1단계, 사진 올리기입니다. 만들 결과는 ${format}입니다. ${
         imageUrl
           ? "사진이 준비됐어요. 사진 바꾸기로 다시 고르거나 다음으로 버튼을 누르세요."
-          : "카메라 버튼이나 제품 사진 올리기 버튼으로 사진 한 장을 선택해 주세요."
+          : "카메라 버튼이나 사진 선택하기 버튼으로 사진 한 장을 선택해 주세요."
       }`
     }
 
     if (step === 2) {
       return (
-        "상품 이름은 필수이고, 가게 이름과 소개 및 알리고 싶은 점은 비워 두어도 됩니다. " +
+        "어떤 제품인지 설명을 입력해 주세요. 가게 이름과 알리고 싶은 점은 선택 사항입니다. " +
         (details.name?.trim()
           ? "상품 이름은 " + details.name + ". "
           : "") +
-        "소개 및 알리고 싶은 점은 " +
+        "제품 설명과 알리고 싶은 점은 " +
         ([details.description, details.features].filter(Boolean).join(". ") || "비워 두었어요") +
         ". " +
-        "사진 바꾸기 버튼으로 사진을 바꿀 수 있어요. 내용을 확인한 뒤 결과 보기 버튼을 누르세요."
+        "사진 바꾸기 버튼으로 사진을 바꿀 수 있어요. 내용을 확인한 뒤 홍보물 만들기 버튼을 누르세요."
       )
     }
 
-    return `결과 보기 화면입니다. 상품명은 ${details.name?.trim() || "입력하지 않았어요"}. 파일은 저장하기, 문구는 복사하기로 가져오세요. 내용을 고치려면 내용 다시 수정하기를 누르세요.`
+    return `결과 보기 화면입니다. ${details.shopName?.trim() || details.name?.trim() || details.description.trim()}. 파일은 저장하기, 문구는 복사하기로 가져오세요. 홈으로 버튼으로 첫 화면에 돌아갈 수 있어요.`
   })()
 
   const stopSpeech = () => {
@@ -2529,11 +2525,11 @@ export default function App() {
     const videoControl = visibleVideo?.querySelector(".result-preview-action")?.textContent?.trim()
     const videoAction = visibleVideo?.querySelector(".result-primary-action")?.textContent?.trim()
     const videoState = visibleVideo?.querySelector(".result-inline-status")?.textContent?.trim()
-    const videoSpeech = `영상 결과입니다. 상품명은 ${details.name?.trim()}. ${videoControl === "일시 정지"
+    const videoSpeech = `영상 결과입니다. ${details.shopName?.trim() || details.name?.trim() || details.description.trim()}. ${videoControl === "일시 정지"
       ? "일시 정지 버튼으로 사진 움직임을 멈출 수 있어요."
       : "재생하기 버튼으로 사진 움직임을 확인하세요."} ${videoAction === "준비 취소"
       ? "준비 취소 버튼으로 영상 파일 준비를 취소할 수 있어요."
-      : "저장하기 버튼으로 파일을 가져오세요."}${videoState ? " " + videoState : ""}`
+      : "다운로드 버튼으로 파일을 가져오거나 공유하기 버튼을 누르세요."}${videoState ? " " + videoState : ""}`
     const utterance = new SpeechSynthesisUtterance(
       visibleCopy ? "홍보 문구 결과입니다. " + visibleCopy
         : visiblePoster ? "이미지 결과입니다. " + visiblePoster
@@ -2630,23 +2626,20 @@ export default function App() {
   }
 
   const navigate = (nextPage: Page, type?: CreationType) => {
-    if (type) {
-      const resumeDraft = userTouched && type === creationType
-      if (!resumeDraft) {
-        if (type === "all") setAllOutputFormat("both")
-        setPreferredResultTab(
-          type === "video" ? "video" : type === "copy" ? "copy" : "poster",
-        )
-        setCreationType(type)
-
-        setStep(1)
-      }
-
-      setContinuationNotice(userTouched)
+    if (nextPage === "create" && type) {
+      setCreationType(type)
+      setAllOutputFormat("both")
+      setPreferredResultTab(type === "video" ? "video" : type === "copy" ? "copy" : "poster")
+      setImageUrl("")
+      setDetails({ ...initialDetails })
+      setEditedHashtags(mapChannels(() => false))
+      setRecommendedHashtagsByChannel(initialHashtagValues())
+      setUserHashtagsByChannel(initialHashtagValues())
+      setUserTouched(false)
+      setContinuationNotice(false)
+      setStep(1)
     }
-
     setPage(nextPage)
-
     setMobileOpen(false)
   }
 
@@ -2767,6 +2760,7 @@ export default function App() {
       resultView={page === "create" && step === 3}
       creationView={page === "create"}
       navigate={navigate}
+      onBack={() => page === "create" && step > 1 ? setStep((step - 1) as Step) : navigate("home")}
       easyMode={easyMode}
       setEasyMode={setEasyMode}
       speaking={speaking}
@@ -2784,7 +2778,7 @@ export default function App() {
           navigate={navigate}
           easyMode={easyMode}
           hasDraft={userTouched}
-          onChooseCreation={() => navigate("create")}
+          onChooseCreation={() => navigate("create", "all")}
         />
       )}
       {page === "create" && (
@@ -2836,7 +2830,7 @@ export default function App() {
           easyMode={easyMode}
           records={records}
           onOpen={openRecord}
-          onCreate={() => navigate("create")}
+          onCreate={() => navigate("create", "all")}
           onStartNew={startNew}
         />
       )}

@@ -20,19 +20,21 @@ async function openResult(page,mode){
   const css=(await readFile(join(root,'index.css'),'utf8')).replaceAll('Noto Sans KR Variable','Noto Sans KR').replaceAll('./files/','/test-fonts/')
   await page.addStyleTag({content:css})
  }
- if(mode==='regular'){
-  await page.getByRole('button',{name:'상단 전체 메뉴 열기',exact:true}).click()
+ {
+  await page.getByRole('navigation',{name:'모바일 빠른 메뉴',exact:true}).getByRole('button',{name:'메뉴',exact:true}).click()
   const menu=page.getByRole('dialog',{name:'전체 메뉴'})
+  await menu.getByText('설정·도움말',{exact:true}).click()
   await menu.getByText('글씨 크기·간편모드',{exact:true}).click()
   const toggle=menu.getByRole('switch',{name:'간편모드',exact:true})
-  if(await toggle.getAttribute('aria-checked')==='true'){await toggle.focus();await page.keyboard.press('Space')}
+  if((await toggle.getAttribute('aria-checked')==='true')!==(mode==='easy')){await toggle.focus();await page.keyboard.press('Space')}
   await page.keyboard.press('Escape')
  }
  await page.getByRole('button',{name:'홍보물 만들기',exact:true}).click()
+ await page.getByRole('dialog').getByRole('button',{name:'한 번에 완성',exact:true}).click()
  await page.getByLabel('제품 사진 올리기',{exact:true}).setInputFiles(photo)
  await page.getByRole('button',{name:'다음으로',exact:true}).click()
- await page.getByLabel('상품 이름',{exact:true}).fill(sampleName)
- await page.getByRole('button',{name:'결과 보기',exact:true}).click()
+ await page.getByLabel('제품 설명',{exact:true}).fill(sampleName)
+ await page.getByRole('button',{name:'홍보물 만들기',exact:true}).click()
  await page.locator('#result-poster-preview img').waitFor()
  await page.evaluate(()=>document.fonts.ready)
 }
@@ -115,7 +117,7 @@ try{
   assert.equal(await page.getByRole('tab',{name:'문구',exact:true}).getAttribute('aria-selected'),'true')
   const text=await page.getByRole('region',{name:'홍보 문구 원문',exact:true}).innerText()
   await page.getByRole('button',{name:'문구 전체 복사하기',exact:true}).click()
-  assert.equal(await page.evaluate(()=>navigator.clipboard.readText()),text)
+  assert.equal((await page.evaluate(()=>navigator.clipboard.readText())).replace(/\r\n/g,'\n'),text)
   await page.locator('#result-copy .result-inline-status[role="status"]').waitFor()
   if(width===390&&mode==='easy'){
    await page.evaluate(()=>{
@@ -140,7 +142,7 @@ try{
    await checkExport(page,'video')
   }
   await page.getByRole('button',{name:'내용 다시 수정하기',exact:true}).click()
-  assert.equal(await page.getByLabel('상품 이름',{exact:true}).inputValue(),sampleName)
+  assert.equal(await page.getByLabel('제품 설명',{exact:true}).inputValue(),sampleName)
   assert.deepEqual(errors,[])
   reports.push({width,mode,status:'passed',measurements})
   console.log(`PASS ${width}px ${mode}`)

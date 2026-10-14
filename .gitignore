@@ -1,3 +1,23 @@
 # 로컬 복원 사본은 저장소와 배포에 포함하지 않는다.
 .phase*-checkpoint-*/
 .phase*-verified-*/
+
+# 모든 하위 프로젝트에 공통으로 적용한다.
+node_modules/
+dist/
+.env
+.env.*
+!.env.example
+
+# 프로젝트별 로컬 출력은 해당 폴더에서만 제외한다.
+/ad_prototype/**/ui-review/
+/ad_prototype/**/.preview/
+/A_손용범/**/*.mp4
+/A_손용범/**/*.mov
+/A_손용범/**/*생성기록.json
+/A_손용범/**/*生成記録.json
+/D_고혜숙/**/.vercel/
+/D_고혜숙/**/*.log
+/C_김만복/**/dist
+/C_김만복/**/*.log
+/C_김만복/**/.DS_Store

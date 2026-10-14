@@ -26,11 +26,7 @@ export default function StepProgress({
           const content = (
             <>
               <span className="journey-node">
-                {state === "complete" ? (
-                  <Icon name="check" size={20} />
-                ) : (
-                  number
-                )}
+                {number}
               </span>
               <span className="journey-label">
                 <span className="journey-short">{item.short}</span>

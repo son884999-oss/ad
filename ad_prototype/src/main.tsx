@@ -6,17 +6,17 @@ import App from "./App"
 
 import FeedbackProvider from "./FeedbackProvider"
 
+import { DesktopAside, DevToolbar } from "./DesktopStage"
+
 import "./index.css"
-import "./feedback-layout.css"
-import "./maintenance-refinements.css"
-import "./mobile-reference.css"
-import "./compact-reference.css"
-import "./focus-review.css"
+import "./reference-ui.css"
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <FeedbackProvider>
+      <DesktopAside />
       <App />
+      <DevToolbar />
     </FeedbackProvider>
   </React.StrictMode>,
 )
