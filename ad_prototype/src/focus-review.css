@@ -340,7 +340,7 @@ body { background:var(--color-brand-soft); }
 
 /* Keep every menu destination in view; expanded guidance can still scroll. */
 .prototype-app.studio-shell .unified-menu-panel { padding:12px 16px calc(88px + env(safe-area-inset-bottom)); }
-.studio-shell .unified-menu-panel .studio-menu-heading { margin-bottom:8px; }
+.studio-shell .unified-menu-panel .studio-menu-heading { margin-bottom:24px; }
 .studio-shell .unified-menu-panel .studio-panel-title { margin-bottom:8px; font-size:22px; line-height:1.4; }
 .studio-shell .unified-menu-panel .menu-creation-options { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
 .studio-shell .unified-menu-panel .menu-creation-options .studio-menu-row {
@@ -354,6 +354,14 @@ body { background:var(--color-brand-soft); }
 .studio-shell .unified-menu-panel .studio-menu-footer { margin-top:8px; padding-top:0; border-top:0; gap:8px; }
 .studio-shell .unified-menu-panel > .studio-menu-footer:last-of-type { grid-template-columns:repeat(2,minmax(0,1fr)); }
 .studio-shell .unified-menu-panel .studio-menu-footer > button { min-height:44px; padding:8px; font-size:16px; line-height:1.4; }
+.studio-shell .unified-menu-panel .menu-saved-entry { margin-top:16px; margin-bottom:8px; }
+.studio-shell .unified-menu-panel .menu-saved-entry > .menu-saved-link {
+  display:grid; grid-template-columns:24px minmax(0,1fr) 20px; align-items:center; gap:10px;
+  min-height:52px; padding:10px 12px; border:1px solid var(--color-control); border-radius:var(--radius-control);
+  background:var(--color-brand-soft); color:var(--color-ink); text-align:left; font-size:18px; font-weight:700; line-height:1.4;
+}
+.studio-shell .unified-menu-panel .menu-saved-link > svg { flex-shrink:0; }
+.studio-shell .unified-menu-panel .menu-saved-link:hover { background:var(--color-peach); border-color:var(--color-brand); }
 .studio-shell .unified-menu-panel .service-menu-section { padding:0; }
 .studio-shell .unified-menu-panel .service-menu-section summary { min-height:44px; padding:8px 0; font-size:18px; line-height:1.4; }
 .studio-shell .unified-menu-panel .service-menu-section[open] { padding-bottom:12px; }
