@@ -48,17 +48,26 @@ try {
       assert.ok(button.y + button.height <= nav.y + 1, 'Upload action should be visible on the short phone')
     }
     if (width === 390 && mode === 'easy') await capture(page, 'photo-390')
+    assert.equal(await page.getByRole('radio').count(), 3, 'Output selection must be visible before upload')
+    if (width >= 360 && width <= 390 && height >= 640) {
+      await page.evaluate(() => scrollTo(0, 0)); await settle(page)
+      const nav = await page.getByRole('navigation', { name: '모바일 빠른 메뉴', exact: true }).boundingBox()
+      for (const target of ['.journey-progress', '.photo-upload', '.photo-output-format', '.photo-next-action > button']) {
+        const box = await page.locator(target).boundingBox()
+        assert.ok(box.y >= 0 && box.y + box.height <= nav.y - 8, 'Empty upload controls must fit: ' + target + ' ' + JSON.stringify(box))
+      }
+    }
     const chooserEvent = page.waitForEvent('filechooser')
     await page.getByRole('button', { name: mode === 'easy' ? '사진 선택창 열기' : '제품 사진 올리기', exact: true }).click()
     await (await chooserEvent).setFiles(photo)
     assert.equal(await page.getByRole('radio', { name: '둘 다', exact: true }).isChecked(), true)
-    if (width <= 390) {
+    if (width >= 360 && width <= 390 && height >= 640) {
       await page.evaluate(() => scrollTo(0, 0)); await settle(page)
       const items = [
         page.getByRole('navigation', { name: '홍보물 만들기 진행 단계', exact: true }),
         page.getByRole('img', { name: '넣은 제품 사진 미리보기', exact: true }),
         page.getByRole('group', { name: /^만들 결과/ }),
-        page.getByRole('button', { name: '다음 단계', exact: true }),
+        page.getByRole('button', { name: '다음으로', exact: true }),
       ]
       const boxes = await Promise.all(items.map(item => item.boundingBox()))
       const nav = await page.getByRole('navigation', { name: '모바일 빠른 메뉴', exact: true }).boundingBox()
@@ -69,7 +78,7 @@ try {
       if (height === 693 && mode === 'easy') await capture(page, 'photo-selected-390x693')
       if (width === 360 && mode === 'easy') await capture(page, 'photo-selected-360x640')
     }
-    await page.getByRole('button', { name: '다음 단계', exact: true }).click()
+    await page.getByRole('button', { name: '다음으로', exact: true }).click()
     await page.getByLabel('상품명', { exact: true }).fill('초이셀 데일리 샴푸')
     assert.equal(await page.getByRole('button', { name: '결과 보기', exact: true }).isEnabled(), true, 'Only product name is required')
     await page.getByLabel('소개', { exact: true }).fill(intro)
@@ -133,7 +142,7 @@ try {
         await page.getByRole('button', { name: '이전으로', exact: true }).click()
         await page.getByRole('radio', { name: choice, exact: true }).locator('..').click()
         assert.equal(await page.getByRole('radio', { name: choice, exact: true }).isChecked(), true)
-        await page.getByRole('button', { name: '다음 단계', exact: true }).click()
+        await page.getByRole('button', { name: '다음으로', exact: true }).click()
         await page.getByRole('button', { name: '결과 보기', exact: true }).click()
         assert.deepEqual((await page.getByRole('tab').allTextContents()).map(x => x.trim()), expected)
         assert.equal((await page.getByRole('tab', { selected: true }).innerText()).trim(), expected[0], 'Media should open before copy')

@@ -63,7 +63,7 @@ async function capture(page, name, top = false) {
 async function input(page) {
   await page.getByRole('button', { name: '홍보물 만들기', exact: true }).click()
   await page.getByLabel('제품 사진 올리기', { exact: true }).setInputFiles(photo)
-  await page.getByRole('button', { name: '다음 단계', exact: true }).click()
+  await page.getByRole('button', { name: '다음으로', exact: true }).click()
   await page.getByLabel('상품명', { exact: true }).fill('데일리 샴푸')
 }
 async function result(page) {

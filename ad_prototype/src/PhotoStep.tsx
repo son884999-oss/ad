@@ -35,7 +35,7 @@ export default function PhotoStep({
     <div className={"photo-step step-panel " + (imageUrl ? "is-ready" : "")}>
       <div className="photo-workspace">
         <section className="photo-section" aria-label="제품 사진 선택">
-          <div className={imageUrl ? "section-heading sr-only" : "section-heading"}>
+          <div className="section-heading sr-only">
             <p id="upload-help">
               20MB 이하의 JPG·PNG 등 사진 한 장을 선택하세요.
             </p>
@@ -78,7 +78,7 @@ export default function PhotoStep({
                   disabled={pending}
                   onClick={selectPhoto}
                 >
-                  <Icon name="camera" size={44} />
+                  <Icon name="camera" size={32} />
                 </button>
                 <button
                   type="button"
@@ -88,7 +88,7 @@ export default function PhotoStep({
                 >
                   제품 사진 올리기
                 </button>
-                <span>이 기기에 있는 사진을 골라 주세요</span>
+                <span>JPG·PNG 등 · 최대 20MB</span>
                 {input}
               </div>
             )}
@@ -106,21 +106,9 @@ export default function PhotoStep({
               {message}
             </p>
           )}
-          {!imageUrl && <figure className="photo-example">
-            <img
-              src="/assets/samples/latte-product-sample.png"
-              alt="제품 전체가 또렷하게 보이는 사진 예시"
-              width="72"
-              height="88"
-            />
-            <figcaption>
-              <strong>이런 사진이 좋아요</strong>
-              <span>제품 전체가 또렷하게 보이는 사진을 골라 주세요.</span>
-            </figcaption>
-          </figure>}
         </section>
       </div>
-      {imageUrl && outputFormat && onOutputFormatChange && (
+      {outputFormat && onOutputFormatChange && (
         <fieldset className="photo-output-format" disabled={pending}>
           <legend>만들 결과 <span>문구 포함</span></legend>
           <div className="photo-output-options">
@@ -149,10 +137,27 @@ export default function PhotoStep({
           disabled={!imageUrl || pending}
           onClick={onNext}
         >
-          {pending ? "사진 확인 중" : "다음 단계"}
+          {pending ? "사진 확인 중" : "다음으로"}
           <Icon name="arrow" />
         </button>
       </div>
+      {!imageUrl && (
+        <details className="photo-tips">
+          <summary>사진을 잘 고르는 방법</summary>
+          <figure className="photo-example">
+            <img
+              src="/assets/samples/latte-product-sample.png"
+              alt="제품 전체가 또렷하게 보이는 사진 예시"
+              width="72"
+              height="88"
+            />
+            <figcaption>
+              <strong>사진 예시</strong>
+              <span>밝은 곳에서 제품 전체가 또렷하게 보이는 사진을 골라 주세요.</span>
+            </figcaption>
+          </figure>
+        </details>
+      )}
     </div>
   )
 }

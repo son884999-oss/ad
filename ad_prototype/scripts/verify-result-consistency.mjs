@@ -29,7 +29,7 @@ async function openResult(page,mode){
  }
  await page.getByRole('button',{name:'홍보물 만들기',exact:true}).click()
  await page.getByLabel('제품 사진 올리기',{exact:true}).setInputFiles(photo)
- await page.getByRole('button',{name:'다음 단계',exact:true}).click()
+ await page.getByRole('button',{name:'다음으로',exact:true}).click()
  await page.getByLabel('상품명',{exact:true}).fill(sampleName)
  await page.getByRole('button',{name:'결과 보기',exact:true}).click()
  await page.locator('#result-poster-preview img').waitFor()

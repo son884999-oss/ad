@@ -1,0 +1,19 @@
+{
+  "tool": "built-in image_gen",
+  "date": "2026-10-11",
+  "synthetic": true,
+  "images": [
+    {
+      "file": "cookie.png",
+      "prompt": "Use case: product-mockup. Asset type: synthetic product photo fixture for testing an image-to-video advertising prompt module. Create one photorealistic square studio product photograph of a handmade chocolate chip cookie, with one simple clear unbranded cookie wrapper beside it, on a plain warm beige tabletop and matching seamless background. Cookie and packaging fully visible with generous margins, eye-level three-quarter close view, sharp visible baked surface and chocolate pieces, soft warm diffused studio light, realistic natural shadows. Simple stationary composition. No other props, no people, no hands, no steam, no motion, no text, no branding, no watermark. Deliver a single photograph, not a collage."
+    },
+    {
+      "file": "cosmetic.png",
+      "prompt": "Use case: product-mockup. Asset type: synthetic product photo fixture for testing an image-to-video advertising prompt module. Create one photorealistic square studio product photograph of a single cosmetic serum bottle with an attached plain white label and a closed dropper cap, on a plain neutral pale gray tabletop and matching seamless background. Entire bottle and cap fully visible with generous margins. Front-facing three-quarter view, label sharply visible. Soft restrained elegant directional studio lighting, realistic reflections and shadow, no elaborate effects. Blank label with no text or invented brand. No other products or props, no people, no hands, no liquid splashes, no motion, no watermark. Deliver a single photograph, not a collage."
+    },
+    {
+      "file": "mug.png",
+      "prompt": "Use case: product-mockup. Asset type: synthetic product photo fixture for testing an image-to-video advertising prompt module. Create one photorealistic square studio product photograph of a single plain ceramic mug with a clearly visible intact curved handle, on a plain neutral light beige tabletop and matching seamless background. Entire mug and handle fully visible with generous margins, front three-quarter view from slightly above to reveal the empty opening. Soft balanced natural studio lighting, calm mood, realistic ceramic surface finish and soft shadow. No text, logos, extra objects, saucer, beverage, steam, people, hands, motion or watermark. Deliver a single photograph, not a collage."
+    }
+  ]
+}

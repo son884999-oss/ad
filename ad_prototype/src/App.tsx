@@ -53,6 +53,7 @@ type GeneratedRecord = {
   imageUrl: string
 
   details: {
+    shopName?: string
     name?: string
     description: string
 
@@ -79,6 +80,7 @@ const creationNames: Record<CreationType, string> = {
 const RESULT_SECONDARY_FEATURES_ENABLED = false
 
 const initialDetails = {
+  shopName: "",
   name: "",
   description: "",
 
@@ -635,12 +637,10 @@ function StepHeader({
   step,
   onBack,
   easyMode,
-  photoReady = false,
 }: {
   step: Step
   onBack: (step: Step) => void
   easyMode: boolean
-  photoReady?: boolean
 }) {
   const stepGuides: Record<Step, {
     title: string
@@ -670,7 +670,7 @@ function StepHeader({
   return (
     <div className="creation-header">
       <StepProgress step={step} onBack={onBack} />
-      <div className={step === 1 && photoReady ? "sr-only" : "mt-5"}>
+      <div className={step === 1 ? "sr-only" : "mt-5"}>
         <h2
           data-screen-heading
           tabIndex={-1}
@@ -741,23 +741,9 @@ function CreateFlow({
 
   setImageUrl: (url: string) => void
 
-  details: {
-    name?: string
-    description: string
+  details: GeneratedRecord["details"]
 
-    features: string
-
-    audience: string
-  }
-
-  setDetails: (details: {
-    name?: string
-    description: string
-
-    features: string
-
-    audience: string
-  }) => void
+  setDetails: (details: GeneratedRecord["details"]) => void
 
   recommendedHashtagsByChannel: Record<Channel, string> | undefined
 
@@ -791,6 +777,8 @@ function CreateFlow({
   const [copyMessage, setCopyMessage] = useState("")
 
   const [posterStatus, setPosterStatus] = useState<FileStatus>("idle")
+  const [posterPreviewStatus, setPosterPreviewStatus] = useState<FileStatus>("idle")
+  const [posterRetry, setPosterRetry] = useState(0)
   const [posterPreviewUrl, setPosterPreviewUrl] = useState("")
   const [posterVisibleText, setPosterVisibleText] = useState("")
   const [posterExpanded, setPosterExpanded] = useState(false)
@@ -804,6 +792,7 @@ function CreateFlow({
   const [uploadMessage, setUploadMessage] = useState("")
   const [uploadPending, setUploadPending] = useState(false)
   const detailsPhotoRef = useRef<HTMLInputElement>(null)
+  const [nameTouched, setNameTouched] = useState(false)
 
   const uploadRequestRef = useRef(0)
   useEffect(() => {
@@ -866,6 +855,7 @@ function CreateFlow({
     imageUrl,
 
     details.name,
+    details.shopName,
 
     details.description,
 
@@ -939,9 +929,11 @@ function CreateFlow({
     }
   }
 
-  const productSummary = details.name?.trim()
-    ? `${details.name.trim()}\n${details.description}`
-    : details.description
+  const productSummary = [
+    details.name?.trim(),
+    details.shopName?.trim(),
+    details.description,
+  ].filter(Boolean).join("\n")
   const audienceRecommendation = details.audience.trim()
     ? `\n\n${details.audience}께 추천해요.`
     : ""
@@ -1018,14 +1010,7 @@ function CreateFlow({
       ? resultCopy[channel].slice(details.name.trim().length).trimStart()
       : resultCopy[channel]
 
-  const updateDetails = (nextDetails: {
-    name?: string
-    description: string
-
-    features: string
-
-    audience: string
-  }) => {
+  const updateDetails = (nextDetails: GeneratedRecord["details"]) => {
     setDetails(nextDetails)
 
     onDraftTouched()
@@ -1086,7 +1071,7 @@ function CreateFlow({
       return posterPreviewFileRef.current
     }
     if (!imageUrl) {
-      setPosterStatus("failed")
+      if (download) setPosterStatus("failed")
 
       return null
     }
@@ -1158,7 +1143,7 @@ function CreateFlow({
 
       return file
     } catch {
-      setPosterStatus("failed")
+      if (download) setPosterStatus("failed")
 
       return null
     }
@@ -1171,12 +1156,16 @@ function CreateFlow({
     posterPreviewFileRef.current = null
     setPosterPreviewUrl("")
     setPosterVisibleText("")
+    setPosterPreviewStatus("preparing")
     // The preview and download use the same Canvas renderer and copy.
     void createPosterFile(false).then((file) => {
-      if (cancelled || !file) return
+      if (cancelled) return
+      if (!file) throw new Error("poster-preview-failed")
       posterPreviewFileRef.current = file
       previewUrl = URL.createObjectURL(file)
       setPosterPreviewUrl(previewUrl)
+      setPosterPreviewStatus("ready")
+      notify("result")
       const context = document.createElement("canvas").getContext("2d")
       if (context) {
         context.font = '700 72px "Noto Sans KR", sans-serif'
@@ -1185,6 +1174,8 @@ function CreateFlow({
         const copy = wrapCanvasText(context, mediaText, 928, 3).join(" ")
         setPosterVisibleText([title, copy].filter(Boolean).join(". "))
       }
+    }).catch(() => {
+      if (!cancelled) setPosterPreviewStatus("failed")
     })
     return () => {
       cancelled = true
@@ -1199,6 +1190,7 @@ function CreateFlow({
     details.features,
     resultCopy[channel],
     channel,
+    posterRetry,
   ])
 
   const cancelVideoPreparation = () => {
@@ -1471,18 +1463,21 @@ function CreateFlow({
       }`}
     >
       {step === 3 ? (
-        <div className="result-screen-heading sr-only">
-          <h2 data-screen-heading tabIndex={-1}>
-            결과 보기
-          </h2>
-          <p>사진과 입력한 내용으로 만든 체험 결과예요. 새로고침 전에 저장하거나 복사하세요.</p>
+        <div className="result-screen-heading">
+          <StepProgress step={step} onBack={setStep} />
+          <div className="sr-only">
+            <h2 data-screen-heading tabIndex={-1}>
+              결과 보기
+            </h2>
+            <p>사진과 입력한 내용으로 만든 체험 결과예요. 새로고침 전에 저장하거나 복사하세요.</p>
+          </div>
         </div>
       ) : (
-        <StepHeader step={step} onBack={setStep} easyMode={easyMode} photoReady={!!imageUrl} />
+        <StepHeader step={step} onBack={setStep} easyMode={easyMode} />
       )}
       {step === 1 && continuationNotice && (
-        <p className="mb-6 rounded-[12px] border border-[#dda77f] bg-[#fff8f3] px-4 py-3 text-[18px] font-bold text-[#7f340d]">
-          입력한 사진과 설명을 이어서 사용해요.
+        <p className="sr-only" role="status">
+          진행하던 작업을 이어서 사용해요.
         </p>
       )}
       {step === 1 && (
@@ -1541,7 +1536,7 @@ function CreateFlow({
             id="details-example-note"
             className="description-example-note"
           >
-            상품명만 입력해도 결과를 볼 수 있어요.
+            상품명만 필수예요. 나머지는 비워 두어도 돼요.
           </p>
           {type !== "all" && (
             <p className="mt-3 text-[16px] font-bold text-[#2b2b2b]">
@@ -1559,14 +1554,37 @@ function CreateFlow({
               <input
                 aria-label="상품명"
                 aria-required="true"
-                aria-invalid={details.name && !details.name.trim() ? true : undefined}
-                aria-describedby="details-example-note"
+                aria-invalid={nameTouched && missingFields.length > 0 ? true : undefined}
+                aria-describedby="product-name-help details-example-note"
                 value={details.name ?? ""}
                 maxLength={60}
+                onBlur={() => setNameTouched(true)}
                 onChange={(event) =>
                   updateDetails({ ...details, name: event.target.value })
                 }
                 placeholder="예: 카페라떼"
+                className="mt-2 w-full rounded-[12px] border p-4"
+              />
+              <span
+                id="product-name-help"
+                className={nameTouched && missingFields.length > 0 ? "field-validation is-error" : "field-validation"}
+                role={nameTouched && missingFields.length > 0 ? "alert" : undefined}
+              >
+                {nameTouched && missingFields.length > 0
+                  ? "상품명을 입력해 주세요."
+                  : "홍보물에 표시할 상품명을 적어 주세요."}
+              </span>
+            </label>
+            <label className="block text-[18px] font-bold">
+              가게 이름
+              <input
+                aria-label="가게 이름"
+                aria-required="false"
+                aria-describedby="details-example-note"
+                value={details.shopName ?? ""}
+                maxLength={60}
+                onChange={(event) => updateDetails({ ...details, shopName: event.target.value })}
+                placeholder="예: 행복한 카페"
                 className="mt-2 w-full rounded-[12px] border p-4"
               />
             </label>
@@ -1769,7 +1787,7 @@ function CreateFlow({
                 <p
                   id="missing-details"
                   role="status"
-                  className="sr-only"
+                  className="missing-details-note"
                 >
                   {missingFields.join(", ")}을 입력하면 다음으로 갈 수 있어요.
                 </p>
@@ -1779,7 +1797,7 @@ function CreateFlow({
                 onClick={() => {
                   setSelectedResultTab(resultTabs[0].id)
                   onResultCreated()
-                  notify("result")
+                  if (!showPoster) notify("result")
 
                   setStep(3)
                 }}
@@ -1887,11 +1905,18 @@ function CreateFlow({
                         <img src={posterPreviewUrl} alt={`${details.name?.trim() || "제품"} 홍보 이미지`} aria-describedby={posterVisibleText ? "poster-visible-text" : undefined} />
                       </div>
                     ) : (
-                      <p role="status">
-                        {posterStatus === "failed"
-                          ? "미리보기를 준비하지 못했어요. 사진을 확인해 주세요."
-                          : "이미지 미리보기를 준비하고 있어요."}
-                      </p>
+                      <div className="result-preparation" aria-busy={posterPreviewStatus === "preparing"}>
+                        <p role={posterPreviewStatus === "failed" ? "alert" : "status"}>
+                          {posterPreviewStatus === "failed"
+                            ? "이미지를 준비하지 못했어요. 다시 시도해 주세요."
+                            : "이미지를 준비하고 있어요."}
+                        </p>
+                        {posterPreviewStatus === "failed" && (
+                          <button type="button" className="studio-secondary" onClick={() => setPosterRetry((value) => value + 1)}>
+                            이미지 다시 준비
+                          </button>
+                        )}
+                      </div>
                     )}
                   </div>
                 </ResultPreview>
@@ -1903,9 +1928,13 @@ function CreateFlow({
                   onClick={() => createPosterFile(true)}
                   disabled={posterStatus === "preparing" || !posterPreviewUrl}
                   busy={posterStatus === "preparing"}
-                  error={posterStatus === "failed"}
+                  error={posterStatus === "failed" || posterPreviewStatus === "failed"}
                   message={
-                    posterStatus === "failed"
+                    posterPreviewStatus === "failed"
+                      ? showVideo || showCopy
+                        ? "이미지 준비에 실패했어요. 다른 결과는 계속 확인할 수 있어요."
+                        : "다시 준비하거나 아래에서 내용을 수정해 주세요."
+                      : posterStatus === "failed"
                       ? "저장에 실패했어요. 다시 시도해 주세요."
                       : posterStatus === "ready"
                         ? "PNG 저장을 요청했어요. 다운로드 목록을 확인하세요."
@@ -2047,11 +2076,13 @@ function Records({
   records,
   onOpen,
   onCreate,
+  onStartNew,
 }: {
   easyMode: boolean
   records: GeneratedRecord[]
   onOpen: (record: GeneratedRecord, kind: "poster" | "video" | "copy") => void
   onCreate: () => void
+  onStartNew: () => void
 }) {
   const [filter, setFilter] = useState<"all" | "poster" | "video" | "copy">(
     "all",
@@ -2141,7 +2172,7 @@ function Records({
               : "아직 만든 결과가 없어요"}
           </h3>
           <p>만들기에서 사진 한 장으로 시작해 보세요.</p>
-          <button className="studio-primary" onClick={onCreate}>
+          <button className="studio-primary" onClick={records.length ? onStartNew : onCreate}>
             {records.length ? "새 홍보물 만들기" : "홍보물 만들기"}
           </button>
         </div>
@@ -2394,7 +2425,7 @@ export default function App() {
 
       return `${speakUi(creationNames[creationType])} 1단계, 사진 올리기입니다. 만들 결과는 ${format}입니다. ${
         imageUrl
-          ? "사진이 준비됐어요. 사진 바꾸기로 다시 고르거나 다음 단계 버튼을 누르세요."
+          ? "사진이 준비됐어요. 사진 바꾸기로 다시 고르거나 다음으로 버튼을 누르세요."
           : "카메라 버튼이나 제품 사진 올리기 버튼으로 사진 한 장을 선택해 주세요."
       }`
     }
@@ -2609,13 +2640,16 @@ export default function App() {
 
   const navigate = (nextPage: Page, type?: CreationType) => {
     if (type) {
-      if (type === "all") setAllOutputFormat("both")
-      setPreferredResultTab(
-        type === "video" ? "video" : type === "copy" ? "copy" : "poster",
-      )
-      setCreationType(type)
+      const resumeDraft = userTouched && type === creationType
+      if (!resumeDraft) {
+        if (type === "all") setAllOutputFormat("both")
+        setPreferredResultTab(
+          type === "video" ? "video" : type === "copy" ? "copy" : "poster",
+        )
+        setCreationType(type)
 
-      setStep(1)
+        setStep(1)
+      }
 
       setContinuationNotice(userTouched)
     }
@@ -2626,6 +2660,8 @@ export default function App() {
   }
 
   const startNew = () => {
+    setAllOutputFormat("both")
+    setPreferredResultTab(creationType === "video" ? "video" : creationType === "copy" ? "copy" : "poster")
     setEditedHashtags(mapChannels(() => false))
     setImageUrl("")
 
@@ -2789,7 +2825,10 @@ export default function App() {
             setEditedHashtags((current) => ({ ...current, [channel]: true }))
           }}
           outputFormat={outputFormat}
-          onOutputFormatChange={setAllOutputFormat}
+          onOutputFormatChange={(format) => {
+            setAllOutputFormat(format)
+            setUserTouched(true)
+          }}
           continuationNotice={continuationNotice}
           onDraftTouched={() => {
             setUserTouched(true)
@@ -2806,7 +2845,8 @@ export default function App() {
           easyMode={easyMode}
           records={records}
           onOpen={openRecord}
-          onCreate={startNew}
+          onCreate={() => navigate("create")}
+          onStartNew={startNew}
         />
       )}
       {page === "plan" && <Plan easyMode={easyMode} />}

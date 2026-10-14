@@ -103,7 +103,6 @@ export function StudioLogin({
   const [showPassword, setShowPassword] = useState(false)
   const submit = (event: FormEvent) => {
     event.preventDefault()
-    onEnter()
   }
   return (
     <main
@@ -121,15 +120,14 @@ export function StudioLogin({
             {mode === "login" ? "로그인" : "회원가입"}
           </h1>
           <p>
-            {mode === "login"
-              ? "우리 가게 홍보를 시작해 보세요."
-              : "이메일과 비밀번호를 입력해 주세요."}
+            로그인과 회원가입은 연결 준비 중이에요. 아래 바로 시작하기로 체험해 주세요.
           </p>
           <form onSubmit={submit}>
             <label>
               이메일
               <input
                 type="email"
+                disabled
                 required
                 autoComplete="email"
                 placeholder="name@example.com"
@@ -140,6 +138,7 @@ export function StudioLogin({
               <div className="studio-password-input">
                 <input
                   id="login-password"
+                  disabled
                   aria-label="비밀번호"
                   type={showPassword ? "text" : "password"}
                   required
@@ -151,6 +150,7 @@ export function StudioLogin({
                 />
                 <button
                   type="button"
+                  disabled
                   aria-label={
                     showPassword ? "비밀번호 숨기기" : "비밀번호 보기"
                   }
@@ -162,8 +162,8 @@ export function StudioLogin({
                 </button>
               </div>
             </label>
-            <button type="submit" className="studio-primary">
-              {mode === "login" ? "로그인" : "가입하고 시작하기"}
+            <button type="submit" className="studio-primary" disabled>
+              연결 준비 중
             </button>
           </form>
           <button

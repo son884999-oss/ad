@@ -1,0 +1,14 @@
+{
+  "name": "e-video-prompt",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Product image-to-video direction prompt module",
+  "type": "commonjs",
+  "main": "src/index.js",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "test": "node --test",
+    "examples": "node examples/run.js",
+    "examples:gemini": "node --env-file=.env examples/run.js --gemini"
+  }
+}

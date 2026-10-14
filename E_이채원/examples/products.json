@@ -1,0 +1,23 @@
+[
+  {
+    "productName": "수제 초콜릿 쿠키",
+    "productDescription": "초콜릿 조각이 보이는 쿠키와 포장 사진",
+    "imageUrl": "https://example.com/products/cookie.jpg",
+    "keySellingPoint": "표면의 초콜릿 조각",
+    "targetAudience": "간식을 즐기는 성인",
+    "brandTone": "따뜻한"
+  },
+  {
+    "productName": "데일리 세럼",
+    "productDescription": "라벨이 붙은 화장품 용기 사진",
+    "imageUrl": "https://example.com/products/cosmetic.jpg",
+    "keySellingPoint": "용기와 라벨 디자인",
+    "targetAudience": "차분한 디자인을 선호하는 성인",
+    "brandTone": "고급스러운"
+  },
+  {
+    "productName": "데일리 머그컵",
+    "productDescription": "손잡이가 있는 머그컵 제품 사진",
+    "imageUrl": "https://example.com/products/mug.jpg"
+  }
+]

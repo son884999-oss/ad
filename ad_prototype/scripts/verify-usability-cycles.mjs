@@ -33,7 +33,7 @@ async function begin(page) {
 }
 async function input(page) {
   await page.getByLabel('제품 사진 올리기', { exact: true }).setInputFiles(photo)
-  await page.getByRole('button', { name: '다음 단계', exact: true }).click()
+  await page.getByRole('button', { name: '다음으로', exact: true }).click()
   await page.getByLabel('상품명', { exact: true }).fill('데일리 샴푸')
 }
 async function result(page) {
@@ -89,7 +89,7 @@ try {
         const selected = page.getByRole('button', { name: '사진 바꾸기', exact: true })
         const selectedStyle = await selected.evaluate(style)
         const opened = page.waitForEvent('filechooser'); await selected.press('Enter'); const picker = await opened; await picker.setFiles([])
-        await page.getByRole('button', { name: '다음 단계', exact: true }).click()
+        await page.getByRole('button', { name: '다음으로', exact: true }).click()
         await page.getByLabel('상품명', { exact: true }).fill('데일리 샴푸')
         const sameStyle = await page.getByRole('button', { name: '사진 바꾸기', exact: true }).evaluate(style)
         assert.deepEqual(sameStyle, selectedStyle)

@@ -13,6 +13,7 @@
     "verify:cycles": "node scripts/verify-usability-cycles.mjs",
     "verify:experts": "node scripts/verify-expert-review.mjs",
     "verify:submission": "node scripts/verify-submission-ui.mjs",
+    "verify:mobile-flow": "node scripts/verify-mobile-flow.mjs",
     "verify:readability": "node scripts/verify-readability.mjs",
     "verify:studio": "node scripts/verify-studio.mjs",
     "verify:zoom": "node scripts/verify-native-zoom.mjs",

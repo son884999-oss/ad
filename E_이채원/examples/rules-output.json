@@ -1,0 +1,14 @@
+[
+  {
+    "productName": "수제 초콜릿 쿠키",
+    "videoPrompt": "Create an inviting food product portrait. Use a warm, welcoming mood with soft lighting consistent with the reference. Use one continuous 10-second shot with a slow, subtle camera push-in, keeping the entire product and label readable. Keep the reference setting and emphasize only the visible surface texture and packaging details. Preserve the reference composition and background, product shape, proportions, colors, label text and logo. Keep the product stationary; avoid rapid motion, cuts, morphing, new objects, added text, invented effects and unsupported product benefits."
+  },
+  {
+    "productName": "데일리 세럼",
+    "videoPrompt": "Create a restrained beauty product portrait. Use an elegant, restrained mood with soft directional lighting consistent with the reference. Use one continuous 10-second shot with a slow, subtle camera push-in, keeping the entire product and label readable. Keep the reference setting and emphasize only the visible container finish and label details. Preserve the reference composition and background, product shape, proportions, colors, label text and logo. Keep the product stationary; avoid rapid motion, cuts, morphing, new objects, added text, invented effects and unsupported product benefits."
+  },
+  {
+    "productName": "데일리 머그컵",
+    "videoPrompt": "Create a calm everyday product portrait. Use a calm mood with soft balanced lighting consistent with the reference. Use one continuous 10-second shot with a slow, subtle camera push-in, keeping the entire product and label readable. Keep the reference setting and emphasize only the visible silhouette and surface finish. Preserve the reference composition and background, product shape, proportions, colors, label text and logo. Keep the product stationary; avoid rapid motion, cuts, morphing, new objects, added text, invented effects and unsupported product benefits."
+  }
+]

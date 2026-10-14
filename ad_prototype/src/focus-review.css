@@ -1,9 +1,9 @@
 /* 2026-10-13: professor reference 1; one clear task and its primary action. */
-.studio-shell .photo-upload-choices { cursor:default; gap:16px; }
-.studio-shell .photo-upload-icon-button { display:grid; place-items:center; width:96px; height:96px; padding:0; border:2px solid var(--color-brand); border-radius:50%; color:var(--color-brand); background:var(--color-surface); cursor:pointer; }
+.studio-shell .photo-upload-choices { cursor:default; gap:10px; }
+.studio-shell .photo-upload-icon-button { display:grid; place-items:center; width:64px; height:64px; padding:0; border:2px solid var(--color-brand); border-radius:50%; color:var(--color-brand); background:var(--color-surface); cursor:pointer; }
 .studio-shell .photo-upload-icon-button:hover { background:var(--color-peach); }
 .studio-shell .photo-upload-icon-button:focus-visible { outline:3px solid var(--color-focus); outline-offset:4px; }
-.studio-shell .photo-upload-choices .photo-upload-text-button { width:min(100%,300px); min-height:52px; justify-content:center; }
+.studio-shell .photo-upload-choices .photo-upload-text-button { width:min(100%,300px); min-height:52px; padding:10px 12px; justify-content:center; font-size:20px; }
 .studio-shell .photo-upload-choices button:disabled { cursor:wait; opacity:.6; }
 .prototype-app .studio-reading-bar { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:6px 16px; }
 .prototype-app .studio-read-button { width:auto; min-height:44px; padding:7px 10px; gap:6px; font-size:16px; line-height:1.4; }
@@ -161,7 +161,7 @@ body { background:var(--color-brand-soft); }
 .studio-shell .studio-home-simple .studio-how { width:100%; }
 
 /* Photo -> next: no optional channel panel or floating prompt. */
-.studio-shell .photo-step .photo-next-action {
+.studio-shell.has-creation-view .photo-step .photo-next-action {
   position:static;
   display:block;
   margin-top:18px;
@@ -171,7 +171,7 @@ body { background:var(--color-brand-soft); }
   box-shadow:none;
 }
 .studio-shell .photo-next-action > span { display:none; }
-.studio-shell .photo-step .photo-next-action > button {
+.studio-shell.has-creation-view .photo-step .photo-next-action > button {
   width:100%;
   min-height:56px;
   padding:10px 16px;
@@ -234,7 +234,7 @@ body { background:var(--color-brand-soft); }
 
 /* One compact, numbered journey on phone and desktop. */
 .studio-shell.has-creation-view .journey-progress { padding:6px; border:1px solid var(--color-line); border-radius:var(--radius-control); background:var(--color-surface); }
-.studio-shell.has-creation-view .journey-progress :is(button,.journey-static) { flex-direction:row; align-items:center; justify-content:center; min-height:44px; padding:4px 2px; gap:6px; }
+.studio-shell.has-creation-view .journey-progress :is(button,.journey-static) { flex-direction:column; align-items:center; justify-content:center; min-height:60px; padding:4px 2px; gap:6px; }
 .studio-shell.has-creation-view .journey-node { width:26px; height:26px; flex-shrink:0; font-size:16px; box-shadow:none; }
 .studio-shell.has-creation-view .journey-node svg { width:16px; height:16px; }
 .studio-shell.has-creation-view .journey-label { font-size:16px; line-height:1.4; white-space:nowrap; }
@@ -242,7 +242,7 @@ body { background:var(--color-brand-soft); }
 .studio-shell.has-creation-view .journey-long { display:none; }
 .studio-shell.has-creation-view .journey-label small { display:none; }
 .studio-shell.has-creation-view .journey-progress button .journey-label { text-decoration:none; }
-.studio-shell.has-creation-view .journey-progress li:not(:last-child)::after { top:50%; left:calc(100% - 4px); right:-4px; height:2px; background:var(--color-line); }
+.studio-shell.has-creation-view .journey-progress li:not(:last-child)::after { top:17px; left:calc(50% + 22px); right:calc(-50% + 22px); height:2px; background:var(--color-line); }
 .studio-shell.has-creation-view .journey-progress li[data-state="complete"]::after { background:var(--color-brand); }
 .studio-shell .photo-output-format { margin:18px 0 0; padding:0; border:0; min-width:0; }
 .studio-shell .photo-output-format legend { margin-bottom:8px; padding:0; color:var(--color-ink); font-size:18px; font-weight:700; }
@@ -256,12 +256,28 @@ body { background:var(--color-brand-soft); }
 .studio-shell .photo-output-options input:disabled + span { opacity:.6; }
 
 /* Guide -> photo -> output choice -> next fits a typical portrait phone. */
-.prototype-app.studio-shell .studio-main:has(.photo-step.is-ready) { padding-bottom:calc(88px + env(safe-area-inset-bottom)); }
-.studio-shell .creation-header:has(+ .photo-step.is-ready) { margin-bottom:0; }
-.studio-shell .photo-step.is-ready .photo-upload { margin-top:0; margin-bottom:0; }
-.studio-shell .photo-step.is-ready .selected-photo { height:clamp(80px,calc(100dvh - var(--studio-reading-height,57px) - 423px - env(safe-area-inset-bottom)),360px); }
+.prototype-app.studio-shell .studio-main:has(.photo-step) { padding-bottom:calc(88px + env(safe-area-inset-bottom)); }
+.prototype-app.studio-shell.has-creation-view .creation-flow > .creation-header:has(~ .photo-step) { margin-bottom:0; }
+.studio-shell .photo-step .photo-upload { margin-top:0; margin-bottom:0; }
+.studio-shell .photo-step .upload-target { min-height:180px; padding:12px; }
+.studio-shell .photo-step .upload-target > span { font-size:16px; line-height:1.5; color:var(--color-muted); }
+.studio-shell .photo-step.is-ready .selected-photo { height:clamp(80px,calc(100dvh - var(--studio-reading-height,57px) - 439px - env(safe-area-inset-bottom)),360px); }
 .studio-shell .photo-step.is-ready .photo-confirmation { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:8px 12px; }
 .studio-shell .photo-step.is-ready .photo-check { gap:6px; font-size:16px; white-space:nowrap; }
 .studio-shell .photo-step.is-ready .photo-check svg { width:20px; height:20px; }
-.studio-shell .photo-step.is-ready .photo-output-format { margin-top:8px; }
-.studio-shell .photo-step.is-ready .photo-next-action { margin-top:12px; }
+.studio-shell .photo-step .photo-output-format { margin-top:12px; }
+.studio-shell.has-creation-view .photo-step .photo-next-action { margin-top:12px; }
+.studio-shell .photo-tips { margin-top:12px; }
+.studio-shell .photo-tips > summary { min-height:44px; padding:10px 2px; color:var(--color-muted); font-size:16px; line-height:1.5; cursor:pointer; }
+.studio-shell .photo-tips .photo-example { margin-top:4px; }
+.studio-shell .field-validation { display:block; margin-top:4px; color:var(--color-muted); font-size:16px; font-weight:400; line-height:1.5; }
+.studio-shell .field-validation.is-error { color:var(--color-error); }
+.studio-shell .compact-information input[aria-invalid="true"] { border-color:var(--color-error); }
+.studio-shell .compact-information .details-actions:has(.missing-details-note) { align-items:end; }
+.studio-shell .missing-details-note { margin:0 0 8px; color:var(--color-muted); font-size:16px; line-height:1.5; }
+.studio-shell .result-preparation { display:flex; flex-direction:column; align-items:center; gap:16px; width:100%; padding:20px; text-align:center; font-size:18px; line-height:1.6; }
+.studio-shell .result-preparation p { margin:0; }
+.studio-shell .result-preparation button { min-height:52px; font-size:18px; }
+.studio-shell .results-flow .result-grid.result-tab-panels { margin-top:8px; }
+.studio-shell.easy-mode .field-validation { font-size:var(--font-body); }
+.studio-login input:disabled, .studio-login button:disabled { opacity:.65; cursor:not-allowed; }
