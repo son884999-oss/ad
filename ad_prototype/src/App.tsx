@@ -838,7 +838,7 @@ function CreateFlow({
   }, [type])
 
   const missingFields = [
-    !(details.description.trim() || details.name?.trim()) && "제품 설명",
+    !(details.description.trim() || details.name?.trim()) && "제품 이름",
   ].filter(Boolean)
 
   const videoRecorderRef = useRef<MediaRecorder | null>(null)
@@ -1611,7 +1611,7 @@ function CreateFlow({
             id="details-example-note"
             className="description-example-note sr-only"
           >
-            제품 설명은 필수이고 가게 이름과 알리고 싶은 점은 선택이에요.
+            제품 이름은 꼭 적고, 가게 이름과 알리고 싶은 점은 적지 않아도 돼요.
           </p>
           {type !== "all" && (
             <p className="sr-only">
@@ -1623,21 +1623,9 @@ function CreateFlow({
           )}
           <div className="details-fields mt-7 space-y-5">
             <label className="block text-[18px] font-bold">
-              가게 이름 <span className="field-tag">선택</span>
+              제품 이름 <span className="field-tag is-required">필수</span>
               <input
-                aria-label="가게 이름"
-                aria-required="false"
-                value={details.shopName ?? ""}
-                maxLength={60}
-                onChange={(event) => updateDetails({ ...details, shopName: event.target.value })}
-                placeholder="예) 행복한 카페"
-                className="mt-2 w-full rounded-[12px] border p-4"
-              />
-            </label>
-            <label className="block text-[18px] font-bold">
-              어떤 제품인가요? <span className="field-tag is-required">필수</span>
-              <input
-                aria-label="제품 설명"
+                aria-label="제품 이름"
                 aria-required="true"
                 aria-invalid={nameTouched && missingFields.length > 0 ? true : undefined}
                 aria-describedby="product-name-help"
@@ -1648,8 +1636,20 @@ function CreateFlow({
                 className="mt-2 w-full rounded-[12px] border-2 border-[#817a74] p-4 text-[18px] font-normal leading-7 outline-none"
               />
               <span id="product-name-help" className={nameTouched && missingFields.length > 0 ? "field-validation is-error" : "sr-only"} role={nameTouched && missingFields.length > 0 ? "alert" : undefined}>
-                {nameTouched && missingFields.length > 0 ? "어떤 제품인지 적어 주세요." : "제품 설명을 입력하면 홍보물을 만들 수 있어요."}
+                {nameTouched && missingFields.length > 0 ? "제품 이름을 적어 주세요." : "제품 이름을 적으면 홍보물을 만들 수 있어요."}
               </span>
+            </label>
+            <label className="block text-[18px] font-bold">
+              가게 이름 <span className="field-tag">선택</span>
+              <input
+                aria-label="가게 이름"
+                aria-required="false"
+                value={details.shopName ?? ""}
+                maxLength={60}
+                onChange={(event) => updateDetails({ ...details, shopName: event.target.value })}
+                placeholder="예) 행복한 카페"
+                className="mt-2 w-full rounded-[12px] border p-4"
+              />
             </label>
             <label className="block text-[18px] font-bold">
               어떤 점을 알려주고 싶나요? <span className="field-tag">선택</span>
@@ -1823,7 +1823,7 @@ function CreateFlow({
                 role="status"
                 className="missing-details-note"
               >
-                {missingFields.length > 0 ? "어떤 제품인지 적으면 만들 수 있어요." : ""}
+                {missingFields.length > 0 ? "제품 이름을 적으면 만들 수 있어요." : ""}
               </p>
               <PrimaryButton
                 disabled={missingFields.length > 0 || uploadPending}
@@ -2450,11 +2450,11 @@ export default function App() {
 
     if (step === 2) {
       return (
-        "어떤 제품인지 설명을 입력해 주세요. 가게 이름과 알리고 싶은 점은 선택 사항입니다. " +
+        "제품 이름을 적어 주세요. 가게 이름과 알리고 싶은 점은 적지 않아도 돼요. " +
         (details.name?.trim()
           ? "상품 이름은 " + details.name + ". "
           : "") +
-        "제품 설명과 알리고 싶은 점은 " +
+        "적은 제품 이름과 알리고 싶은 점은 " +
         ([details.description, details.features].filter(Boolean).join(". ") || "비워 두었어요") +
         ". " +
         "사진 변경 버튼으로 사진을 바꿀 수 있어요. 다 적었으면 " + { all: "홍보물 만들기", poster: "이미지 만들기", video: "영상 만들기", copy: "홍보 글 만들기" }[creationType] + " 버튼을 누르세요."

@@ -1,11 +1,14 @@
 import { useSyncExternalStore } from "react"
 
 type View = "auto" | "mobile" | "pc"
-type DevState = { view: View; width: number; desktopViewport: boolean }
+export type Layout = "mobile" | "pc"
+type DevState = { view: View; width: number; desktopViewport: boolean; layout: Layout }
 const VIEW_KEY = "hongboitda-dev-view"
 const WIDTH_KEY = "hongboitda-dev-width"
 const previewWidths = [360, 375, 390, 430] as const
 const DESKTOP_VIEWPORT = "width=1280"
+// Below this width the app keeps the phone layout (tablets get the framed phone view).
+const PC_MIN_WIDTH = 1024
 
 function readStored(key: string, fallback: string) {
   try {
@@ -26,28 +29,47 @@ function store(key: string, value: string) {
 const viewportMeta = document.querySelector<HTMLMetaElement>('meta[name="viewport"]')
 const defaultViewport = viewportMeta?.content ?? "width=device-width, initial-scale=1.0"
 const listeners = new Set<() => void>()
+const storedView = readStored(VIEW_KEY, "auto")
 let state: DevState = {
-  view: readStored(VIEW_KEY, "auto") as View,
+  view: storedView === "mobile" || storedView === "pc" ? storedView : "auto",
   width: Number(readStored(WIDTH_KEY, "390")) || 390,
   desktopViewport: false,
+  layout: "mobile",
 }
+
+const layoutFor = (view: View): Layout =>
+  view === "mobile" ? "mobile" : view === "pc" ? "pc" : window.innerWidth >= PC_MIN_WIDTH ? "pc" : "mobile"
 
 function apply() {
   const root = document.documentElement
   root.dataset.view = state.view
+  root.dataset.layout = state.layout
   root.style.setProperty("--preview-w", `${state.width}px`)
   if (viewportMeta) viewportMeta.content = state.desktopViewport ? DESKTOP_VIEWPORT : defaultViewport
   store(VIEW_KEY, state.view)
   store(WIDTH_KEY, String(state.width))
-  window.dispatchEvent(new Event("resize"))
 }
-apply()
 
 function setDevState(patch: Partial<DevState>) {
-  state = { ...state, ...patch }
+  const next = { ...state, ...patch }
+  // The viewport meta change resizes the layout viewport, so apply it before measuring.
+  state = next
+  apply()
+  state = { ...state, layout: layoutFor(state.view) }
   apply()
   listeners.forEach((listener) => listener())
+  window.dispatchEvent(new Event("resize"))
 }
+
+state = { ...state, layout: layoutFor(state.view) }
+apply()
+window.addEventListener("resize", () => {
+  const layout = layoutFor(state.view)
+  if (layout === state.layout) return
+  state = { ...state, layout }
+  apply()
+  listeners.forEach((listener) => listener())
+})
 
 export function useDevState() {
   return useSyncExternalStore(
@@ -59,6 +81,8 @@ export function useDevState() {
   )
 }
 
+export const useLayout = () => useDevState().layout
+
 // Phones and small tablets report a short physical screen even when the page is laid out at desktop width.
 export const isMobileDevice = () => Math.min(window.screen.width, window.screen.height) < 768
 
@@ -69,42 +93,21 @@ export function setOppositeView(on: boolean) {
   else setDevState({ desktopViewport: false, view: on ? "mobile" : "auto" })
 }
 
-// Brand panel beside the phone frame on wide desktop screens (hidden on mobile and in PC view).
-export function DesktopAside() {
-  return (
-    <aside className="desktop-aside" aria-label="홍보잇다 소개">
-      <span className="desktop-aside-logo">
-        <svg viewBox="0 0 54 28" aria-hidden="true">
-          <path d="M27 14C16-1 3 2 3 14s13 15 24 0S51-1 51 14s-13 15-24 0" fill="none" stroke="currentColor" strokeWidth="5" strokeLinecap="round" />
-        </svg>
-        <strong>홍보잇다</strong>
-      </span>
-      <h2>
-        사진 한 장으로
-        <br />
-        우리 가게 홍보를 시작해요
-      </h2>
-      <p>포스터·짧은 영상·홍보 글을 한 번에 만들어요. 휴대폰에서 가장 편하게 쓸 수 있도록 만들었어요.</p>
-      <ul>
-        <li>회원가입 없이 바로 시작</li>
-        <li>큰 글씨 간편모드 기본 제공</li>
-        <li>읽어주기로 화면 안내</li>
-      </ul>
-    </aside>
-  )
-}
-
 // Developer-only viewport switcher. Shown in dev builds or with ?dev in the URL.
 export function DevToolbar() {
   const enabled = import.meta.env.DEV || new URLSearchParams(window.location.search).has("dev")
   const devState = useDevState()
   if (!enabled) return null
-  const options: [View, string][] = [["auto", "자동"], ["mobile", "모바일"], ["pc", "PC 전체"]]
+  const options: [View, string, string][] = [
+    ["auto", "자동", "화면 너비에 맞춰 보기"],
+    ["mobile", "📱 모바일", "휴대폰 화면으로 보기"],
+    ["pc", "🖥️ PC", "PC 화면으로 보기"],
+  ]
   return (
     <div className="dev-toolbar" role="toolbar" aria-label="개발자 모드 화면 전환">
       <span className="dev-toolbar-title">개발자 모드</span>
-      {options.map(([value, label]) => (
-        <button key={value} type="button" aria-pressed={devState.view === value} onClick={() => setDevState({ view: value })}>
+      {options.map(([value, label, name]) => (
+        <button key={value} type="button" aria-pressed={devState.view === value} aria-label={name} onClick={() => setDevState({ view: value })}>
           {label}
         </button>
       ))}
