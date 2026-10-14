@@ -7,6 +7,7 @@
 import { createInterface } from 'node:readline/promises';
 import { stdin, stdout } from 'node:process';
 import { generatePromo } from '../promo.mjs';
+import { CHANNEL_STYLES } from '../prompt.mjs';
 
 const mode = process.argv.includes('--mock') ? 'mock' : 'claude';
 const rl = createInterface({ input: stdin, output: stdout });
@@ -25,6 +26,20 @@ async function askOptional(label, example) {
   return (await rl.question(`${label} (선택, 예: ${example}): `)).trim();
 }
 
+/** 채널: 번호나 이름으로 고른다. Enter면 지정 안 함 */
+async function askChannel() {
+  const keys = Object.keys(CHANNEL_STYLES);
+  const list = keys.map((k, i) => `${i + 1}) ${k}`).join('  ');
+  for (;;) {
+    const answer = (await rl.question(`홍보할 곳 (선택, Enter=지정 안 함)\n  ${list}\n  번호 또는 이름: `)).trim();
+    if (!answer) return '';
+    const byNumber = keys[Number(answer) - 1];
+    if (byNumber) return byNumber;
+    if (keys.includes(answer)) return answer;
+    console.log('  → 목록에 있는 번호나 이름을 입력하세요.');
+  }
+}
+
 console.log(`\n=== B_이창훈 홍보문구 직접 테스트 (${mode === 'mock' ? 'mock 모드 — 항상 같은 샴푸 문구' : 'Claude API'}) ===`);
 console.log('선택 항목은 Enter만 누르면 건너뜁니다. 끝내려면 Ctrl + C\n');
 
@@ -35,15 +50,23 @@ for (;;) {
     keyFeatures: await askOptional('제품 특징', '국산 원료, 무첨가, 당일 배송'),
     targetAudience: await askOptional('타깃 고객', '30대 직장인'),
     brandTone: await askOptional('브랜드 분위기', '따뜻하고 정겨운'),
+    shopName: await askOptional('가게 이름', '골목빵집'),
+    location: await askOptional('위치', '대전 유성구 봉명동'),
+    priceInfo: await askOptional('가격·이벤트', '6개입 9,000원'),
+    contact: await askOptional('주문·문의 방법', '인스타그램 DM으로 예약'),
+    channel: await askChannel(),
   };
 
-  console.log('\n생성 중...');
+  console.log('\n생성 중... (품질 점검 후 다시 쓰는 경우 10초 이상 걸릴 수 있어요)');
   const started = Date.now();
   try {
-    const r = await generatePromo(product, { mode });
+    const r = await generatePromo(product, { mode, includeCandidates: true });
     console.log(`\n■ ${product.productName}  (${((Date.now() - started) / 1000).toFixed(1)}초)`);
+    if (r.copyCandidates.length > 1) {
+      console.log(`  카피 후보 : ${r.copyCandidates.map((c, i) => `${i + 1}) ${c}`).join('  ')}`);
+    }
     console.log(`  광고 카피 : ${r.copy}`);
-    console.log(`  SNS 문구  : ${r.sns}`);
+    console.log(`  SNS 문구  : ${r.sns.replace(/\n/g, '\n              ')}`);
     console.log(`  소개 문장 : ${r.intro}`);
     console.log(`  해시태그  : ${r.hashtags.map((t) => `#${t}`).join(' ')}`);
   } catch (err) {
