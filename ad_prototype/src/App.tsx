@@ -11,6 +11,7 @@ import {
 } from "react"
 import { wrapCanvasText } from "./canvasText"
 import PhotoStep from "./PhotoStep"
+import GenerationProgress from "./GenerationProgress"
 import StepProgress from "./StepProgress"
 import Icon from "./Icon"
 import { useFeedback } from "./FeedbackProvider"
@@ -59,20 +60,46 @@ type GeneratedRecord = {
     features: string
 
     audience: string
+
+    keywords?: string
+
+    tone?: Tone
   }
 
   userHashtags: Record<Channel, string>
 }
 
 
+type Tone = "" | "natural" | "premium" | "friendly" | "trendy"
+
+const toneOptions: { value: Tone; label: string; name: string }[] = [
+  { value: "", label: "자동", name: "AI 자동 추천" },
+  { value: "natural", label: "자연", name: "자연스럽고 건강한" },
+  { value: "premium", label: "고급", name: "고급스럽고 전문적인" },
+  { value: "friendly", label: "친근", name: "친근하고 따뜻한" },
+  { value: "trendy", label: "트렌디", name: "트렌디하고 활기찬" },
+]
+
+// Closing line added to every channel copy so the chosen mood is visible in the result.
+const toneLines: Record<Tone, string> = {
+  "": "",
+  natural: "꾸밈없이 정성 그대로 담았어요.",
+  premium: "특별한 날, 특별한 분께 권하는 선택이에요.",
+  friendly: "편하게 들러 주세요. 반갑게 맞이할게요!",
+  trendy: "요즘 가장 많이 찾는 바로 그 메뉴, 지금 만나보세요! ✨",
+}
+
+const MAX_PHOTO_SIZE = 10 * 1024 * 1024
+const ACCEPTED_PHOTO_TYPES = ["image/jpeg", "image/png", "image/webp"]
+
 const creationNames: Record<CreationType, string> = {
   all: "한 번에 완성",
 
   poster: "이미지 만들기",
 
-  video: "영상 만들기",
+  video: "동영상 만들기",
 
-  copy: "문구 만들기",
+  copy: "홍보 글 만들기",
 }
 
 // Restore the result help menus by enabling this flag.
@@ -86,6 +113,10 @@ const initialDetails = {
   features: "",
 
   audience: "",
+
+  keywords: "",
+
+  tone: "" as Tone,
 }
 
 const outputFormatNames: Record<OutputFormat, string> = {
@@ -343,9 +374,13 @@ function makeHashtags(
     features: string
 
     audience: string
+
+    keywords?: string
   },
 ) {
   const keywords = [
+    ...(details.keywords ?? "").split(",").map((item) => item.replace(/[^0-9A-Za-z가-힣]/g, "")).filter((item) => item.length > 1),
+
     ...extractHashtagKeywords(details.description),
 
     ...extractHashtagKeywords(details.features),
@@ -675,7 +710,7 @@ function StepHeader({
     },
 
     2: {
-      title: "상품 이름을 적어 주세요",
+      title: "가게와 제품을 알려 주세요",
 
       description: "제품의 특징을 적어 주세요.",
     },
@@ -748,6 +783,7 @@ function CreateFlow({
   onStartNew,
   onResultTabChange,
   initialResultTab,
+  onGeneratingChange,
 }: {
   type: CreationType
 
@@ -789,6 +825,7 @@ function CreateFlow({
   onStartNew: () => void
   onResultTabChange: () => void
   initialResultTab: "poster" | "video" | "copy"
+  onGeneratingChange?: (generating: boolean) => void
 }) {
   const { notify } = useFeedback()
   const [playing, setPlaying] = useState(false)
@@ -799,6 +836,14 @@ function CreateFlow({
 
   const [posterStatus, setPosterStatus] = useState<FileStatus>("idle")
   const [posterPreviewStatus, setPosterPreviewStatus] = useState<FileStatus>("idle")
+  const [generating, setGenerating] = useState(false)
+  useEffect(() => {
+    if (step !== 3) setGenerating(false)
+  }, [step])
+  useEffect(() => {
+    onGeneratingChange?.(generating)
+    return () => onGeneratingChange?.(false)
+  }, [generating, onGeneratingChange])
   const [posterRetry, setPosterRetry] = useState(0)
   const [posterPreviewUrl, setPosterPreviewUrl] = useState("")
   const [posterVisibleText, setPosterVisibleText] = useState("")
@@ -827,7 +872,7 @@ function CreateFlow({
   }, [type])
 
   const missingFields = [
-    !(details.description.trim() || details.name?.trim()) && "제품 설명",
+    !details.name?.trim() && "제품 이름",
   ].filter(Boolean)
 
   const videoRecorderRef = useRef<MediaRecorder | null>(null)
@@ -888,15 +933,20 @@ function CreateFlow({
     details.features,
 
     details.audience,
+
+    details.keywords,
+
+    details.tone,
   ])
 
   const upload = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
-
-    if (!file) return
-
-    const request = ++uploadRequestRef.current
     event.currentTarget.value = ""
+    if (file) uploadFile(file)
+  }
+
+  const uploadFile = (file: File) => {
+    const request = ++uploadRequestRef.current
     const keepNotice = imageUrl ? " 기존 사진은 그대로예요." : ""
 
     const fail = () => {
@@ -905,19 +955,19 @@ function CreateFlow({
         setUploadMessage(
           "새 사진을 읽지 못했어요." +
             keepNotice +
-            " JPG 또는 PNG 사진을 다시 선택해 주세요.",
+            " JPG, PNG, WebP 사진을 다시 선택해 주세요.",
         )
       }
     }
 
-    if (!file.type.startsWith("image/")) {
+    if (!ACCEPTED_PHOTO_TYPES.includes(file.type)) {
       setUploadPending(false)
-      setUploadMessage("사진 파일을 선택해 주세요." + keepNotice)
+      setUploadMessage("JPG, PNG, WebP 사진만 올릴 수 있어요." + keepNotice)
       return
     }
-    if (file.size > 20 * 1024 * 1024) {
+    if (file.size > MAX_PHOTO_SIZE) {
       setUploadPending(false)
-      setUploadMessage("20MB 이하의 사진 파일을 선택해 주세요." + keepNotice)
+      setUploadMessage("10MB 이하의 사진을 선택해 주세요." + keepNotice)
       return
     }
 
@@ -955,18 +1005,21 @@ function CreateFlow({
     }
   }
 
+  const keyFeatureList = (details.keywords ?? "").split(",").map((item) => item.trim()).filter(Boolean)
   const productSummary = [
     details.name?.trim(),
     details.shopName?.trim(),
     details.description,
+    keyFeatureList.length ? keyFeatureList.map((item) => "✔ " + item).join("  ") : "",
   ].filter(Boolean).join("\n")
+  const toneLine = toneLines[details.tone ?? ""]
   const audienceRecommendation = details.audience.trim()
     ? `\n\n${details.audience}께 추천해요.`
     : ""
   const audienceLabel = details.audience.trim()
     ? `\n\n추천 대상: ${details.audience}`
     : ""
-  const resultCopy: Record<Channel, string> = {
+  const baseCopy: Record<Channel, string> = {
     ...mapChannels(
       () => `${productSummary}\n\n${details.features}${audienceRecommendation}`,
     ),
@@ -981,6 +1034,7 @@ function CreateFlow({
 
     threads: `요즘 손님들이 자주 찾는 이유가 있더라고요.\n${productSummary}\n특히 ${details.features} 이 부분이 참 좋아요. 궁금한 점은 편하게 물어보세요.`,
   }
+  const resultCopy = mapChannels((id) => (toneLine ? `${baseCopy[id]}\n\n${toneLine}` : baseCopy[id]).replace(/\n{3,}/g, "\n\n").trim())
   const channelTheme = channelThemes[channel]
 
   const safeRecommendations = normalizeHashtagValues(
@@ -1014,7 +1068,7 @@ function CreateFlow({
   const resultTabs = [
     { id: "poster" as const, label: "이미지", available: showPoster },
     { id: "video" as const, label: "영상", available: showVideo },
-    { id: "copy" as const, label: "문구", available: showCopy },
+    { id: "copy" as const, label: "홍보 글", available: showCopy },
   ].filter((tab) => tab.available)
   const activeResultTab = resultTabs.some((tab) => tab.id === selectedResultTab)
     ? selectedResultTab
@@ -1507,7 +1561,26 @@ function CreateFlow({
         step === 3 ? "results-flow" : "max-w-[920px]"
       }`}
     >
-      {step === 3 ? (
+      {step === 3 && generating ? (
+        <GenerationProgress
+          kind={type}
+          imageUrl={imageUrl}
+          title={details.shopName?.trim() || details.name?.trim() || details.description.trim() || "우리 가게"}
+          ready={!showPoster || posterPreviewStatus !== "preparing"}
+          onCancel={() => {
+            setGenerating(false)
+            setStep(2)
+          }}
+          onDone={() => {
+            setGenerating(false)
+            onResultCreated()
+            if (!showPoster) notify("result")
+            window.requestAnimationFrame(() =>
+              document.querySelector<HTMLElement>(".result-screen-heading [data-screen-heading]")?.focus({ preventScroll: true }),
+            )
+          }}
+        />
+      ) : step === 3 ? (
         <div className="result-screen-heading">
           <div className="sr-only">
             <h2 data-screen-heading tabIndex={-1}>
@@ -1532,6 +1605,7 @@ function CreateFlow({
           pending={uploadPending}
           message={uploadMessage}
           onUpload={upload}
+          onDropFile={uploadFile}
           onNext={() => setStep(2)}
         />
       )}
@@ -1581,59 +1655,131 @@ function CreateFlow({
             id="details-example-note"
             className="description-example-note sr-only"
           >
-            제품 설명은 필수이고 가게 이름과 알리고 싶은 점은 선택이에요.
+            제품 이름은 꼭 적고, 나머지는 적지 않아도 돼요.
           </p>
           {type !== "all" && (
             <p className="sr-only">
               {uiText("결과 형식", easyMode)}:{" "}
               {type === "copy"
-                ? "문구"
+                ? "홍보 글"
                 : uiText(creationNames[type], easyMode)}
             </p>
           )}
           <div className="details-fields mt-7 space-y-5">
             <label className="block text-[18px] font-bold">
-              가게 이름
+              제품 이름 <span className="field-tag is-required">필수</span>
+              <input
+                aria-label="제품 이름"
+                aria-required="true"
+                aria-invalid={nameTouched && missingFields.length > 0 ? true : undefined}
+                aria-describedby="product-name-help"
+                value={details.name ?? ""}
+                maxLength={50}
+                placeholder="예) 수제 쿠키와 커피"
+                onBlur={() => setNameTouched(true)}
+                onChange={(event) => updateDetails({ ...details, name: event.target.value })}
+                className="mt-2 w-full rounded-[12px] border-2 border-[#817a74] p-4 text-[18px] font-normal leading-7 outline-none"
+              />
+              <span className="field-meta">
+                <span id="product-name-help" className={nameTouched && missingFields.length > 0 ? "field-validation is-error" : "sr-only"} role={nameTouched && missingFields.length > 0 ? "alert" : undefined}>
+                  {nameTouched && missingFields.length > 0 ? "제품 이름을 적어 주세요." : "제품 이름을 적으면 홍보물을 만들 수 있어요."}
+                </span>
+                {Boolean(details.name) && <span className="field-count" aria-hidden="true">{(details.name ?? "").length}/50</span>}
+              </span>
+            </label>
+            <label className="block text-[18px] font-bold">
+              가게 이름 <span className="field-tag">선택</span>
               <input
                 aria-label="가게 이름"
                 aria-required="false"
                 value={details.shopName ?? ""}
-                maxLength={60}
+                maxLength={30}
                 onChange={(event) => updateDetails({ ...details, shopName: event.target.value })}
                 placeholder="예) 행복한 카페"
                 className="mt-2 w-full rounded-[12px] border p-4"
               />
             </label>
-            <label className="block text-[18px] font-bold">
-              어떤 제품인가요?
-              <input
-                aria-label="제품 설명"
-                aria-required="true"
-                aria-invalid={nameTouched && missingFields.length > 0 ? true : undefined}
-                aria-describedby="product-name-help"
-                value={[details.name, details.description].filter(Boolean).join("\n")}
-                placeholder="예) 수제 쿠키와 커피"
-                onBlur={() => setNameTouched(true)}
-                onChange={(event) => updateDetails({ ...details, name: "", description: event.target.value })}
-                className="mt-2 w-full rounded-[12px] border-2 border-[#817a74] p-4 text-[18px] font-normal leading-7 outline-none"
-              />
-              <span id="product-name-help" className={nameTouched && missingFields.length > 0 ? "field-validation is-error" : "sr-only"} role={nameTouched && missingFields.length > 0 ? "alert" : undefined}>
-                {nameTouched && missingFields.length > 0 ? "어떤 제품인지 적어 주세요." : "제품 설명을 입력하면 홍보물을 만들 수 있어요."}
-              </span>
-            </label>
-            <label className="block text-[18px] font-bold">
-              어떤 점을 알려주고 싶나요?
-              <AutoSizeTextarea
-                aria-label="알리고 싶은 점"
-                aria-required="false"
-                value={details.features}
-                placeholder={"예) 신선한 재료, 직접 만든 디저트,\n아늑한 분위기"}
-                onChange={(event) => updateDetails({ ...details, features: event.target.value })}
-                rows={2}
-                resizeKey={easyMode}
-                className="mt-2 w-full rounded-[12px] border-2 border-[#817a74] p-4 text-[18px] font-normal leading-7 outline-none"
-              />
-            </label>
+            <fieldset className="tone-field">
+              <legend>홍보 분위기 <span className="field-tag">선택</span></legend>
+              <div className="tone-options" role="radiogroup" aria-label="홍보 분위기">
+                {toneOptions.map((option) => (
+                  <button
+                    key={option.value || "auto"}
+                    type="button"
+                    role="radio"
+                    aria-checked={(details.tone ?? "") === option.value}
+                    aria-label={option.name}
+                    onClick={() => updateDetails({ ...details, tone: option.value })}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            </fieldset>
+            <details className="details-more" open={Boolean(details.description || details.features || details.keywords || details.audience) || undefined}>
+              <summary>
+                <span>더 자세히 알려주기</span>
+                <small>
+                  {[details.description, details.features, details.keywords, details.audience].filter((value) => value?.trim()).length}/4 입력 · 선택
+                </small>
+              </summary>
+              <div className="details-more-fields">
+                <label className="block text-[18px] font-bold">
+                  제품 설명
+                  <AutoSizeTextarea
+                    aria-label="제품 설명"
+                    value={details.description}
+                    maxLength={500}
+                    placeholder="예) 매일 아침 직접 굽는 촉촉한 초코 케이크예요."
+                    onChange={(event) => updateDetails({ ...details, description: event.target.value })}
+                    rows={2}
+                    resizeKey={easyMode}
+                    className="mt-2 w-full rounded-[12px] border-2 border-[#817a74] p-4 text-[18px] font-normal leading-7 outline-none"
+                  />
+                  <span className="field-meta">{Boolean(details.description) && <span className="field-count" aria-hidden="true">{(details.description ?? "").length}/500</span>}</span>
+                </label>
+                <label className="block text-[18px] font-bold">
+                  어떤 점을 알려주고 싶나요?
+                  <AutoSizeTextarea
+                    aria-label="알리고 싶은 점"
+                    aria-required="false"
+                    value={details.features}
+                    placeholder={"예) 신선한 재료, 직접 만든 디저트,\n아늑한 분위기"}
+                    onChange={(event) => updateDetails({ ...details, features: event.target.value })}
+                    rows={2}
+                    resizeKey={easyMode}
+                    className="mt-2 w-full rounded-[12px] border-2 border-[#817a74] p-4 text-[18px] font-normal leading-7 outline-none"
+                  />
+                </label>
+                <label className="block text-[18px] font-bold">
+                  핵심 특징
+                  <input
+                    aria-label="핵심 특징"
+                    aria-describedby="keywords-help"
+                    value={details.keywords ?? ""}
+                    placeholder="예) 수제, 당일 생산, 무료 포장"
+                    onChange={(event) => updateDetails({ ...details, keywords: event.target.value })}
+                    className="mt-2 w-full rounded-[12px] border p-4"
+                  />
+                  <span id="keywords-help" className="field-hint">쉼표(,)로 나눠 적으면 해시태그와 홍보 글에 넣어요.</span>
+                  {Boolean(details.keywords?.trim()) && (
+                    <span className="keyword-chips" aria-hidden="true">
+                      {(details.keywords ?? "").split(",").map((item) => item.trim()).filter(Boolean).map((item) => <span key={item}>{item}</span>)}
+                    </span>
+                  )}
+                </label>
+                <label className="block text-[18px] font-bold">
+                  주요 고객층
+                  <input
+                    aria-label="주요 고객층"
+                    value={details.audience}
+                    placeholder="예) 동네 직장인, 디저트를 좋아하는 20~30대"
+                    onChange={(event) => updateDetails({ ...details, audience: event.target.value })}
+                    className="mt-2 w-full rounded-[12px] border p-4"
+                  />
+                </label>
+              </div>
+            </details>
             {false && <details className="information-more-settings">
               <summary>
                 <span>추가 설정 · 고객·검색어</span>
@@ -1793,25 +1939,23 @@ function CreateFlow({
                 role="status"
                 className="missing-details-note"
               >
-                {missingFields.length > 0 ? "어떤 제품인지 적으면 만들 수 있어요." : ""}
+                {missingFields.length > 0 ? "제품 이름을 적으면 만들 수 있어요." : ""}
               </p>
               <PrimaryButton
                 disabled={missingFields.length > 0 || uploadPending}
                 onClick={() => {
                   setSelectedResultTab(resultTabs[0].id)
-                  onResultCreated()
-                  if (!showPoster) notify("result")
-
+                  setGenerating(true)
                   setStep(3)
                 }}
               >
-                홍보물 만들기 <Icon name="arrow" />
+                {{ all: "홍보물 만들기", poster: "이미지 만들기", video: "영상 만들기", copy: "홍보 글 만들기" }[type]} <Icon name="arrow" />
               </PrimaryButton>
             </div>
           </div>
         </div>
       )}
-      {step === 3 && (
+      {step === 3 && !generating && (
         <div className={`results-step step-panel${resultTabs.length === 1 ? " is-single" : ""}`}>
           <div className="result-tabs-bar">
             <div
@@ -1926,7 +2070,7 @@ function CreateFlow({
                 {posterVisibleText && <p id="poster-visible-text" className="sr-only">그림에 표시된 문구: {posterVisibleText}</p>}
                 <ResultActionBar
                   label={posterStatus === "preparing" ? "다운로드 준비" : "다운로드"}
-                  accessibleLabel="이미지 저장하기"
+                  accessibleLabel="이미지 다운로드"
                   icon="download"
                   onClick={() => createPosterFile(true)}
                   onShare={() => shareResult("poster")}
@@ -1997,7 +2141,7 @@ function CreateFlow({
                 </ResultPreview>
                 <ResultActionBar
                   label={videoStatus === "preparing" ? "준비 취소" : "다운로드"}
-                  accessibleLabel={videoStatus === "preparing" ? "영상 준비 취소" : "영상 저장하기"}
+                  accessibleLabel={videoStatus === "preparing" ? "영상 준비 취소" : "영상 다운로드"}
                   icon={videoStatus === "preparing" ? null : "download"}
                   onClick={() => videoStatus === "preparing"
                     ? cancelVideoPreparation()
@@ -2026,7 +2170,7 @@ function CreateFlow({
                 tabIndex={0}
                 className="result-card result-copy"
               >
-                <ResultCardHeading icon="copy" title="홍보 문구" />
+                <ResultCardHeading icon="copy" title="홍보 글" />
                 <ResultPreview text>
                   <div className="result-main-preview result-text-preview">
                     <div
@@ -2042,7 +2186,7 @@ function CreateFlow({
                 </ResultPreview>
                 <ResultActionBar
                   label="복사하기"
-                  accessibleLabel="문구 전체 복사하기"
+                  accessibleLabel="홍보 글 복사하기"
                   icon="copy"
                   onClick={copyFinalText}
                   onShare={() => shareResult("copy")}
@@ -2099,7 +2243,7 @@ function Records({
   const visible = entries.filter(
     (entry) => filter === "all" || entry.kind === filter,
   )
-  const labels = { all: "전체", poster: "이미지", video: "영상", copy: "문구" }
+  const labels = { all: "전체", poster: "이미지", video: "영상", copy: "홍보 글" }
   return (
     <section className="records-screen">
       <h2 data-screen-heading tabIndex={-1}>
@@ -2263,7 +2407,8 @@ export default function App() {
 
   const [records, setRecords] = useState<GeneratedRecord[]>([])
 
-  const [easyMode, setEasyModeState] = useState(true)
+  const [easyMode, setEasyModeState] = useState(false)
+  const [generatingView, setGeneratingView] = useState(false)
   const [editedHashtags, setEditedHashtags] =
     useState<Record<Channel, boolean>>(() => mapChannels(() => false))
 
@@ -2393,7 +2538,7 @@ export default function App() {
     }
 
     if (page === "home") {
-      return "첫 화면입니다. 홍보물 만들기를 누르면 만들 종류를 고를 수 있어요. 사진을 넣고 제품 설명을 적으면 이미지, 영상, 문구를 확인할 수 있어요. 결과를 다운로드하거나 복사하고 공유할 수 있어요. 가입 없이 체험할 수 있어요."
+      return "첫 화면입니다. 홍보물 만들기 버튼을 누르면 바로 사진을 올릴 수 있어요. 사진을 올리고 어떤 제품인지 적으면 포스터, 짧은 영상, 홍보 글을 만들어 드려요. 회원가입 없이 바로 시작할 수 있어요."
     }
 
     if (page === "records") {
@@ -2409,30 +2554,34 @@ export default function App() {
     if (step === 1) {
       const format =
         creationType === "all"
-          ? [allOutputFormat !== "video" && "이미지", allOutputFormat !== "poster" && "영상", "문구"].filter(Boolean).join(", ")
-          : creationType === "poster" ? "이미지" : creationType === "video" ? "영상" : "문구"
+          ? [allOutputFormat !== "video" && "이미지", allOutputFormat !== "poster" && "영상", "홍보 글"].filter(Boolean).join(", ")
+          : creationType === "poster" ? "이미지" : creationType === "video" ? "영상" : "홍보 글"
 
       return `${speakUi(creationNames[creationType])} 1단계, 사진 올리기입니다. 만들 결과는 ${format}입니다. ${
         imageUrl
-          ? "사진이 준비됐어요. 사진 바꾸기로 다시 고르거나 다음으로 버튼을 누르세요."
+          ? "사진이 준비됐어요. 사진 변경 버튼으로 다시 고르거나 다음으로 버튼을 누르세요."
           : "카메라 버튼이나 사진 선택하기 버튼으로 사진 한 장을 선택해 주세요."
       }`
     }
 
     if (step === 2) {
       return (
-        "어떤 제품인지 설명을 입력해 주세요. 가게 이름과 알리고 싶은 점은 선택 사항입니다. " +
+        "제품 이름을 적어 주세요. 가게 이름과 홍보 분위기는 골라도 되고 비워 둬도 돼요. 더 자세히 알려주기를 누르면 제품 설명, 알리고 싶은 점, 핵심 특징, 주요 고객층을 더 적을 수 있어요. " +
         (details.name?.trim()
           ? "상품 이름은 " + details.name + ". "
           : "") +
-        "제품 설명과 알리고 싶은 점은 " +
+        "적은 제품 이름과 알리고 싶은 점은 " +
         ([details.description, details.features].filter(Boolean).join(". ") || "비워 두었어요") +
         ". " +
-        "사진 바꾸기 버튼으로 사진을 바꿀 수 있어요. 내용을 확인한 뒤 홍보물 만들기 버튼을 누르세요."
+        "사진 변경 버튼으로 사진을 바꿀 수 있어요. 다 적었으면 " + { all: "홍보물 만들기", poster: "이미지 만들기", video: "영상 만들기", copy: "홍보 글 만들기" }[creationType] + " 버튼을 누르세요."
       )
     }
 
-    return `결과 보기 화면입니다. ${details.shopName?.trim() || details.name?.trim() || details.description.trim()}. 파일은 저장하기, 문구는 복사하기로 가져오세요. 홈으로 버튼으로 첫 화면에 돌아갈 수 있어요.`
+    if (generatingView) {
+      return "만드는 중입니다. 잠시만 기다려 주세요. 다 만들어지면 결과 화면으로 넘어가요. 멈추려면 취소 버튼을 누르세요."
+    }
+
+    return `결과 보기 화면입니다. ${details.shopName?.trim() || details.name?.trim() || details.description.trim()}. 이미지와 영상은 다운로드 버튼으로 저장하고, 홍보 글은 복사하기 버튼으로 가져가세요. 공유하기 버튼으로 바로 보낼 수도 있어요. 홈으로 버튼을 누르면 첫 화면으로 돌아가요.`
   })()
 
   const stopSpeech = () => {
@@ -2531,8 +2680,8 @@ export default function App() {
       ? "준비 취소 버튼으로 영상 파일 준비를 취소할 수 있어요."
       : "다운로드 버튼으로 파일을 가져오거나 공유하기 버튼을 누르세요."}${videoState ? " " + videoState : ""}`
     const utterance = new SpeechSynthesisUtterance(
-      visibleCopy ? "홍보 문구 결과입니다. " + visibleCopy
-        : visiblePoster ? "이미지 결과입니다. " + visiblePoster
+      visibleCopy ? "홍보 글 결과입니다. " + visibleCopy + " 복사하기 버튼으로 글을 가져가거나 공유하기 버튼을 누르세요."
+        : visiblePoster ? "이미지 결과입니다. " + visiblePoster + " 다운로드 버튼으로 저장하거나 공유하기 버튼을 누르세요."
           : visibleVideo ? videoSpeech
             : speechText,
     )
@@ -2758,6 +2907,7 @@ export default function App() {
       mobileOpen={mobileOpen}
       setMobileOpen={setMobileOpen}
       resultView={page === "create" && step === 3}
+      generating={page === "create" && step === 3 && generatingView}
       creationView={page === "create"}
       navigate={navigate}
       onBack={() => page === "create" && step > 1 ? setStep((step - 1) as Step) : navigate("home")}
@@ -2823,6 +2973,7 @@ export default function App() {
           onDashboard={() => navigate("home")}
           onStartNew={startNew}
           onResultTabChange={stopSpeech}
+          onGeneratingChange={setGeneratingView}
         />
       )}
       {page === "records" && (

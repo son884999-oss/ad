@@ -2,6 +2,9 @@
 .phase*-checkpoint-*/
 .phase*-verified-*/
 
+# 저장소의 제외 규칙은 이 파일 하나로 관리한다.
+# 각자 폴더에 .gitignore를 따로 만들지 말고, 필요한 규칙은 아래에 "/폴더명/**/패턴"으로 추가한다.
+
 # 모든 하위 프로젝트에 공통으로 적용한다.
 node_modules/
 dist/
@@ -18,6 +21,5 @@ dist/
 /A_손용범/**/*生成記録.json
 /D_고혜숙/**/.vercel/
 /D_고혜숙/**/*.log
-/C_김만복/**/dist
 /C_김만복/**/*.log
 /C_김만복/**/.DS_Store
