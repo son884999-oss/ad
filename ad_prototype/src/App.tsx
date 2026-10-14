@@ -60,11 +60,37 @@ type GeneratedRecord = {
     features: string
 
     audience: string
+
+    keywords?: string
+
+    tone?: Tone
   }
 
   userHashtags: Record<Channel, string>
 }
 
+
+type Tone = "" | "natural" | "premium" | "friendly" | "trendy"
+
+const toneOptions: { value: Tone; label: string; name: string }[] = [
+  { value: "", label: "자동", name: "AI 자동 추천" },
+  { value: "natural", label: "자연", name: "자연스럽고 건강한" },
+  { value: "premium", label: "고급", name: "고급스럽고 전문적인" },
+  { value: "friendly", label: "친근", name: "친근하고 따뜻한" },
+  { value: "trendy", label: "트렌디", name: "트렌디하고 활기찬" },
+]
+
+// Closing line added to every channel copy so the chosen mood is visible in the result.
+const toneLines: Record<Tone, string> = {
+  "": "",
+  natural: "꾸밈없이 정성 그대로 담았어요.",
+  premium: "특별한 날, 특별한 분께 권하는 선택이에요.",
+  friendly: "편하게 들러 주세요. 반갑게 맞이할게요!",
+  trendy: "요즘 가장 많이 찾는 바로 그 메뉴, 지금 만나보세요! ✨",
+}
+
+const MAX_PHOTO_SIZE = 10 * 1024 * 1024
+const ACCEPTED_PHOTO_TYPES = ["image/jpeg", "image/png", "image/webp"]
 
 const creationNames: Record<CreationType, string> = {
   all: "한 번에 완성",
@@ -87,6 +113,10 @@ const initialDetails = {
   features: "",
 
   audience: "",
+
+  keywords: "",
+
+  tone: "" as Tone,
 }
 
 const outputFormatNames: Record<OutputFormat, string> = {
@@ -344,9 +374,13 @@ function makeHashtags(
     features: string
 
     audience: string
+
+    keywords?: string
   },
 ) {
   const keywords = [
+    ...(details.keywords ?? "").split(",").map((item) => item.replace(/[^0-9A-Za-z가-힣]/g, "")).filter((item) => item.length > 1),
+
     ...extractHashtagKeywords(details.description),
 
     ...extractHashtagKeywords(details.features),
@@ -838,7 +872,7 @@ function CreateFlow({
   }, [type])
 
   const missingFields = [
-    !(details.description.trim() || details.name?.trim()) && "제품 이름",
+    !details.name?.trim() && "제품 이름",
   ].filter(Boolean)
 
   const videoRecorderRef = useRef<MediaRecorder | null>(null)
@@ -899,15 +933,20 @@ function CreateFlow({
     details.features,
 
     details.audience,
+
+    details.keywords,
+
+    details.tone,
   ])
 
   const upload = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
-
-    if (!file) return
-
-    const request = ++uploadRequestRef.current
     event.currentTarget.value = ""
+    if (file) uploadFile(file)
+  }
+
+  const uploadFile = (file: File) => {
+    const request = ++uploadRequestRef.current
     const keepNotice = imageUrl ? " 기존 사진은 그대로예요." : ""
 
     const fail = () => {
@@ -916,19 +955,19 @@ function CreateFlow({
         setUploadMessage(
           "새 사진을 읽지 못했어요." +
             keepNotice +
-            " JPG 또는 PNG 사진을 다시 선택해 주세요.",
+            " JPG, PNG, WebP 사진을 다시 선택해 주세요.",
         )
       }
     }
 
-    if (!file.type.startsWith("image/")) {
+    if (!ACCEPTED_PHOTO_TYPES.includes(file.type)) {
       setUploadPending(false)
-      setUploadMessage("사진 파일을 선택해 주세요." + keepNotice)
+      setUploadMessage("JPG, PNG, WebP 사진만 올릴 수 있어요." + keepNotice)
       return
     }
-    if (file.size > 20 * 1024 * 1024) {
+    if (file.size > MAX_PHOTO_SIZE) {
       setUploadPending(false)
-      setUploadMessage("20MB 이하의 사진 파일을 선택해 주세요." + keepNotice)
+      setUploadMessage("10MB 이하의 사진을 선택해 주세요." + keepNotice)
       return
     }
 
@@ -966,18 +1005,21 @@ function CreateFlow({
     }
   }
 
+  const keyFeatureList = (details.keywords ?? "").split(",").map((item) => item.trim()).filter(Boolean)
   const productSummary = [
     details.name?.trim(),
     details.shopName?.trim(),
     details.description,
+    keyFeatureList.length ? keyFeatureList.map((item) => "✔ " + item).join("  ") : "",
   ].filter(Boolean).join("\n")
+  const toneLine = toneLines[details.tone ?? ""]
   const audienceRecommendation = details.audience.trim()
     ? `\n\n${details.audience}께 추천해요.`
     : ""
   const audienceLabel = details.audience.trim()
     ? `\n\n추천 대상: ${details.audience}`
     : ""
-  const resultCopy: Record<Channel, string> = {
+  const baseCopy: Record<Channel, string> = {
     ...mapChannels(
       () => `${productSummary}\n\n${details.features}${audienceRecommendation}`,
     ),
@@ -992,6 +1034,7 @@ function CreateFlow({
 
     threads: `요즘 손님들이 자주 찾는 이유가 있더라고요.\n${productSummary}\n특히 ${details.features} 이 부분이 참 좋아요. 궁금한 점은 편하게 물어보세요.`,
   }
+  const resultCopy = mapChannels((id) => (toneLine ? `${baseCopy[id]}\n\n${toneLine}` : baseCopy[id]).replace(/\n{3,}/g, "\n\n").trim())
   const channelTheme = channelThemes[channel]
 
   const safeRecommendations = normalizeHashtagValues(
@@ -1562,6 +1605,7 @@ function CreateFlow({
           pending={uploadPending}
           message={uploadMessage}
           onUpload={upload}
+          onDropFile={uploadFile}
           onNext={() => setStep(2)}
         />
       )}
@@ -1611,7 +1655,7 @@ function CreateFlow({
             id="details-example-note"
             className="description-example-note sr-only"
           >
-            제품 이름은 꼭 적고, 가게 이름과 알리고 싶은 점은 적지 않아도 돼요.
+            제품 이름은 꼭 적고, 나머지는 적지 않아도 돼요.
           </p>
           {type !== "all" && (
             <p className="sr-only">
@@ -1629,14 +1673,18 @@ function CreateFlow({
                 aria-required="true"
                 aria-invalid={nameTouched && missingFields.length > 0 ? true : undefined}
                 aria-describedby="product-name-help"
-                value={[details.name, details.description].filter(Boolean).join("\n")}
+                value={details.name ?? ""}
+                maxLength={50}
                 placeholder="예) 수제 쿠키와 커피"
                 onBlur={() => setNameTouched(true)}
-                onChange={(event) => updateDetails({ ...details, name: "", description: event.target.value })}
+                onChange={(event) => updateDetails({ ...details, name: event.target.value })}
                 className="mt-2 w-full rounded-[12px] border-2 border-[#817a74] p-4 text-[18px] font-normal leading-7 outline-none"
               />
-              <span id="product-name-help" className={nameTouched && missingFields.length > 0 ? "field-validation is-error" : "sr-only"} role={nameTouched && missingFields.length > 0 ? "alert" : undefined}>
-                {nameTouched && missingFields.length > 0 ? "제품 이름을 적어 주세요." : "제품 이름을 적으면 홍보물을 만들 수 있어요."}
+              <span className="field-meta">
+                <span id="product-name-help" className={nameTouched && missingFields.length > 0 ? "field-validation is-error" : "sr-only"} role={nameTouched && missingFields.length > 0 ? "alert" : undefined}>
+                  {nameTouched && missingFields.length > 0 ? "제품 이름을 적어 주세요." : "제품 이름을 적으면 홍보물을 만들 수 있어요."}
+                </span>
+                {Boolean(details.name) && <span className="field-count" aria-hidden="true">{(details.name ?? "").length}/50</span>}
               </span>
             </label>
             <label className="block text-[18px] font-bold">
@@ -1645,25 +1693,93 @@ function CreateFlow({
                 aria-label="가게 이름"
                 aria-required="false"
                 value={details.shopName ?? ""}
-                maxLength={60}
+                maxLength={30}
                 onChange={(event) => updateDetails({ ...details, shopName: event.target.value })}
                 placeholder="예) 행복한 카페"
                 className="mt-2 w-full rounded-[12px] border p-4"
               />
             </label>
-            <label className="block text-[18px] font-bold">
-              어떤 점을 알려주고 싶나요? <span className="field-tag">선택</span>
-              <AutoSizeTextarea
-                aria-label="알리고 싶은 점"
-                aria-required="false"
-                value={details.features}
-                placeholder={"예) 신선한 재료, 직접 만든 디저트,\n아늑한 분위기"}
-                onChange={(event) => updateDetails({ ...details, features: event.target.value })}
-                rows={2}
-                resizeKey={easyMode}
-                className="mt-2 w-full rounded-[12px] border-2 border-[#817a74] p-4 text-[18px] font-normal leading-7 outline-none"
-              />
-            </label>
+            <fieldset className="tone-field">
+              <legend>홍보 분위기 <span className="field-tag">선택</span></legend>
+              <div className="tone-options" role="radiogroup" aria-label="홍보 분위기">
+                {toneOptions.map((option) => (
+                  <button
+                    key={option.value || "auto"}
+                    type="button"
+                    role="radio"
+                    aria-checked={(details.tone ?? "") === option.value}
+                    aria-label={option.name}
+                    onClick={() => updateDetails({ ...details, tone: option.value })}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            </fieldset>
+            <details className="details-more" open={Boolean(details.description || details.features || details.keywords || details.audience) || undefined}>
+              <summary>
+                <span>더 자세히 알려주기</span>
+                <small>
+                  {[details.description, details.features, details.keywords, details.audience].filter((value) => value?.trim()).length}/4 입력 · 선택
+                </small>
+              </summary>
+              <div className="details-more-fields">
+                <label className="block text-[18px] font-bold">
+                  제품 설명
+                  <AutoSizeTextarea
+                    aria-label="제품 설명"
+                    value={details.description}
+                    maxLength={500}
+                    placeholder="예) 매일 아침 직접 굽는 촉촉한 초코 케이크예요."
+                    onChange={(event) => updateDetails({ ...details, description: event.target.value })}
+                    rows={2}
+                    resizeKey={easyMode}
+                    className="mt-2 w-full rounded-[12px] border-2 border-[#817a74] p-4 text-[18px] font-normal leading-7 outline-none"
+                  />
+                  <span className="field-meta">{Boolean(details.description) && <span className="field-count" aria-hidden="true">{(details.description ?? "").length}/500</span>}</span>
+                </label>
+                <label className="block text-[18px] font-bold">
+                  어떤 점을 알려주고 싶나요?
+                  <AutoSizeTextarea
+                    aria-label="알리고 싶은 점"
+                    aria-required="false"
+                    value={details.features}
+                    placeholder={"예) 신선한 재료, 직접 만든 디저트,\n아늑한 분위기"}
+                    onChange={(event) => updateDetails({ ...details, features: event.target.value })}
+                    rows={2}
+                    resizeKey={easyMode}
+                    className="mt-2 w-full rounded-[12px] border-2 border-[#817a74] p-4 text-[18px] font-normal leading-7 outline-none"
+                  />
+                </label>
+                <label className="block text-[18px] font-bold">
+                  핵심 특징
+                  <input
+                    aria-label="핵심 특징"
+                    aria-describedby="keywords-help"
+                    value={details.keywords ?? ""}
+                    placeholder="예) 수제, 당일 생산, 무료 포장"
+                    onChange={(event) => updateDetails({ ...details, keywords: event.target.value })}
+                    className="mt-2 w-full rounded-[12px] border p-4"
+                  />
+                  <span id="keywords-help" className="field-hint">쉼표(,)로 나눠 적으면 해시태그와 홍보 글에 넣어요.</span>
+                  {Boolean(details.keywords?.trim()) && (
+                    <span className="keyword-chips" aria-hidden="true">
+                      {(details.keywords ?? "").split(",").map((item) => item.trim()).filter(Boolean).map((item) => <span key={item}>{item}</span>)}
+                    </span>
+                  )}
+                </label>
+                <label className="block text-[18px] font-bold">
+                  주요 고객층
+                  <input
+                    aria-label="주요 고객층"
+                    value={details.audience}
+                    placeholder="예) 동네 직장인, 디저트를 좋아하는 20~30대"
+                    onChange={(event) => updateDetails({ ...details, audience: event.target.value })}
+                    className="mt-2 w-full rounded-[12px] border p-4"
+                  />
+                </label>
+              </div>
+            </details>
             {false && <details className="information-more-settings">
               <summary>
                 <span>추가 설정 · 고객·검색어</span>
@@ -2450,7 +2566,7 @@ export default function App() {
 
     if (step === 2) {
       return (
-        "제품 이름을 적어 주세요. 가게 이름과 알리고 싶은 점은 적지 않아도 돼요. " +
+        "제품 이름을 적어 주세요. 가게 이름과 홍보 분위기는 골라도 되고 비워 둬도 돼요. 더 자세히 알려주기를 누르면 제품 설명, 알리고 싶은 점, 핵심 특징, 주요 고객층을 더 적을 수 있어요. " +
         (details.name?.trim()
           ? "상품 이름은 " + details.name + ". "
           : "") +
