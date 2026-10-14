@@ -1,0 +1,57 @@
+{
+  "profiles": 14,
+  "screenChecks": 118,
+  "pageErrors": [],
+  "selectedGeometry": [
+    {
+      "screen": "home-360x640-easy",
+      "viewport": {
+        "width": 360,
+        "height": 640
+      },
+      "navigationTop": 567,
+      "contentBottom": 536.75,
+      "horizontalOverflow": false
+    },
+    {
+      "screen": "menu-360x640-easy",
+      "viewport": {
+        "width": 360,
+        "height": 640
+      },
+      "navigationTop": 567,
+      "contentBottom": 450.17,
+      "horizontalOverflow": false
+    },
+    {
+      "screen": "information-product-only-360x640-easy",
+      "viewport": {
+        "width": 360,
+        "height": 640
+      },
+      "navigationTop": 567,
+      "contentBottom": 560.39,
+      "horizontalOverflow": false
+    },
+    {
+      "screen": "result-poster-360x640-easy",
+      "viewport": {
+        "width": 360,
+        "height": 640
+      },
+      "navigationTop": 567,
+      "contentBottom": 560.39,
+      "horizontalOverflow": false
+    },
+    {
+      "screen": "result-video-360x640-easy",
+      "viewport": {
+        "width": 360,
+        "height": 640
+      },
+      "navigationTop": 567,
+      "contentBottom": 560.39,
+      "horizontalOverflow": false
+    }
+  ]
+}

@@ -447,7 +447,8 @@ export function StudioShell({
               </button>
             </div>
             <h2 className="studio-panel-title">어떤 홍보물을 만들까요?</h2>
-            <p className="studio-panel-intro">만들기 버튼은 세 가지 홍보물을 한 번에 만들어요.</p>
+            <p className="studio-panel-intro sr-only">원하는 홍보물을 골라 주세요.</p>
+            <div className="menu-creation-options">
                 {[
                   {
                     label: "한 번에 만들기",
@@ -496,10 +497,11 @@ export function StudioShell({
                     <StudioIcon name="arrow" />
                   </button>
                 ))}
+                </div>
                 <div className="studio-menu-footer">
                   <button onClick={() => navigate("records")}>내 홍보물 보기</button>
                 </div>
-                <details className="service-menu-section" open>
+                <details className="service-menu-section">
                   <summary>글씨 크기·간편모드</summary>
                   <p>간편모드에서는 글씨와 버튼을 더 크게 보여줘요.</p>
                   <button

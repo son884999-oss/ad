@@ -34,7 +34,7 @@ async function begin(page) {
 async function input(page) {
   await page.getByLabel('제품 사진 올리기', { exact: true }).setInputFiles(photo)
   await page.getByRole('button', { name: '다음으로', exact: true }).click()
-  await page.getByLabel('상품명', { exact: true }).fill('데일리 샴푸')
+  await page.getByLabel('상품 이름', { exact: true }).fill('데일리 샴푸')
 }
 async function result(page) {
   await page.getByRole('button', { name: '결과 보기', exact: true }).click()
@@ -66,9 +66,9 @@ try {
       let evidence = {}
       if (cycle === 1) {
         await input(page)
-        const product = page.getByLabel('상품명', { exact: true })
+        const product = page.getByLabel('상품 이름', { exact: true })
         assert.equal(await product.getAttribute('placeholder'), '예: 카페라떼')
-        for (const label of ['소개', '알리고 싶은 점']) {
+        for (const label of ['소개 및 알리고 싶은 점']) {
           const field = page.getByLabel(label, { exact: true })
           assert.equal(await field.getAttribute('aria-required'), 'false')
           assert.equal(await field.inputValue(), '')
@@ -90,14 +90,14 @@ try {
         const selectedStyle = await selected.evaluate(style)
         const opened = page.waitForEvent('filechooser'); await selected.press('Enter'); const picker = await opened; await picker.setFiles([])
         await page.getByRole('button', { name: '다음으로', exact: true }).click()
-        await page.getByLabel('상품명', { exact: true }).fill('데일리 샴푸')
+        await page.getByLabel('상품 이름', { exact: true }).fill('데일리 샴푸')
         const sameStyle = await page.getByRole('button', { name: '사진 바꾸기', exact: true }).evaluate(style)
         assert.deepEqual(sameStyle, selectedStyle)
         const original = await page.locator('.information-photo img').getAttribute('src')
         await page.getByLabel('정보 입력에서 사진 바꾸기').setInputFiles({ name: 'broken.png', mimeType: 'image/png', buffer: Buffer.from('invalid image') })
         await page.locator('#details-upload-feedback[role="alert"]').waitFor()
         assert.equal(await page.locator('.information-photo img').getAttribute('src'), original)
-        assert.equal(await page.getByLabel('상품명', { exact: true }).inputValue(), '데일리 샴푸')
+        assert.equal(await page.getByLabel('상품 이름', { exact: true }).inputValue(), '데일리 샴푸')
         evidence = { cameraAndTextPicker: true, keyboardPicker: true, sameStyle, failedReplacementPreservesInput: true }
       } else if (cycle === 3) {
         await input(page)
@@ -107,16 +107,17 @@ try {
         const before = (await nav.boundingBox()).y
         await menu.evaluate(el => el.scrollTop = el.scrollHeight)
         assert.ok(Math.abs((await nav.boundingBox()).y - before) < 1)
+        await menu.getByText('글씨 크기·간편모드', { exact: true }).click()
         await menu.getByRole('switch', { name: '간편모드' }).focus(); await settle(page)
         const switchBounds = await menu.getByRole('switch', { name: '간편모드' }).boundingBox()
         assert.ok(switchBounds.y + switchBounds.height <= before)
         await nav.getByRole('button', { name: '전체 메뉴 닫기' }).click()
         const mainNav = page.locator('.studio-bottom-nav:not(.studio-menu-bottom-nav)')
         await mainNav.getByRole('button', { name: '만들기', exact: true }).click()
-        assert.equal(await page.getByLabel('상품명', { exact: true }).inputValue(), '데일리 샴푸')
+        assert.equal(await page.getByLabel('상품 이름', { exact: true }).inputValue(), '데일리 샴푸')
         await mainNav.getByRole('button', { name: '홈', exact: true }).click()
         await page.getByRole('button', { name: '홍보물 이어 만들기' }).click()
-        assert.equal(await page.getByLabel('상품명', { exact: true }).inputValue(), '데일리 샴푸')
+        assert.equal(await page.getByLabel('상품 이름', { exact: true }).inputValue(), '데일리 샴푸')
         evidence = { fixedNavY: before, focusedSettingVisible: true, resumeRetainsInput: true }
       } else if (cycle === 4) {
         await input(page); await result(page)
@@ -173,7 +174,7 @@ try {
       } else if (cycle === 6) {
         await input(page)
         const long = '매일 쓰는 순한 샴푸를 소개합니다.\n제품 특징을 읽고 선택해 주세요.\n'.repeat(15)
-        await page.getByLabel('소개', { exact: true }).fill(long)
+        await page.getByLabel('소개 및 알리고 싶은 점', { exact: true }).fill(long)
         await result(page)
         await page.getByRole('button', { name: '크게 보기', exact: true }).click()
         await settle(page)

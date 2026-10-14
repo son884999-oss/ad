@@ -14,6 +14,7 @@ const browser = await chromium.launch({ headless: true, ...(process.env.UI_BROWS
 const reports = []
 const intro = '매일 사용하는 샴푸입니다. 초록색 펌프 용기로 편리하게 사용할 수 있어요.'
 const features = '제품 사진과 설명을 함께 확인해 주세요.'
+const description = intro + '\n' + features
 const settle = page => page.evaluate(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))))
 const fieldMetrics = el => ({ height: el.clientHeight, content: el.scrollHeight, top: el.scrollTop })
 async function capture(page, name) {
@@ -35,6 +36,7 @@ try {
     }
     if (mode === 'regular') {
       await page.getByRole('button', { name: '상단 전체 메뉴 열기', exact: true }).click()
+      await page.getByRole('dialog').getByText('글씨 크기·간편모드', { exact: true }).click()
       await page.getByRole('dialog').getByRole('switch', { name: '간편모드' }).click()
       await page.keyboard.press('Escape')
     }
@@ -79,13 +81,12 @@ try {
       if (width === 360 && mode === 'easy') await capture(page, 'photo-selected-360x640')
     }
     await page.getByRole('button', { name: '다음으로', exact: true }).click()
-    await page.getByLabel('상품명', { exact: true }).fill('초이셀 데일리 샴푸')
+    await page.getByLabel('상품 이름', { exact: true }).fill('초이셀 데일리 샴푸')
     assert.equal(await page.getByRole('button', { name: '결과 보기', exact: true }).isEnabled(), true, 'Only product name is required')
-    await page.getByLabel('소개', { exact: true }).fill(intro)
-    await page.getByLabel('알리고 싶은 점', { exact: true }).fill(features)
-    await page.getByLabel('상품명', { exact: true }).focus(); await settle(page)
+    await page.getByLabel('소개 및 알리고 싶은 점', { exact: true }).fill(description)
+    await page.getByLabel('상품 이름', { exact: true }).focus(); await settle(page)
     const fields = {}
-    for (const label of ['소개', '알리고 싶은 점']) {
+    for (const label of ['소개 및 알리고 싶은 점']) {
       fields[label] = await page.getByLabel(label, { exact: true }).evaluate(fieldMetrics)
       assert.ok(fields[label].height >= fields[label].content - 1, label + ': content is clipped')
       assert.equal(fields[label].top, 0)
@@ -118,9 +119,9 @@ try {
     assert.equal(await page.evaluate(() => navigator.clipboard.readText()), text)
     if (width === 390 && mode === 'easy') await capture(page, 'result-copy-390')
     await page.getByRole('button', { name: '내용 다시 수정하기', exact: true }).click()
-    assert.equal(await page.getByLabel('소개', { exact: true }).inputValue(), intro)
-    await page.getByLabel('소개', { exact: true }).fill(intro.repeat(3)); await page.getByLabel('상품명', { exact: true }).focus(); await settle(page)
-    const longer = await page.getByLabel('소개', { exact: true }).evaluate(fieldMetrics)
+    assert.equal(await page.getByLabel('소개 및 알리고 싶은 점', { exact: true }).inputValue(), description)
+    await page.getByLabel('소개 및 알리고 싶은 점', { exact: true }).fill(intro.repeat(3)); await page.getByLabel('상품 이름', { exact: true }).focus(); await settle(page)
+    const longer = await page.getByLabel('소개 및 알리고 싶은 점', { exact: true }).evaluate(fieldMetrics)
     assert.ok(longer.height >= longer.content - 1)
     await page.getByRole('button', { name: '결과 보기', exact: true }).click()
     await page.getByRole('tab', { name: '문구', exact: true }).click()

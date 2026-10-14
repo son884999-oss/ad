@@ -24,6 +24,7 @@ pnpm build
 pnpm exec tsc --noEmit
 node scripts/verify-documents.mjs
 pnpm verify:mobile-flow
+pnpm verify:screen-fit
 pnpm verify:submission
 pnpm verify:results
 pnpm verify:usability
@@ -32,5 +33,7 @@ pnpm verify:usability
 The browser checks need the local preview running and an installed Playwright Chromium browser. `UI_BASE_URL` can point them to a different preview port. `UI_BROWSER_EXECUTABLE` can select an existing Chromium executable. There is no separate lint command; TypeScript, document links, and the focused browser checks are the current verification entrypoints.
 
 Older professor/phase scripts retain historical selectors and evidence. They do not replace current UI verification. See the [final integration review](feedback/2026-10-14-final-integration-review.md) for the checks actually performed and their limits.
+
+The [first-screen review](feedback/2026-10-14-first-screen-fit.md) covers complete home/menu composition, the three-field information screen, automatic description growth, and visible save actions on short mobile viewports.
 
 Keep the `ad_prototype` directory name: it is the configured Vercel Root Directory.

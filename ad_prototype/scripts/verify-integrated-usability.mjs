@@ -78,6 +78,7 @@ try {
     await settle(page)
     assert.ok(Math.abs((await menuNav.boundingBox()).y - navTop) < 1, 'Menu navigation moved while scrolling')
     assert.equal(await page.locator('.studio-main').getAttribute('inert'), '')
+    await menu.getByText('글씨 크기·간편모드', { exact: true }).click()
     const toggle = menu.getByRole('switch', { name: '간편모드', exact: true })
     await toggle.focus(); await settle(page)
     const menuTarget = await visibleTarget(toggle, 'Focused menu setting')
@@ -104,12 +105,11 @@ try {
     await replacePicker.setFiles([])
     const changeStyle = await selectedChange.evaluate(el => ({ font: getComputedStyle(el).fontSize, padding: getComputedStyle(el).padding, radius: getComputedStyle(el).borderRadius }))
     await page.getByRole('button', { name: '다음으로', exact: true }).click()
-    const product = page.getByLabel('상품명', { exact: true })
-    const intro = page.getByLabel('소개', { exact: true })
-    const features = page.getByLabel('알리고 싶은 점', { exact: true })
+    const product = page.getByLabel('상품 이름', { exact: true })
+    const intro = page.getByLabel('소개 및 알리고 싶은 점', { exact: true })
     assert.equal(await product.getAttribute('aria-invalid'), null, 'A pristine field is announced as an error')
     assert.equal(await product.getAttribute('aria-required'), 'true')
-    for (const field of [intro, features]) {
+    for (const field of [intro]) {
       assert.equal(await field.getAttribute('aria-required'), 'false')
       assert.equal(await field.inputValue(), '')
       assert.equal(await field.evaluate(el => el.required), false)
@@ -135,21 +135,20 @@ try {
       await page.getByLabel('정보 입력에서 사진 바꾸기').setInputFiles(photo)
       await page.getByText('사진이 준비됐어요.', { exact: true }).waitFor()
     }
-    for (const field of [product, intro, features, page.getByRole('button', { name: '결과 보기', exact: true })]) {
+    for (const field of [product, intro, page.getByRole('button', { name: '결과 보기', exact: true })]) {
       await field.focus(); await settle(page); await visibleTarget(field, 'Information focus')
     }
     if (captureMobile || (layout.width === 1440 && mode === 'easy')) await capture(page, captureMobile ? 'after-input.png' : 'after-input-desktop.png')
 
-    await intro.fill('매일 쓰는 순한 샴푸 소개')
-    await features.fill('순한 사용감')
+    await intro.fill('매일 쓰는 순한 샴푸 소개\n순한 사용감')
     await bottom(page).getByRole('button', { name: '만들기', exact: true }).click()
     assert.equal(await product.inputValue(), name, 'Active create tab erased the draft')
-    assert.equal(await intro.inputValue(), '매일 쓰는 순한 샴푸 소개')
+    assert.equal(await intro.inputValue(), '매일 쓰는 순한 샴푸 소개\n순한 사용감')
     await bottom(page).getByRole('button', { name: '홈', exact: true }).click()
     await page.getByRole('button', { name: '홍보물 이어 만들기', exact: true }).click()
     assert.equal(await product.inputValue(), name, 'Home resume erased the draft')
     assert.equal(await page.locator('.information-photo img').getAttribute('src'), original)
-    await intro.fill(''); await features.fill('')
+    await intro.fill('')
     await page.getByRole('button', { name: '결과 보기', exact: true }).click()
     await page.locator('#result-poster-preview img').waitFor()
     const resultTabs = ['이미지', '영상', '문구']
