@@ -43,6 +43,7 @@ async function open(page, mode) {
   }
   if (mode === 'regular') {
     await page.getByRole('button', { name: '상단 전체 메뉴 열기', exact: true }).click()
+    await page.getByRole('dialog').getByText('글씨 크기·간편모드', { exact: true }).click()
     await page.getByRole('dialog').getByRole('switch', { name: '간편모드' }).click()
     await page.keyboard.press('Escape')
   }
@@ -64,7 +65,7 @@ async function input(page) {
   await page.getByRole('button', { name: '홍보물 만들기', exact: true }).click()
   await page.getByLabel('제품 사진 올리기', { exact: true }).setInputFiles(photo)
   await page.getByRole('button', { name: '다음으로', exact: true }).click()
-  await page.getByLabel('상품명', { exact: true }).fill('데일리 샴푸')
+  await page.getByLabel('상품 이름', { exact: true }).fill('데일리 샴푸')
 }
 async function result(page) {
   await page.getByRole('button', { name: '결과 보기', exact: true }).click()
@@ -94,7 +95,7 @@ async function lifecycle(page, downloads) {
   assert.ok((await speak(page)).includes('일시 정지'))
   await stop(page)
   await page.getByRole('button', { name: '내용 다시 수정하기', exact: true }).click()
-  await page.getByLabel('상품명', { exact: true }).fill('새 샴푸')
+  await page.getByLabel('상품 이름', { exact: true }).fill('새 샴푸')
   await result(page)
   assert.equal(await page.getByRole('button', { name: '재생하기', exact: true }).getAttribute('aria-pressed'), 'false')
   assert.equal(await page.locator('.result-motion-preview img').evaluate(el => getComputedStyle(el).animationPlayState), 'paused')
@@ -117,7 +118,7 @@ async function lifecycle(page, downloads) {
   await page.getByRole('button', { name: '영상 저장하기', exact: true }).click()
   await page.waitForFunction(n => window.expertRecorders.length > n && window.expertRecorders.at(-1).state === 'recording', recordCount)
   await page.getByRole('button', { name: '내용 다시 수정하기', exact: true }).click()
-  await page.getByLabel('상품명', { exact: true }).fill('최종 샴푸')
+  await page.getByLabel('상품 이름', { exact: true }).fill('최종 샴푸')
   await result(page)
   await page.waitForTimeout(3500)
   assert.equal(downloads.length, count, 'Old name preparation downloaded after edit')
@@ -149,10 +150,10 @@ try {
     await open(page, mode)
     await input(page)
     const informationSpeech = await speak(page)
-    assert.ok(informationSpeech.includes('소개') && informationSpeech.includes('알리고 싶은 점') && informationSpeech.includes('사진 바꾸기'))
+    assert.ok(informationSpeech.includes('소개 및 알리고 싶은 점') && informationSpeech.includes('소개 및 알리고 싶은 점') && informationSpeech.includes('사진 바꾸기'))
     assert.ok(!/주요 고객|제품 설명|강조할 특징|사진 변경/.test(informationSpeech))
     await stop(page)
-    const field = await page.getByLabel('상품명', { exact: true }).evaluate(metrics)
+    const field = await page.getByLabel('상품 이름', { exact: true }).evaluate(metrics)
     const guide = await page.locator('#details-example-note').evaluate(metrics)
     const photoChange = await page.getByRole('button', { name: '사진 바꾸기', exact: true }).evaluate(metrics)
     assert.equal(parseFloat(field.font), mode === 'easy' ? 22 : 18)
@@ -204,8 +205,8 @@ try {
       await page.evaluate(() => speechSynthesis.getVoices = () => [{ lang: 'ko-KR', name: 'QA Korean voice' }])
       jobs = await lifecycle(page, downloads)
       await page.getByRole('button', { name: '내용 다시 수정하기', exact: true }).click()
-      await page.getByLabel('상품명', { exact: true }).fill('우리동네정성가득한샴푸와향기로운생활제품'.repeat(3).slice(0, 60))
-      await page.getByLabel('소개', { exact: true }).fill('정성으로 만드는 제품 소개입니다. '.repeat(20))
+      await page.getByLabel('상품 이름', { exact: true }).fill('우리동네정성가득한샴푸와향기로운생활제품'.repeat(3).slice(0, 60))
+      await page.getByLabel('소개 및 알리고 싶은 점', { exact: true }).fill('정성으로 만드는 제품 소개입니다. '.repeat(20))
       await result(page)
       await page.getByRole('tab', { name: '이미지', exact: true }).click()
       assert.ok((await page.locator('#poster-visible-text').innerText()).includes('…'), 'Long poster alternative should reflect rendered truncation')

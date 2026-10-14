@@ -80,6 +80,10 @@ async function createPage(width = 390, height = 844, mode = "easy") {
       .click()
     await page
       .getByRole("dialog")
+      .getByText("글씨 크기·간편모드", { exact: true })
+      .click()
+    await page
+      .getByRole("dialog")
       .getByRole("switch", { name: "간편모드", exact: true })
       .click()
     await page.keyboard.press("Escape")
@@ -216,13 +220,13 @@ try {
           .isDisabled(),
         true,
       )
-      const name = page.getByLabel("상품명", { exact: true })
+      const name = page.getByLabel("상품 이름", { exact: true })
       await name.fill("   ")
       await page.getByLabel("가게 이름", { exact: true }).focus()
       assert.equal(await name.getAttribute("aria-invalid"), "true")
       assert.equal(
         await page
-          .getByText("상품명을 입력해 주세요.", { exact: true })
+          .getByText("상품 이름을 입력해 주세요.", { exact: true })
           .isVisible(),
         true,
       )
@@ -233,7 +237,9 @@ try {
           .isEnabled(),
         true,
       )
-      await page.getByLabel("소개", { exact: true }).fill("잠시 보관할 설명")
+      await page
+        .getByLabel("소개 및 알리고 싶은 점", { exact: true })
+        .fill("잠시 보관할 설명")
       await nav(page)
         .getByRole("button", { name: "내 홍보물", exact: true })
         .click()
@@ -246,7 +252,9 @@ try {
         "Empty saved-output creation entry must preserve the unfinished draft",
       )
       assert.equal(
-        await page.getByLabel("소개", { exact: true }).inputValue(),
+        await page
+          .getByLabel("소개 및 알리고 싶은 점", { exact: true })
+          .inputValue(),
         "잠시 보관할 설명",
       )
       assert.equal(
@@ -255,8 +263,8 @@ try {
           .count(),
         1,
       )
-      await page.getByLabel("소개", { exact: true }).fill("")
-      for (const label of ["소개", "알리고 싶은 점"])
+      await page.getByLabel("소개 및 알리고 싶은 점", { exact: true }).fill("")
+      for (const label of ["소개 및 알리고 싶은 점"])
         assert.ok(
           !/선택|필수/u.test(
             await page
@@ -387,7 +395,9 @@ try {
   for (const choice of ["포스터", "영상"]) {
     const page = await createPage()
     await photoStep(page, choice)
-    await page.getByLabel("상품명", { exact: true }).fill("초이셀 데일리 샴푸")
+    await page
+      .getByLabel("상품 이름", { exact: true })
+      .fill("초이셀 데일리 샴푸")
     await page.evaluate(() => {
       window.exportCalls = { poster: 0, video: 0 }
       const toBlob = HTMLCanvasElement.prototype.toBlob
@@ -452,7 +462,7 @@ try {
   }
   const failure = await createPage()
   await photoStep(failure)
-  await failure.getByLabel("상품명", { exact: true }).fill("오류 복구 상품")
+  await failure.getByLabel("상품 이름", { exact: true }).fill("오류 복구 상품")
   await failure.evaluate(() => {
     const original = HTMLCanvasElement.prototype.toBlob
     let once = true
@@ -490,14 +500,14 @@ try {
     .getByRole("button", { name: "내용 다시 수정하기", exact: true })
     .click()
   assert.equal(
-    await failure.getByLabel("상품명", { exact: true }).inputValue(),
+    await failure.getByLabel("상품 이름", { exact: true }).inputValue(),
     "오류 복구 상품",
   )
   await failure.setViewportSize({ width: 390, height: 400 })
-  await failure.getByLabel("알리고 싶은 점", { exact: true }).focus()
+  await failure.getByLabel("소개 및 알리고 싶은 점", { exact: true }).focus()
   await settle(failure)
   const field = await failure
-    .getByLabel("알리고 싶은 점", { exact: true })
+    .getByLabel("소개 및 알리고 싶은 점", { exact: true })
     .boundingBox()
   assert.ok(
     field.y >= 0 &&
@@ -548,7 +558,7 @@ try {
     .getByRole("button", { name: "다음으로", exact: true })
     .click()
   await completeFailure
-    .getByLabel("상품명", { exact: true })
+    .getByLabel("상품 이름", { exact: true })
     .fill("이미지 오류 확인")
   await completeFailure.evaluate(() => {
     const original = HTMLCanvasElement.prototype.getContext

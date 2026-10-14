@@ -86,7 +86,7 @@ body { background:var(--color-brand-soft); }
 .prototype-app.studio-shell.is-home .studio-main[data-app-scroll-container] { padding:12px 16px calc(96px + env(safe-area-inset-bottom)); }
 .prototype-app.studio-shell .studio-reading-bar { padding:6px 16px; }
 .prototype-app.studio-shell .studio-bottom-nav { position:fixed; inset:auto auto 0 50%; transform:translateX(-50%); width:min(100%,560px); display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); z-index:40; padding:4px 4px env(safe-area-inset-bottom); box-shadow:0 -4px 18px #26364a0a; }
-.prototype-app.studio-shell .studio-bottom-nav button { min-height:76px; padding:6px 2px; border-radius:12px; font-size:16px; line-height:1.35; }
+.prototype-app.studio-shell .studio-bottom-nav button { min-height:68px; padding:6px 2px; border-radius:12px; font-size:16px; line-height:1.35; }
 .prototype-app.studio-shell.easy-mode .studio-bottom-nav button { font-size:18px; }
 .prototype-app.studio-shell .studio-menu-bottom-nav { z-index:70; }
 .prototype-app.studio-shell .unified-menu-panel { inset:0 auto 0 max(0px,calc((100% - 560px)/2)); transform:none; width:min(100%,560px); max-height:none; padding:16px 18px calc(112px + env(safe-area-inset-bottom)); border-radius:0; overscroll-behavior:contain; scroll-padding-block:12px calc(100px + env(safe-area-inset-bottom)); }
@@ -136,29 +136,50 @@ body { background:var(--color-brand-soft); }
  .studio-shell .studio-reading-context { font-size:16px; }
 }
 
-/* Allocate the upper whitespace to the original coffee preview, per the home review. */
+/* Fit the complete home composition, including the guide, above navigation. */
 .prototype-app.studio-shell.is-home .studio-main[data-app-scroll-container] {
-  padding-top:32px;
+  padding-top:12px;
   padding-bottom:calc(88px + env(safe-area-inset-bottom));
 }
 .studio-shell .studio-home-simple {
-  min-height:calc(100dvh - 65px - 32px - 88px);
+  min-height:0;
   display:flex;
   flex-direction:column;
   justify-content:flex-start;
 }
 .studio-shell .studio-home-simple .studio-how {
-  margin-top:18px;
+  margin-top:8px;
   margin-bottom:0;
-  padding-top:14px;
-  position:relative;
-  top:-16px;
+  padding-top:0;
+  position:static;
 }
 .studio-shell .studio-home-simple .studio-start-guide {
   width:100%;
   margin-bottom:0;
 }
 .studio-shell .studio-home-simple .studio-how { width:100%; }
+.studio-shell.is-home .studio-header-inner { min-height:60px; }
+.studio-shell.is-home .studio-brand-button .studio-brand-logo { width:132px; }
+.studio-shell .studio-home-simple .studio-start-guide h1 { font-size:28px; }
+.studio-shell .studio-home-simple .studio-hero-description { margin:6px 0 10px; font-size:18px; }
+.studio-shell .studio-home-simple .studio-guide-action .studio-primary { min-height:56px; padding:10px 18px; font-size:20px; }
+.studio-shell .studio-home-simple .studio-guide-action p { margin-top:4px; }
+.studio-shell .studio-home-simple .home-sample-art { margin-top:8px; height:clamp(80px,calc(100dvh - 518px),256px); }
+.studio-shell .studio-home-simple .home-sample-art > img { height:100%; object-fit:contain; }
+.studio-shell .studio-home-simple .studio-section-title { margin-bottom:6px; }
+.studio-shell .studio-home-simple .studio-how h2 { font-size:18px; }
+.studio-shell .studio-home-simple .studio-guide-steps { gap:16px; padding:0; }
+.studio-shell .studio-home-simple .studio-guide-steps li { gap:6px; }
+.studio-shell .studio-home-simple .studio-step-number { width:28px; height:28px; font-size:18px; }
+.studio-shell .studio-home-simple .studio-guide-steps h3 { font-size:16px; line-height:1.4; }
+.studio-shell .studio-home-simple .studio-guide-arrow { top:2px; right:-20px; }
+@media (max-height:620px) {
+  .prototype-app.studio-shell.is-home .studio-main[data-app-scroll-container] { padding-top:8px; }
+  .studio-shell .studio-home-simple .studio-start-guide h1 { font-size:28px; }
+  .studio-shell .studio-home-simple .studio-how h2 { font-size:18px; }
+  .studio-shell .studio-home-simple .studio-guide-steps h3 { font-size:16px; line-height:1.4; }
+  .studio-shell .studio-home-simple .studio-step-number { width:26px; height:26px; }
+}
 
 /* Photo -> next: no optional channel panel or floating prompt. */
 .studio-shell.has-creation-view .photo-step .photo-next-action {
@@ -211,7 +232,7 @@ body { background:var(--color-brand-soft); }
 .studio-shell .result-preview--copy .copy-result-text { display:block; width:100%; height:auto; min-height:calc(clamp(240px,40dvh,400px) - 24px); margin:0; padding:12px; overflow:visible; white-space:pre-wrap; overflow-wrap:anywhere; user-select:text; border:0; border-radius:0; background:transparent; color:var(--color-ink); font-size:19px; line-height:1.6; }
 .studio-shell .copy-result-text:focus-visible, .studio-shell .result-main-preview.is-expanded:focus-visible { outline:3px solid var(--color-focus); outline-offset:-3px; }
 .studio-shell.easy-mode .result-text-preview .copy-result-text { font-size:22px; }
-.studio-shell .result-card .result-card-actions { display:block; width:100%; margin:0; padding:14px 16px; }
+.studio-shell .result-card .result-card-actions { display:block; width:100%; margin:0; padding:12px 16px; }
 .studio-shell .result-card .result-card-actions .result-primary-action { display:flex; align-items:center; justify-content:center; gap:8px; width:100%; min-height:52px; padding:10px 12px; border:1px solid var(--color-brand); border-radius:var(--radius-control); background:var(--color-brand); color:var(--color-surface); font-size:20px; font-weight:700; line-height:1.4; }
 .studio-shell .result-primary-action svg { width:24px; height:24px; flex-shrink:0; }
 .studio-shell .result-card .result-inline-status { margin:10px 0 0; font-size:16px; line-height:1.5; color:var(--color-muted); }
@@ -281,3 +302,65 @@ body { background:var(--color-brand-soft); }
 .studio-shell .results-flow .result-grid.result-tab-panels { margin-top:8px; }
 .studio-shell.easy-mode .field-validation { font-size:var(--font-body); }
 .studio-login input:disabled, .studio-login button:disabled { opacity:.65; cursor:not-allowed; }
+
+/* Three short fields grow with the user's words instead of reserving empty lines. */
+.prototype-app.studio-shell .studio-reading-bar .studio-read-button { height:44px; min-height:44px; padding:6px 10px; font-size:16px; line-height:1.4; }
+.prototype-app.studio-shell .studio-main:has(.compact-information) { padding-top:8px; }
+.prototype-app.studio-shell .creation-flow:has(.compact-information) > .creation-header { margin-bottom:8px; }
+.studio-shell .compact-information { padding-bottom:0; }
+.studio-shell.easy-mode .compact-information .details-fields > label { font-size:20px; }
+.studio-shell .compact-information .details-fields { gap:6px; margin-top:6px; }
+.studio-shell .compact-information .details-fields > label { margin-block:0; }
+.studio-shell .compact-information .details-fields > label > .field-requirement { line-height:1.4; }
+.studio-shell .compact-information .field-label-line { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:4px 8px; }
+.studio-shell .compact-information .field-inline-error { font-size:16px; font-weight:400; line-height:1.4; color:var(--color-error); }
+.studio-shell .compact-information .details-fields > label > textarea,
+.studio-shell.easy-mode .compact-information .details-fields > label > textarea {
+  height:auto; min-height:52px; padding:10px; line-height:1.45; resize:none; overflow:hidden;
+}
+.studio-shell .compact-information .details-actions {
+  position:static; padding:0; border-top:0;
+}
+.studio-shell .compact-information .details-actions .missing-details-note { position:absolute; width:1px; height:1px; margin:0; padding:0; overflow:hidden; clip-path:inset(50%); }
+
+/* Preview height follows the space left by readable tabs and real save controls. */
+.prototype-app.studio-shell .studio-main:has(.results-step) { padding-top:8px; }
+.prototype-app.studio-shell .studio-reading-bar { min-height:0; }
+.prototype-app.studio-shell .result-tabs { padding:4px; gap:4px; }
+.prototype-app.studio-shell .result-tabs button { min-height:48px; padding:8px 6px; font-size:18px; line-height:1.4; }
+.prototype-app.studio-shell .result-tabs-bar { margin-top:8px; padding-block:6px; }
+.studio-shell .result-preview { --result-preview-height:clamp(160px,calc(100dvh - 480px),400px); }
+.studio-shell .result-preview:not(.result-preview--copy) { height:var(--result-preview-height); }
+.studio-shell .result-preview--copy { min-height:var(--result-preview-height); }
+.studio-shell .result-preview--copy .copy-result-text { min-height:calc(var(--result-preview-height) - 24px); }
+.studio-shell .result-followup-actions { grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
+.studio-shell .result-followup-actions > .studio-secondary { min-height:52px; padding:8px; font-size:16px; line-height:1.4; }
+.studio-shell .result-followup-actions > .studio-text-button { display:none; }
+.studio-shell .result-edit-help { position:absolute; width:1px; height:1px; margin:0; overflow:hidden; clip-path:inset(50%); }
+
+/* Keep every menu destination in view; expanded guidance can still scroll. */
+.prototype-app.studio-shell .unified-menu-panel { padding:12px 16px calc(88px + env(safe-area-inset-bottom)); }
+.studio-shell .unified-menu-panel .studio-menu-heading { margin-bottom:8px; }
+.studio-shell .unified-menu-panel .studio-panel-title { margin-bottom:8px; font-size:22px; line-height:1.4; }
+.studio-shell .unified-menu-panel .menu-creation-options { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
+.studio-shell .unified-menu-panel .menu-creation-options .studio-menu-row {
+  position:relative; display:grid; grid-template-columns:24px minmax(0,1fr); align-items:center; gap:8px;
+  min-height:68px; margin:0; padding:8px; text-align:left;
+}
+.studio-shell .unified-menu-panel .studio-menu-row > svg:first-child { width:24px; height:24px; padding:0; background:transparent; }
+.studio-shell .unified-menu-panel .studio-menu-row > svg:last-child { display:none; }
+.studio-shell .unified-menu-panel .studio-menu-copy strong { font-size:18px; line-height:1.4; word-break:keep-all; }
+.studio-shell .unified-menu-panel .studio-menu-copy small { font-size:16px; }
+.studio-shell .unified-menu-panel .studio-menu-footer { margin-top:8px; padding-top:0; border-top:0; gap:8px; }
+.studio-shell .unified-menu-panel > .studio-menu-footer:last-of-type { grid-template-columns:repeat(2,minmax(0,1fr)); }
+.studio-shell .unified-menu-panel .studio-menu-footer > button { min-height:44px; padding:8px; font-size:16px; line-height:1.4; }
+.studio-shell .unified-menu-panel .service-menu-section { padding:0; }
+.studio-shell .unified-menu-panel .service-menu-section summary { min-height:44px; padding:8px 0; font-size:18px; line-height:1.4; }
+.studio-shell .unified-menu-panel .service-menu-section[open] { padding-bottom:12px; }
+@media (max-height:760px) {
+  .studio-shell .unified-menu-panel .studio-panel-title,
+  .studio-shell .unified-menu-panel .studio-menu-copy small {
+    position:absolute; width:1px; height:1px; margin:0; padding:0; overflow:hidden;
+    clip:rect(0,0,0,0); clip-path:inset(50%); white-space:nowrap; border:0;
+  }
+}

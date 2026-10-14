@@ -23,6 +23,7 @@ async function openResult(page,mode){
  if(mode==='regular'){
   await page.getByRole('button',{name:'상단 전체 메뉴 열기',exact:true}).click()
   const menu=page.getByRole('dialog',{name:'전체 메뉴'})
+  await menu.getByText('글씨 크기·간편모드',{exact:true}).click()
   const toggle=menu.getByRole('switch',{name:'간편모드',exact:true})
   if(await toggle.getAttribute('aria-checked')==='true'){await toggle.focus();await page.keyboard.press('Space')}
   await page.keyboard.press('Escape')
@@ -30,7 +31,7 @@ async function openResult(page,mode){
  await page.getByRole('button',{name:'홍보물 만들기',exact:true}).click()
  await page.getByLabel('제품 사진 올리기',{exact:true}).setInputFiles(photo)
  await page.getByRole('button',{name:'다음으로',exact:true}).click()
- await page.getByLabel('상품명',{exact:true}).fill(sampleName)
+ await page.getByLabel('상품 이름',{exact:true}).fill(sampleName)
  await page.getByRole('button',{name:'결과 보기',exact:true}).click()
  await page.locator('#result-poster-preview img').waitFor()
  await page.evaluate(()=>document.fonts.ready)
@@ -139,7 +140,7 @@ try{
    await checkExport(page,'video')
   }
   await page.getByRole('button',{name:'내용 다시 수정하기',exact:true}).click()
-  assert.equal(await page.getByLabel('상품명',{exact:true}).inputValue(),sampleName)
+  assert.equal(await page.getByLabel('상품 이름',{exact:true}).inputValue(),sampleName)
   assert.deepEqual(errors,[])
   reports.push({width,mode,status:'passed',measurements})
   console.log(`PASS ${width}px ${mode}`)

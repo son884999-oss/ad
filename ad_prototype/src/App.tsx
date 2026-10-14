@@ -550,7 +550,10 @@ function ResultPreview({ children, text = false }: { children: ReactNode; text?:
   return <div className={`result-preview${text ? " result-preview--copy" : ""}`}>{children}</div>
 }
 
-function AutoSizeTextarea(props: ComponentPropsWithoutRef<"textarea">) {
+function AutoSizeTextarea({
+  resizeKey,
+  ...props
+}: ComponentPropsWithoutRef<"textarea"> & { resizeKey?: boolean }) {
   const ref = useRef<HTMLTextAreaElement>(null)
   useLayoutEffect(() => {
     const field = ref.current
@@ -560,7 +563,9 @@ function AutoSizeTextarea(props: ComponentPropsWithoutRef<"textarea">) {
     const resize = () => {
       if (!active) return
       field.style.height = "auto"
-      field.style.height = `${field.scrollHeight + 2}px`
+      const style = getComputedStyle(field)
+      const border = parseFloat(style.borderTopWidth) + parseFloat(style.borderBottomWidth)
+      field.style.height = `${field.scrollHeight + border}px`
       field.scrollTop = 0
     }
     resize()
@@ -573,7 +578,7 @@ function AutoSizeTextarea(props: ComponentPropsWithoutRef<"textarea">) {
     observer.observe(field)
     void document.fonts.ready.then(resize)
     return () => { active = false; observer.disconnect() }
-  }, [props.value])
+  }, [props.value, resizeKey])
   return <textarea {...props} ref={ref} />
 }
 
@@ -654,7 +659,7 @@ function StepHeader({
     },
 
     2: {
-      title: "상품명을 적어 주세요",
+      title: "상품 이름을 적어 주세요",
 
       description: "제품의 특징을 적어 주세요.",
     },
@@ -670,7 +675,7 @@ function StepHeader({
   return (
     <div className="creation-header">
       <StepProgress step={step} onBack={onBack} />
-      <div className={step === 1 ? "sr-only" : "mt-5"}>
+      <div className={step < 3 ? "sr-only" : "mt-5"}>
         <h2
           data-screen-heading
           tabIndex={-1}
@@ -799,13 +804,14 @@ function CreateFlow({
     uploadRequestRef.current += 1
     setUploadPending(false)
     setUploadMessage("")
+    setNameTouched(false)
     return () => {
       uploadRequestRef.current += 1
     }
   }, [type])
 
   const missingFields = [
-    !details.name?.trim() && "상품명",
+    !details.name?.trim() && "상품 이름",
   ].filter(Boolean)
 
   const videoRecorderRef = useRef<MediaRecorder | null>(null)
@@ -1534,12 +1540,12 @@ function CreateFlow({
           )}
           <p
             id="details-example-note"
-            className="description-example-note"
+            className="description-example-note sr-only"
           >
-            상품명만 필수예요. 나머지는 비워 두어도 돼요.
+            상품 이름만 필수예요.
           </p>
           {type !== "all" && (
-            <p className="mt-3 text-[16px] font-bold text-[#2b2b2b]">
+            <p className="sr-only">
               {uiText("결과 형식", easyMode)}:{" "}
               {type === "copy"
                 ? "문구"
@@ -1548,11 +1554,15 @@ function CreateFlow({
           )}
           <div className="details-fields mt-7 space-y-5">
             <label className="block text-[18px] font-bold">
-              상품명{" "}
-              <span className="field-requirement">필수</span>
+              <span className="field-label-line">
+                <span>상품 이름 <span className="field-requirement">필수</span></span>
+                {nameTouched && missingFields.length > 0 && (
+                  <span className="field-inline-error" aria-hidden="true">입력해 주세요.</span>
+                )}
+              </span>
               <span className="field-hint">예: 카페라떼</span>
               <input
-                aria-label="상품명"
+                aria-label="상품 이름"
                 aria-required="true"
                 aria-invalid={nameTouched && missingFields.length > 0 ? true : undefined}
                 aria-describedby="product-name-help details-example-note"
@@ -1567,12 +1577,12 @@ function CreateFlow({
               />
               <span
                 id="product-name-help"
-                className={nameTouched && missingFields.length > 0 ? "field-validation is-error" : "field-validation"}
+                className="sr-only"
                 role={nameTouched && missingFields.length > 0 ? "alert" : undefined}
               >
                 {nameTouched && missingFields.length > 0
-                  ? "상품명을 입력해 주세요."
-                  : "홍보물에 표시할 상품명을 적어 주세요."}
+                  ? "상품 이름을 입력해 주세요."
+                  : "홍보물에 표시할 상품 이름을 적어 주세요."}
               </span>
             </label>
             <label className="block text-[18px] font-bold">
@@ -1589,38 +1599,21 @@ function CreateFlow({
               />
             </label>
             <label className="block text-[18px] font-bold">
-              소개
+              소개 및 알리고 싶은 점
               <span className="field-hint" id="description-help">
-                예: 매일 신선하게 만드는 라떼
+                예: 신선한 우유로 만든 고소한 라떼
               </span>
               <AutoSizeTextarea
-                aria-label="소개"
+                aria-label="소개 및 알리고 싶은 점"
                 aria-required="false"
                 aria-describedby="description-help details-example-note"
-                value={details.description}
-                placeholder="예: 매일 신선하게 만드는 라떼"
+                value={[details.description, details.features].filter(Boolean).join("\n")}
+                placeholder="예: 신선하고 고소해요"
                 onChange={(event) =>
-                  updateDetails({ ...details, description: event.target.value })
+                  updateDetails({ ...details, description: event.target.value, features: "" })
                 }
-                rows={3}
-                className="mt-2 w-full rounded-[12px] border-2 border-[#817a74] p-4 text-[18px] font-normal leading-7 outline-none focus:border-[#c64f12] focus:ring-3 focus:ring-[#c64f12]/15"
-              />
-            </label>
-            <label className="block text-[18px] font-bold">
-              알리고 싶은 점
-              <span className="field-hint" id="features-help">
-                예: 고소한 우유와 진한 커피
-              </span>
-              <AutoSizeTextarea
-                aria-label="알리고 싶은 점"
-                aria-required="false"
-                aria-describedby="features-help details-example-note"
-                value={details.features}
-                placeholder="예: 고소한 우유와 진한 커피"
-                onChange={(event) =>
-                  updateDetails({ ...details, features: event.target.value })
-                }
-                rows={3}
+                rows={1}
+                resizeKey={easyMode}
                 className="mt-2 w-full rounded-[12px] border-2 border-[#817a74] p-4 text-[18px] font-normal leading-7 outline-none focus:border-[#c64f12] focus:ring-3 focus:ring-[#c64f12]/15"
               />
             </label>
@@ -2404,7 +2397,7 @@ export default function App() {
     }
 
     if (page === "home") {
-      return `첫 화면입니다. ${userTouched ? "홍보물 이어 만들기를 누르면 현재 작업으로 돌아갑니다." : "홍보물 만들기를 누르면 사진 올리기로 이동합니다."} 가입 없이 체험할 수 있어요. 사진을 넣고 상품명을 적으면 이미지, 영상, 문구를 확인할 수 있어요. 결과를 저장하거나 복사하세요. 개별 제작과 사용 방법은 메뉴에서 볼 수 있어요.`
+      return `첫 화면입니다. ${userTouched ? "홍보물 이어 만들기를 누르면 현재 작업으로 돌아갑니다." : "홍보물 만들기를 누르면 사진 올리기로 이동합니다."} 가입 없이 체험할 수 있어요. 사진을 넣고 상품 이름을 적으면 이미지, 영상, 문구를 확인할 수 있어요. 결과를 저장하거나 복사하세요. 개별 제작과 사용 방법은 메뉴에서 볼 수 있어요.`
     }
 
     if (page === "records") {
@@ -2432,14 +2425,12 @@ export default function App() {
 
     if (step === 2) {
       return (
-        "상품명은 필수이고, 소개와 알리고 싶은 점은 비워 두어도 됩니다. " +
+        "상품 이름은 필수이고, 가게 이름과 소개 및 알리고 싶은 점은 비워 두어도 됩니다. " +
         (details.name?.trim()
-          ? "상품명은 " + details.name + ". "
+          ? "상품 이름은 " + details.name + ". "
           : "") +
-        "소개는 " +
-        (details.description || "비워 두었어요") +
-        ". 알리고 싶은 점은 " +
-        (details.features || "비워 두었어요") +
+        "소개 및 알리고 싶은 점은 " +
+        ([details.description, details.features].filter(Boolean).join(". ") || "비워 두었어요") +
         ". " +
         "사진 바꾸기 버튼으로 사진을 바꿀 수 있어요. 내용을 확인한 뒤 결과 보기 버튼을 누르세요."
       )

@@ -32,6 +32,7 @@
 | [10개 관점 UI 검토·교차 토론](../feedback/2026-10-14-ten-perspective-ui-review.md) | 글자·버튼·폰트·일관성·시인성·상태·접근성을 검토한 AI 토론과 개선·검증 기록 |
 | [제출 전 UI·결과 선택 개선](../feedback/2026-10-14-submission-ui-fixes.md) | 결과 가림·긴 글·보조 버튼 개선, 한 화면 사진·토글 배치와 문구 후순위 구성 검증 |
 | [최종 UI·GitHub 통합 검토](../feedback/2026-10-14-final-integration-review.md) | 독립 검토, 초안 소실 경로 수정, 실제 파일 준비·브라우저 회귀 검사와 통합 범위 |
+| [첫 화면·세 입력칸 배치 재검증](../feedback/2026-10-14-first-screen-fit.md) | 홈·메뉴 전체 구성, 세 입력칸·자동 확장, 저장 조작의 실제 모바일 경계 검사 |
 | [최신 교수 체크리스트 검증](review/2026-10-13-professor-review.md) | 원본 86개 식별자의 검증 범위별 판정과 실제 화면·검사 자료 |
 
 New feedback belongs in `feedback/`. Keep the source message analysis and reference images separate from implementation conclusions.
