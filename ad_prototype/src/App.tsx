@@ -1,9 +1,11 @@
 import {
   ChangeEvent,
+  type ComponentPropsWithoutRef,
   FormEvent,
   ReactNode,
   useEffect,
   useId,
+  useLayoutEffect,
   useRef,
   useState,
 } from "react"
@@ -232,6 +234,10 @@ const knownRegions = new Set([
 ])
 
 const hashtagStopWords = new Set([
+  "사용하",
+  "있어",
+  "확인해",
+  "주세요",
   "정성",
 
   "담아",
@@ -517,19 +523,56 @@ function PrimaryButton({
   )
 }
 
-function ResultPreview({
+function ResultCardHeading({
+  icon,
+  title,
   control,
-  children,
 }: {
+  icon: "picture" | "video" | "copy"
+  title: string
   control?: ReactNode
-  children: ReactNode
 }) {
   return (
-    <div className="result-preview">
-      {children}
+    <div className="result-card-heading">
+      <span aria-hidden="true"><Icon name={icon} size={22} /></span>
+      <div className="result-card-title">
+        <h3>{title}</h3>
+        <small>확인용 예시</small>
+      </div>
       {control && <div className="result-preview-controls">{control}</div>}
     </div>
   )
+}
+
+function ResultPreview({ children, text = false }: { children: ReactNode; text?: boolean }) {
+  return <div className={`result-preview${text ? " result-preview--copy" : ""}`}>{children}</div>
+}
+
+function AutoSizeTextarea(props: ComponentPropsWithoutRef<"textarea">) {
+  const ref = useRef<HTMLTextAreaElement>(null)
+  useLayoutEffect(() => {
+    const field = ref.current
+    if (!field) return
+    let active = true
+    let width = field.clientWidth
+    const resize = () => {
+      if (!active) return
+      field.style.height = "auto"
+      field.style.height = `${field.scrollHeight + 2}px`
+      field.scrollTop = 0
+    }
+    resize()
+    const observer = new ResizeObserver(() => {
+      if (field.clientWidth !== width) {
+        width = field.clientWidth
+        resize()
+      }
+    })
+    observer.observe(field)
+    void document.fonts.ready.then(resize)
+    return () => { active = false; observer.disconnect() }
+  }, [props.value])
+  return <textarea {...props} ref={ref} />
 }
 
 function ResultActionBar({
@@ -592,10 +635,12 @@ function StepHeader({
   step,
   onBack,
   easyMode,
+  photoReady = false,
 }: {
   step: Step
   onBack: (step: Step) => void
   easyMode: boolean
+  photoReady?: boolean
 }) {
   const stepGuides: Record<Step, {
     title: string
@@ -603,7 +648,7 @@ function StepHeader({
     description: string
   }> = {
     1: {
-      title: "사진을 넣어 주세요",
+      title: "사진을 올려 주세요",
 
       description: "제품이나 가게 사진 한 장을 준비해 주세요.",
     },
@@ -625,15 +670,13 @@ function StepHeader({
   return (
     <div className="creation-header">
       <StepProgress step={step} onBack={onBack} />
-      <div className="mt-5">
+      <div className={step === 1 && photoReady ? "sr-only" : "mt-5"}>
         <h2
           data-screen-heading
           tabIndex={-1}
           className="text-[26px] font-bold leading-tight text-[#222222] sm:text-[28px]"
         >
-          {step === 2
-            ? uiText(stepGuides[step].title, easyMode)
-            : `${step}단계 · ${uiText(stepGuides[step].title, easyMode)}`}
+          {uiText(stepGuides[step].title, easyMode)}
         </h2>
         <p className="mt-2 text-[18px] leading-7 text-[#545454]">
           {uiText(stepGuides[step].description, easyMode)}
@@ -670,8 +713,7 @@ function CreateFlow({
   setUserHashtagsByChannel,
 
   outputFormat,
-
-
+  onOutputFormatChange,
   continuationNotice,
 
   onDraftTouched,
@@ -726,8 +768,7 @@ function CreateFlow({
   setUserHashtagsByChannel: (hashtags: Record<Channel, string>) => void
 
   outputFormat: OutputFormat
-
-
+  onOutputFormatChange: (format: OutputFormat) => void
   continuationNotice: boolean
 
   onDraftTouched: () => void
@@ -1437,7 +1478,7 @@ function CreateFlow({
           <p>사진과 입력한 내용으로 만든 체험 결과예요. 새로고침 전에 저장하거나 복사하세요.</p>
         </div>
       ) : (
-        <StepHeader step={step} onBack={setStep} easyMode={easyMode} />
+        <StepHeader step={step} onBack={setStep} easyMode={easyMode} photoReady={!!imageUrl} />
       )}
       {step === 1 && continuationNotice && (
         <p className="mb-6 rounded-[12px] border border-[#dda77f] bg-[#fff8f3] px-4 py-3 text-[18px] font-bold text-[#7f340d]">
@@ -1447,6 +1488,8 @@ function CreateFlow({
       {step === 1 && (
         <PhotoStep
           imageUrl={imageUrl}
+          outputFormat={type === "all" ? outputFormat : undefined}
+          onOutputFormatChange={type === "all" ? onOutputFormatChange : undefined}
           pending={uploadPending}
           message={uploadMessage}
           onUpload={upload}
@@ -1532,7 +1575,7 @@ function CreateFlow({
               <span className="field-hint" id="description-help">
                 예: 매일 신선하게 만드는 라떼
               </span>
-              <textarea
+              <AutoSizeTextarea
                 aria-label="소개"
                 aria-required="false"
                 aria-describedby="description-help details-example-note"
@@ -1550,7 +1593,7 @@ function CreateFlow({
               <span className="field-hint" id="features-help">
                 예: 고소한 우유와 진한 커피
               </span>
-              <textarea
+              <AutoSizeTextarea
                 aria-label="알리고 싶은 점"
                 aria-required="false"
                 aria-describedby="features-help details-example-note"
@@ -1717,7 +1760,7 @@ function CreateFlow({
           <div className="details-actions mt-7 flex flex-col-reverse gap-3 sm:flex-row sm:justify-between">
             <button
               onClick={() => setStep(1)}
-              className="min-h-13 rounded-[14px] border-2 border-[#2b2b2b] px-7 font-bold text-[#2b2b2b] hover:bg-[#fff1e7]"
+              className="studio-secondary"
             >
               이전으로
             </button>
@@ -1734,6 +1777,7 @@ function CreateFlow({
               <PrimaryButton
                 disabled={missingFields.length > 0 || uploadPending}
                 onClick={() => {
+                  setSelectedResultTab(resultTabs[0].id)
                   onResultCreated()
                   notify("result")
 
@@ -1805,14 +1849,9 @@ function CreateFlow({
                 tabIndex={0}
                 className="result-card result-poster"
               >
-                <div className="result-card-heading">
-                  <span aria-hidden="true">
-                    <Icon name="picture" size={22} />
-                  </span>
-                  <h3>이미지</h3>
-                  <small>확인용 예시</small>
-                </div>
-                <ResultPreview
+                <ResultCardHeading
+                  icon="picture"
+                  title="이미지"
                   control={
                       <button
                         type="button"
@@ -1833,7 +1872,8 @@ function CreateFlow({
                         <span>{posterExpanded ? "작게 보기" : "크게 보기"}</span>
                       </button>
                   }
-                >
+                />
+                <ResultPreview>
                   <div
                     ref={posterPreviewRef}
                     id="result-poster-preview"
@@ -1891,14 +1931,9 @@ function CreateFlow({
                 tabIndex={0}
                 className="result-card result-video"
               >
-                <div className="result-card-heading">
-                  <span aria-hidden="true">
-                    <Icon name="video" size={22} />
-                  </span>
-                  <h3>영상</h3>
-                  <small>확인용 예시</small>
-                </div>
-                <ResultPreview
+                <ResultCardHeading
+                  icon="video"
+                  title="영상"
                   control={
                       <button
                         type="button"
@@ -1911,7 +1946,8 @@ function CreateFlow({
                         <span>{playing ? "일시 정지" : "재생하기"}</span>
                       </button>
                   }
-                >
+                />
+                <ResultPreview>
                   <div
                     id="result-video-preview"
                     className="result-main-preview result-motion-preview"
@@ -1953,14 +1989,8 @@ function CreateFlow({
                 tabIndex={0}
                 className="result-card result-copy"
               >
-                <div className="result-card-heading">
-                  <span aria-hidden="true">
-                    <Icon name="copy" size={22} />
-                  </span>
-                  <h3>홍보 문구</h3>
-                  <small>확인용 예시</small>
-                </div>
-                <ResultPreview>
+                <ResultCardHeading icon="copy" title="홍보 문구" />
+                <ResultPreview text>
                   <div className="result-main-preview result-text-preview">
                     <div
                       className="copy-result-text"
@@ -2759,6 +2789,7 @@ export default function App() {
             setEditedHashtags((current) => ({ ...current, [channel]: true }))
           }}
           outputFormat={outputFormat}
+          onOutputFormatChange={setAllOutputFormat}
           continuationNotice={continuationNotice}
           onDraftTouched={() => {
             setUserTouched(true)

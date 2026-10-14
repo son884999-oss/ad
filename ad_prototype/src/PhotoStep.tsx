@@ -2,12 +2,16 @@ import { useRef, type ChangeEvent } from "react"
 import Icon from "./Icon"
 export default function PhotoStep({
   imageUrl,
+  outputFormat,
+  onOutputFormatChange,
   pending,
   message,
   onUpload,
   onNext,
 }: {
   imageUrl: string
+  outputFormat?: "both" | "poster" | "video"
+  onOutputFormatChange?: (format: "both" | "poster" | "video") => void
   pending: boolean
   message: string
   onUpload: (event: ChangeEvent<HTMLInputElement>) => void
@@ -30,9 +34,8 @@ export default function PhotoStep({
   return (
     <div className={"photo-step step-panel " + (imageUrl ? "is-ready" : "")}>
       <div className="photo-workspace">
-        <section className="photo-section" aria-labelledby="photo-title">
-          <div className="section-heading">
-            <h3 id="photo-title">가게·제품 사진을 골라 주세요</h3>
+        <section className="photo-section" aria-label="제품 사진 선택">
+          <div className={imageUrl ? "section-heading sr-only" : "section-heading"}>
             <p id="upload-help">
               20MB 이하의 JPG·PNG 등 사진 한 장을 선택하세요.
             </p>
@@ -51,9 +54,9 @@ export default function PhotoStep({
                 <div className="photo-confirmation">
                   <span className="photo-check">
                     <Icon name="check" />
-                    사진이 준비됐어요
+                    사진 준비됨
                   </span>
-                  <p>제품이 잘 보이는지 확인해 주세요.</p>
+                  <p className="sr-only">제품이 잘 보이는지 확인해 주세요.</p>
                   <button
                     type="button"
                     className="studio-secondary photo-change-button"
@@ -117,6 +120,29 @@ export default function PhotoStep({
           </figure>}
         </section>
       </div>
+      {imageUrl && outputFormat && onOutputFormatChange && (
+        <fieldset className="photo-output-format" disabled={pending}>
+          <legend>만들 결과 <span>문구 포함</span></legend>
+          <div className="photo-output-options">
+            {([
+              ["both", "둘 다"],
+              ["poster", "포스터"],
+              ["video", "영상"],
+            ] as const).map(([value, label]) => (
+              <label key={value}>
+                <input
+                  type="radio"
+                  name="creation-output-format"
+                  value={value}
+                  checked={outputFormat === value}
+                  onChange={() => onOutputFormatChange(value)}
+                />
+                <span>{label}</span>
+              </label>
+            ))}
+          </div>
+        </fieldset>
+      )}
       <div className="photo-next-action">
         <button
           className="studio-primary"

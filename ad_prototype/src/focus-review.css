@@ -36,9 +36,6 @@
 
 /* Keep the selected photo secondary to the information being entered. */
 .studio-shell .creation-flow:has(.compact-information) .journey-progress { margin-bottom:8px; }
-.studio-shell .creation-flow:has(.compact-information) .journey-node { width:24px; height:24px; font-size:16px; }
-.studio-shell .creation-flow:has(.compact-information) .journey-progress :is(button,.journey-static) { min-height:48px; gap:2px; }
-.studio-shell .creation-flow:has(.compact-information) .journey-progress li:not(:last-child)::after { top:11px; left:calc(50% + 15px); right:calc(-50% + 15px); }
 .studio-shell .creation-flow:has(.compact-information) > .creation-header { margin-bottom:8px; }
 .studio-shell .compact-information .information-photo { grid-template-columns:42px minmax(0,1fr) auto; height:56px; padding:6px 10px; gap:8px; }
 .studio-shell .compact-information .information-photo img { width:42px; height:42px; }
@@ -46,16 +43,16 @@
 .studio-shell .compact-information .description-example-note { margin:8px 0 0; font-size:16px; line-height:1.5; }
 .studio-shell .compact-information .details-fields { gap:4px; margin-top:8px; }
 .studio-shell .compact-information .details-fields > label > input { margin-top:4px; padding:8px 10px; height:52px; min-height:52px; }
-.studio-shell .compact-information .details-fields > label > textarea { margin-top:4px; padding:8px 10px; height:80px; min-height:80px; line-height:1.45; }
+.studio-shell .compact-information .details-fields > label > textarea { margin-top:4px; padding:8px 10px; height:auto; min-height:calc(4.35em + 18px); line-height:1.45; }
 .studio-shell.easy-mode .compact-information .details-fields > label > :is(input,textarea) { font-size:22px; }
 .studio-shell.easy-mode .compact-information .details-fields > label > input { height:52px; min-height:52px; }
-.studio-shell.easy-mode .compact-information .details-fields > label > textarea { height:80px; min-height:80px; }
+.studio-shell.easy-mode .compact-information .details-fields > label > textarea { height:auto; min-height:calc(4.35em + 18px); }
 .studio-shell.has-creation-view .studio-main:has(.compact-information) { padding-top:8px; }
 .studio-shell .creation-flow:has(.compact-information) > .creation-header { margin-bottom:4px; }
 .studio-shell .creation-flow:has(.compact-information) > .creation-header > div { margin-top:6px; }
 .studio-shell .compact-information .information-more-settings > summary { padding-block:6px; gap:2px 8px; min-height:44px; }
 .studio-shell .compact-information .details-actions { display:grid; grid-template-columns:96px minmax(0,1fr); gap:8px; align-items:stretch; margin-top:6px; }
-.studio-shell .compact-information .details-actions > button { padding:8px; font-size:17px; min-height:56px; }
+.studio-shell .compact-information .details-actions > button { padding:8px; font-size:18px; min-height:56px; }
 .studio-shell .compact-information .details-primary-bar { min-width:0; }
 .studio-shell .compact-information .details-primary-bar > button { width:100%; min-height:56px; padding:8px 10px; }
 .studio-shell.easy-mode .compact-information .details-primary-bar > button { min-height:56px; padding:8px 10px; }
@@ -183,13 +180,18 @@ body { background:var(--color-brand-soft); }
 .studio-shell .photo-step.is-ready .selected-photo { height:180px; }
 
 /* Shared result presentation: previews and export actions keep one position. */
-.studio-shell .result-card .result-card-heading { margin:0; }
+/* Media controls live in the header, leaving all result content unobscured. */
+.studio-shell .result-card .result-card-heading { margin:0; height:76px; min-height:76px; padding:12px; gap:8px; }
+.studio-shell .result-card .result-card-heading > span { flex-basis:28px; height:28px; }
+.studio-shell .result-card-title { flex:1; min-width:0; }
+.studio-shell .result-card .result-card-heading h3 { margin:0; font-size:20px; line-height:1.35; white-space:nowrap; }
+.studio-shell .result-card-heading .result-card-title small { display:block; margin:2px 0 0; font-size:var(--font-small); line-height:1.4; }
 .studio-shell .result-preview { position:relative; display:flex; flex-direction:column; width:100%; height:clamp(240px,40dvh,400px); min-height:0; margin:0; overflow:hidden; background:var(--color-canvas); }
-.studio-shell .result-preview-controls { position:absolute; right:16px; bottom:16px; z-index:2; }
-.studio-shell .result-preview .result-preview-action { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; width:104px; height:104px; min-width:104px; min-height:104px; padding:10px; border:2px solid var(--color-surface); border-radius:50%; background:var(--color-ink); color:var(--color-surface); font-size:18px; font-weight:700; line-height:1.4; white-space:nowrap; box-shadow:0 4px 14px rgb(38 54 74 / 28%); }
-.studio-shell .result-preview .result-preview-action svg { width:34px; height:34px; flex-shrink:0; }
-.studio-shell .result-preview .result-preview-action:hover { background:var(--color-brand); }
-.studio-shell .result-preview .result-preview-action[aria-pressed="true"] { background:var(--color-brand); }
+.studio-shell .result-preview-controls { position:static; flex-shrink:0; }
+.studio-shell .result-card-heading .result-preview-action { display:flex; align-items:center; justify-content:center; gap:6px; width:134px; height:52px; min-width:134px; min-height:52px; padding:10px; border:1px solid var(--color-ink); border-radius:var(--radius-control); background:var(--color-ink); color:var(--color-surface); font-size:18px; font-weight:700; line-height:1.4; white-space:nowrap; }
+.studio-shell .result-card-heading .result-preview-action svg { width:24px; height:24px; flex-shrink:0; }
+.studio-shell .result-card-heading .result-preview-action:hover,
+.studio-shell .result-card-heading .result-preview-action[aria-pressed="true"] { background:var(--color-brand); border-color:var(--color-brand); }
 .studio-shell .result-preview .result-motion-preview > strong { left:12px; top:12px; width:min(calc(100% - 24px),280px); padding:8px 12px; transform:none; text-align:left; font-size:18px; line-height:1.5; }
 .studio-shell .result-preview .result-motion-preview > strong > span { -webkit-line-clamp:2; }
 .studio-shell .result-preview-action:disabled, .studio-shell .result-primary-action:disabled { opacity:.6; cursor:wait; }
@@ -202,10 +204,11 @@ body { background:var(--color-brand-soft); }
 @keyframes result-photo-motion { from { transform:scale(1); } to { transform:scale(1.08); } }
 @media (prefers-reduced-motion:reduce) { .studio-shell .result-preview .result-motion-preview > img { animation:none; transform:none; } }
 .studio-shell .result-preview .result-main-preview.is-expanded { align-items:flex-start; justify-content:flex-start; overflow:auto; }
-.studio-shell .result-preview .result-main-preview.is-expanded > .poster-image-canvas { display:block; width:200%; height:auto; max-width:none; flex-shrink:0; box-sizing:content-box; padding:0 136px 136px 0; }
+.studio-shell .result-preview .result-main-preview.is-expanded > .poster-image-canvas { display:block; width:200%; height:auto; max-width:none; flex-shrink:0; box-sizing:border-box; padding:0; }
 .studio-shell .result-preview .result-main-preview.is-expanded > .poster-image-canvas > img { display:block; width:100%; height:auto; max-width:none; }
 .studio-shell .result-preview > .result-text-preview { padding:12px; }
-.studio-shell .result-text-preview .copy-result-text { display:block; width:100%; height:100%; min-height:0; margin:0; padding:12px; resize:none; overflow:auto; overscroll-behavior:contain; white-space:pre-wrap; user-select:text; border:0; border-radius:0; background:transparent; color:var(--color-ink); font-size:19px; line-height:1.6; }
+.studio-shell .result-preview--copy { height:auto; min-height:clamp(240px,40dvh,400px); }
+.studio-shell .result-preview--copy .copy-result-text { display:block; width:100%; height:auto; min-height:calc(clamp(240px,40dvh,400px) - 24px); margin:0; padding:12px; overflow:visible; white-space:pre-wrap; overflow-wrap:anywhere; user-select:text; border:0; border-radius:0; background:transparent; color:var(--color-ink); font-size:19px; line-height:1.6; }
 .studio-shell .copy-result-text:focus-visible, .studio-shell .result-main-preview.is-expanded:focus-visible { outline:3px solid var(--color-focus); outline-offset:-3px; }
 .studio-shell.easy-mode .result-text-preview .copy-result-text { font-size:22px; }
 .studio-shell .result-card .result-card-actions { display:block; width:100%; margin:0; padding:14px 16px; }
@@ -226,3 +229,39 @@ body { background:var(--color-brand-soft); }
 
 /* The same photo replacement action keeps the same button treatment in both steps. */
 .studio-shell .photo-confirmation .photo-change-button, .studio-shell .compact-information .information-photo .photo-change-button { min-height:44px; padding:8px 12px; font-size:18px; line-height:1.4; }
+
+.studio-shell .studio-menu-heading .studio-secondary { min-height:44px; padding:8px 12px; font-size:18px; line-height:1.4; }
+
+/* One compact, numbered journey on phone and desktop. */
+.studio-shell.has-creation-view .journey-progress { padding:6px; border:1px solid var(--color-line); border-radius:var(--radius-control); background:var(--color-surface); }
+.studio-shell.has-creation-view .journey-progress :is(button,.journey-static) { flex-direction:row; align-items:center; justify-content:center; min-height:44px; padding:4px 2px; gap:6px; }
+.studio-shell.has-creation-view .journey-node { width:26px; height:26px; flex-shrink:0; font-size:16px; box-shadow:none; }
+.studio-shell.has-creation-view .journey-node svg { width:16px; height:16px; }
+.studio-shell.has-creation-view .journey-label { font-size:16px; line-height:1.4; white-space:nowrap; }
+.studio-shell.has-creation-view .journey-short { display:inline; }
+.studio-shell.has-creation-view .journey-long { display:none; }
+.studio-shell.has-creation-view .journey-label small { display:none; }
+.studio-shell.has-creation-view .journey-progress button .journey-label { text-decoration:none; }
+.studio-shell.has-creation-view .journey-progress li:not(:last-child)::after { top:50%; left:calc(100% - 4px); right:-4px; height:2px; background:var(--color-line); }
+.studio-shell.has-creation-view .journey-progress li[data-state="complete"]::after { background:var(--color-brand); }
+.studio-shell .photo-output-format { margin:18px 0 0; padding:0; border:0; min-width:0; }
+.studio-shell .photo-output-format legend { margin-bottom:8px; padding:0; color:var(--color-ink); font-size:18px; font-weight:700; }
+.studio-shell .photo-output-format legend > span { margin-left:8px; color:var(--color-muted); font-size:16px; font-weight:400; }
+.studio-shell .photo-output-options { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:4px; width:100%; padding:4px; border:1px solid var(--color-line); border-radius:var(--radius-control); background:var(--color-brand-soft); }
+.studio-shell .photo-output-options label { position:relative; min-width:0; }
+.studio-shell .photo-output-options input { position:absolute; width:1px; height:1px; min-height:0; margin:0; overflow:hidden; clip-path:inset(50%); }
+.studio-shell .photo-output-options label > span { display:flex; align-items:center; justify-content:center; min-height:52px; padding:8px; border-radius:calc(var(--radius-control) - 4px); color:var(--color-ink); font-size:18px; font-weight:700; line-height:1.4; }
+.studio-shell .photo-output-options input:checked + span { background:var(--color-brand); color:var(--color-surface); }
+.studio-shell .photo-output-options input:focus-visible + span { outline:3px solid var(--color-focus); outline-offset:-3px; }
+.studio-shell .photo-output-options input:disabled + span { opacity:.6; }
+
+/* Guide -> photo -> output choice -> next fits a typical portrait phone. */
+.prototype-app.studio-shell .studio-main:has(.photo-step.is-ready) { padding-bottom:calc(88px + env(safe-area-inset-bottom)); }
+.studio-shell .creation-header:has(+ .photo-step.is-ready) { margin-bottom:0; }
+.studio-shell .photo-step.is-ready .photo-upload { margin-top:0; margin-bottom:0; }
+.studio-shell .photo-step.is-ready .selected-photo { height:clamp(80px,calc(100dvh - var(--studio-reading-height,57px) - 423px - env(safe-area-inset-bottom)),360px); }
+.studio-shell .photo-step.is-ready .photo-confirmation { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:8px 12px; }
+.studio-shell .photo-step.is-ready .photo-check { gap:6px; font-size:16px; white-space:nowrap; }
+.studio-shell .photo-step.is-ready .photo-check svg { width:20px; height:20px; }
+.studio-shell .photo-step.is-ready .photo-output-format { margin-top:8px; }
+.studio-shell .photo-step.is-ready .photo-next-action { margin-top:12px; }

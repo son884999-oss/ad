@@ -12,6 +12,7 @@
     "verify:usability": "node scripts/verify-integrated-usability.mjs",
     "verify:cycles": "node scripts/verify-usability-cycles.mjs",
     "verify:experts": "node scripts/verify-expert-review.mjs",
+    "verify:submission": "node scripts/verify-submission-ui.mjs",
     "verify:readability": "node scripts/verify-readability.mjs",
     "verify:studio": "node scripts/verify-studio.mjs",
     "verify:zoom": "node scripts/verify-native-zoom.mjs",

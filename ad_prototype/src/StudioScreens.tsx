@@ -440,7 +440,7 @@ export function StudioShell({
               <BrandLogo />
               <button
                 onClick={() => setMobileOpen(false)}
-                className="studio-tool"
+                className="studio-secondary"
                 aria-label="메뉴 닫기"
               >
                 닫기 ×

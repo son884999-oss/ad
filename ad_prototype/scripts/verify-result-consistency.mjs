@@ -75,7 +75,9 @@ try{
    if(kind!=='copy'){
     const control=panel.locator('.result-preview-action')
     const bounds=await control.boundingBox()
-    assert.ok(bounds.width>=100&&bounds.height>=100,'Preview controls must remain prominent')
+    assert.ok(bounds.width>=120&&bounds.height>=48,'Preview controls must remain prominent')
+    const frame=await panel.locator('.result-preview').boundingBox()
+    assert.ok(bounds.y+bounds.height<=frame.y+1,'Media control must not cover result content')
     assert.equal(await control.locator('svg').count(),1)
     const colors=await control.evaluate(el=>{const s=getComputedStyle(el);return {background:s.backgroundColor,text:s.color}})
     const luminance=color=>color.match(/[\d.]+/g).slice(0,3).map(Number).map(v=>{v/=255;return v<=.04045?v/12.92:((v+.055)/1.055)**2.4}).reduce((sum,v,i)=>sum+v*[.2126,.7152,.0722][i],0)

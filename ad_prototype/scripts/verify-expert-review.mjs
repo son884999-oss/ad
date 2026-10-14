@@ -83,7 +83,7 @@ async function completeControl(page, control) {
     const label = el.querySelector('span').getBoundingClientRect()
     return { top: b.top, bottom: b.bottom, labelTop: label.top, labelBottom: label.bottom, safeTop: tabs.bottom, safeBottom: nav.top, hits: points.map(([x, y]) => el.contains(document.elementFromPoint(x, y))) }
   })
-  assert.ok(r.hits.every(Boolean), 'Media circle is obscured: ' + JSON.stringify(r))
+  assert.ok(r.hits.every(Boolean), 'Media control is obscured: ' + JSON.stringify(r))
   assert.ok(r.top >= r.safeTop - 1 && r.bottom <= r.safeBottom + 1, 'Media control/label not fully visible: ' + JSON.stringify(r))
   return r
 }
@@ -166,8 +166,8 @@ try {
       await page.getByRole('tab', { name: label, exact: true }).click()
       const control = page.locator('#result-' + kind + ' .result-preview-action')
       media[kind] = { ...await control.evaluate(metrics), visibility: await completeControl(page, control) }
-      assert.equal(media[kind].width, 104)
-      assert.equal(media[kind].height, 104)
+      assert.ok(media[kind].width >= 120)
+      assert.ok(media[kind].height >= 48)
       if (layout.height < 600 && mode === 'easy') await capture(page, `expert-${kind}-${layout.width}x${layout.height}.png`)
     }
     await page.getByRole('tab', { name: '이미지', exact: true }).click()
@@ -176,10 +176,10 @@ try {
     await page.getByRole('button', { name: '크게 보기', exact: true }).click(); await settle(page)
     await page.locator('#result-poster-preview').evaluate(el => { el.scrollLeft = el.scrollWidth; el.scrollTop = el.scrollHeight })
     const corner = await page.locator('#result-poster-preview').evaluate(el => {
-      const img = el.querySelector('img').getBoundingClientRect(), control = el.parentElement.querySelector('.result-preview-action').getBoundingClientRect()
-      return { imageRight: img.right, imageBottom: img.bottom, controlLeft: control.left, controlTop: control.top }
+      const img = el.querySelector('img').getBoundingClientRect(), frame = el.getBoundingClientRect(), control = el.closest('.result-card').querySelector('.result-preview-action').getBoundingClientRect()
+      return { imageRight: img.right, imageBottom: img.bottom, frameRight: frame.right, frameBottom: frame.bottom, frameTop: frame.top, controlBottom: control.bottom }
     })
-    assert.ok(corner.imageRight < corner.controlLeft - 8 && corner.imageBottom < corner.controlTop - 8, 'Expanded image corner is behind the control: ' + JSON.stringify(corner))
+    assert.ok(corner.imageRight <= corner.frameRight + 1 && corner.imageBottom <= corner.frameBottom + 1 && corner.controlBottom <= corner.frameTop + 1, 'Expanded image corner is obscured: ' + JSON.stringify(corner))
     await page.getByRole('button', { name: '작게 보기', exact: true }).click()
     await page.getByRole('tab', { name: '문구', exact: true }).click()
     const utterance = await speak(page)
@@ -222,5 +222,5 @@ try {
     await page.close()
   }
   await writeFile(join(output, 'expert-verification.json'), JSON.stringify(reports, null, 2))
-  console.log(`PASS: ${reports.length} layouts, full-circle visibility, typography, expanded corners, speech context and export lifecycle.`)
+  console.log(`PASS: ${reports.length} layouts, control visibility and content separation, typography, expanded corners, speech context and export lifecycle.`)
 } finally { await browser.close() }

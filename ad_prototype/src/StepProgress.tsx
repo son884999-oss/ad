@@ -28,8 +28,6 @@ export default function StepProgress({
               <span className="journey-node">
                 {state === "complete" ? (
                   <Icon name="check" size={20} />
-                ) : number === 3 ? (
-                  <Icon name="window" size={22} />
                 ) : (
                   number
                 )}
