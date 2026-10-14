@@ -498,8 +498,12 @@ export function StudioShell({
                   </button>
                 ))}
                 </div>
-                <div className="studio-menu-footer">
-                  <button onClick={() => navigate("records")}>내 홍보물 보기</button>
+                <div className="studio-menu-footer menu-saved-entry">
+                  <button className="studio-secondary menu-saved-link" onClick={() => navigate("records")}>
+                    <StudioIcon name="folder" size={22} />
+                    <span>내 홍보물 보기</span>
+                    <StudioIcon name="arrow" size={20} />
+                  </button>
                 </div>
                 <details className="service-menu-section">
                   <summary>글씨 크기·간편모드</summary>
