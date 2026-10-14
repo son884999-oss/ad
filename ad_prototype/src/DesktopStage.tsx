@@ -1,13 +1,15 @@
-import { useEffect, useState } from "react"
+import { useSyncExternalStore } from "react"
 
 type View = "auto" | "mobile" | "pc"
+type DevState = { view: View; width: number; desktopViewport: boolean }
 const VIEW_KEY = "hongboitda-dev-view"
 const WIDTH_KEY = "hongboitda-dev-width"
 const previewWidths = [360, 375, 390, 430] as const
+const DESKTOP_VIEWPORT = "width=1280"
 
-function readStored<T extends string>(key: string, fallback: T): T {
+function readStored(key: string, fallback: string) {
   try {
-    return (localStorage.getItem(key) as T | null) ?? fallback
+    return localStorage.getItem(key) ?? fallback
   } catch {
     return fallback
   }
@@ -17,8 +19,54 @@ function store(key: string, value: string) {
   try {
     localStorage.setItem(key, value)
   } catch {
-    // Storage can be unavailable (private mode); the toolbar still works for this visit.
+    // Storage can be unavailable (private mode); the setting still works for this visit.
   }
+}
+
+const viewportMeta = document.querySelector<HTMLMetaElement>('meta[name="viewport"]')
+const defaultViewport = viewportMeta?.content ?? "width=device-width, initial-scale=1.0"
+const listeners = new Set<() => void>()
+let state: DevState = {
+  view: readStored(VIEW_KEY, "auto") as View,
+  width: Number(readStored(WIDTH_KEY, "390")) || 390,
+  desktopViewport: false,
+}
+
+function apply() {
+  const root = document.documentElement
+  root.dataset.view = state.view
+  root.style.setProperty("--preview-w", `${state.width}px`)
+  if (viewportMeta) viewportMeta.content = state.desktopViewport ? DESKTOP_VIEWPORT : defaultViewport
+  store(VIEW_KEY, state.view)
+  store(WIDTH_KEY, String(state.width))
+  window.dispatchEvent(new Event("resize"))
+}
+apply()
+
+function setDevState(patch: Partial<DevState>) {
+  state = { ...state, ...patch }
+  apply()
+  listeners.forEach((listener) => listener())
+}
+
+export function useDevState() {
+  return useSyncExternalStore(
+    (listener) => {
+      listeners.add(listener)
+      return () => listeners.delete(listener)
+    },
+    () => state,
+  )
+}
+
+// Phones and small tablets report a short physical screen even when the page is laid out at desktop width.
+export const isMobileDevice = () => Math.min(window.screen.width, window.screen.height) < 768
+
+// Developer option in the menu: show the opposite layout (phone → PC page, PC → phone frame).
+export const oppositeViewOn = (devState: DevState) => devState.desktopViewport || devState.view === "mobile"
+export function setOppositeView(on: boolean) {
+  if (isMobileDevice()) setDevState({ desktopViewport: on, view: "auto" })
+  else setDevState({ desktopViewport: false, view: on ? "mobile" : "auto" })
 }
 
 // Brand panel beside the phone frame on wide desktop screens (hidden on mobile and in PC view).
@@ -49,47 +97,28 @@ export function DesktopAside() {
 // Developer-only viewport switcher. Shown in dev builds or with ?dev in the URL.
 export function DevToolbar() {
   const enabled = import.meta.env.DEV || new URLSearchParams(window.location.search).has("dev")
-  const [view, setView] = useState<View>(() => readStored<View>(VIEW_KEY, "auto"))
-  const [width, setWidth] = useState(() => Number(readStored(WIDTH_KEY, "390")) || 390)
-  const [open, setOpen] = useState(true)
-
-  useEffect(() => {
-    if (!enabled) return
-    const root = document.documentElement
-    root.dataset.view = view
-    root.style.setProperty("--preview-w", `${width}px`)
-    store(VIEW_KEY, view)
-    store(WIDTH_KEY, String(width))
-    window.dispatchEvent(new Event("resize"))
-  }, [enabled, view, width])
-
+  const devState = useDevState()
   if (!enabled) return null
   const options: [View, string][] = [["auto", "자동"], ["mobile", "모바일"], ["pc", "PC 전체"]]
   return (
-    <div className={`dev-toolbar${open ? "" : " is-collapsed"}`} role="toolbar" aria-label="개발자 모드 화면 전환">
-      <button type="button" className="dev-toolbar-title" aria-expanded={open} onClick={() => setOpen(!open)}>
-        개발자 모드
-      </button>
-      {open && (
-        <>
-          {options.map(([value, label]) => (
-            <button key={value} type="button" aria-pressed={view === value} onClick={() => setView(value)}>
-              {label}
-            </button>
-          ))}
-          {view === "mobile" && (
-            <label className="dev-toolbar-width">
-              <span className="sr-only">미리보기 너비</span>
-              <select value={width} onChange={(event) => setWidth(Number(event.target.value))}>
-                {previewWidths.map((value) => (
-                  <option key={value} value={value}>
-                    {value}px
-                  </option>
-                ))}
-              </select>
-            </label>
-          )}
-        </>
+    <div className="dev-toolbar" role="toolbar" aria-label="개발자 모드 화면 전환">
+      <span className="dev-toolbar-title">개발자 모드</span>
+      {options.map(([value, label]) => (
+        <button key={value} type="button" aria-pressed={devState.view === value} onClick={() => setDevState({ view: value })}>
+          {label}
+        </button>
+      ))}
+      {devState.view === "mobile" && (
+        <label className="dev-toolbar-width">
+          <span className="sr-only">미리보기 너비</span>
+          <select value={devState.width} onChange={(event) => setDevState({ width: Number(event.target.value) })}>
+            {previewWidths.map((value) => (
+              <option key={value} value={value}>
+                {value}px
+              </option>
+            ))}
+          </select>
+        </label>
       )}
     </div>
   )

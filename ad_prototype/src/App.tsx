@@ -11,6 +11,7 @@ import {
 } from "react"
 import { wrapCanvasText } from "./canvasText"
 import PhotoStep from "./PhotoStep"
+import GenerationProgress from "./GenerationProgress"
 import StepProgress from "./StepProgress"
 import Icon from "./Icon"
 import { useFeedback } from "./FeedbackProvider"
@@ -70,9 +71,9 @@ const creationNames: Record<CreationType, string> = {
 
   poster: "이미지 만들기",
 
-  video: "영상 만들기",
+  video: "동영상 만들기",
 
-  copy: "문구 만들기",
+  copy: "홍보 글 만들기",
 }
 
 // Restore the result help menus by enabling this flag.
@@ -675,7 +676,7 @@ function StepHeader({
     },
 
     2: {
-      title: "상품 이름을 적어 주세요",
+      title: "가게와 제품을 알려 주세요",
 
       description: "제품의 특징을 적어 주세요.",
     },
@@ -748,6 +749,7 @@ function CreateFlow({
   onStartNew,
   onResultTabChange,
   initialResultTab,
+  onGeneratingChange,
 }: {
   type: CreationType
 
@@ -789,6 +791,7 @@ function CreateFlow({
   onStartNew: () => void
   onResultTabChange: () => void
   initialResultTab: "poster" | "video" | "copy"
+  onGeneratingChange?: (generating: boolean) => void
 }) {
   const { notify } = useFeedback()
   const [playing, setPlaying] = useState(false)
@@ -799,6 +802,14 @@ function CreateFlow({
 
   const [posterStatus, setPosterStatus] = useState<FileStatus>("idle")
   const [posterPreviewStatus, setPosterPreviewStatus] = useState<FileStatus>("idle")
+  const [generating, setGenerating] = useState(false)
+  useEffect(() => {
+    if (step !== 3) setGenerating(false)
+  }, [step])
+  useEffect(() => {
+    onGeneratingChange?.(generating)
+    return () => onGeneratingChange?.(false)
+  }, [generating, onGeneratingChange])
   const [posterRetry, setPosterRetry] = useState(0)
   const [posterPreviewUrl, setPosterPreviewUrl] = useState("")
   const [posterVisibleText, setPosterVisibleText] = useState("")
@@ -1014,7 +1025,7 @@ function CreateFlow({
   const resultTabs = [
     { id: "poster" as const, label: "이미지", available: showPoster },
     { id: "video" as const, label: "영상", available: showVideo },
-    { id: "copy" as const, label: "문구", available: showCopy },
+    { id: "copy" as const, label: "홍보 글", available: showCopy },
   ].filter((tab) => tab.available)
   const activeResultTab = resultTabs.some((tab) => tab.id === selectedResultTab)
     ? selectedResultTab
@@ -1507,7 +1518,26 @@ function CreateFlow({
         step === 3 ? "results-flow" : "max-w-[920px]"
       }`}
     >
-      {step === 3 ? (
+      {step === 3 && generating ? (
+        <GenerationProgress
+          kind={type}
+          imageUrl={imageUrl}
+          title={details.shopName?.trim() || details.name?.trim() || details.description.trim() || "우리 가게"}
+          ready={!showPoster || posterPreviewStatus !== "preparing"}
+          onCancel={() => {
+            setGenerating(false)
+            setStep(2)
+          }}
+          onDone={() => {
+            setGenerating(false)
+            onResultCreated()
+            if (!showPoster) notify("result")
+            window.requestAnimationFrame(() =>
+              document.querySelector<HTMLElement>(".result-screen-heading [data-screen-heading]")?.focus({ preventScroll: true }),
+            )
+          }}
+        />
+      ) : step === 3 ? (
         <div className="result-screen-heading">
           <div className="sr-only">
             <h2 data-screen-heading tabIndex={-1}>
@@ -1587,13 +1617,13 @@ function CreateFlow({
             <p className="sr-only">
               {uiText("결과 형식", easyMode)}:{" "}
               {type === "copy"
-                ? "문구"
+                ? "홍보 글"
                 : uiText(creationNames[type], easyMode)}
             </p>
           )}
           <div className="details-fields mt-7 space-y-5">
             <label className="block text-[18px] font-bold">
-              가게 이름
+              가게 이름 <span className="field-tag">선택</span>
               <input
                 aria-label="가게 이름"
                 aria-required="false"
@@ -1605,7 +1635,7 @@ function CreateFlow({
               />
             </label>
             <label className="block text-[18px] font-bold">
-              어떤 제품인가요?
+              어떤 제품인가요? <span className="field-tag is-required">필수</span>
               <input
                 aria-label="제품 설명"
                 aria-required="true"
@@ -1622,7 +1652,7 @@ function CreateFlow({
               </span>
             </label>
             <label className="block text-[18px] font-bold">
-              어떤 점을 알려주고 싶나요?
+              어떤 점을 알려주고 싶나요? <span className="field-tag">선택</span>
               <AutoSizeTextarea
                 aria-label="알리고 싶은 점"
                 aria-required="false"
@@ -1799,19 +1829,17 @@ function CreateFlow({
                 disabled={missingFields.length > 0 || uploadPending}
                 onClick={() => {
                   setSelectedResultTab(resultTabs[0].id)
-                  onResultCreated()
-                  if (!showPoster) notify("result")
-
+                  setGenerating(true)
                   setStep(3)
                 }}
               >
-                홍보물 만들기 <Icon name="arrow" />
+                {{ all: "홍보물 만들기", poster: "이미지 만들기", video: "영상 만들기", copy: "홍보 글 만들기" }[type]} <Icon name="arrow" />
               </PrimaryButton>
             </div>
           </div>
         </div>
       )}
-      {step === 3 && (
+      {step === 3 && !generating && (
         <div className={`results-step step-panel${resultTabs.length === 1 ? " is-single" : ""}`}>
           <div className="result-tabs-bar">
             <div
@@ -1926,7 +1954,7 @@ function CreateFlow({
                 {posterVisibleText && <p id="poster-visible-text" className="sr-only">그림에 표시된 문구: {posterVisibleText}</p>}
                 <ResultActionBar
                   label={posterStatus === "preparing" ? "다운로드 준비" : "다운로드"}
-                  accessibleLabel="이미지 저장하기"
+                  accessibleLabel="이미지 다운로드"
                   icon="download"
                   onClick={() => createPosterFile(true)}
                   onShare={() => shareResult("poster")}
@@ -1997,7 +2025,7 @@ function CreateFlow({
                 </ResultPreview>
                 <ResultActionBar
                   label={videoStatus === "preparing" ? "준비 취소" : "다운로드"}
-                  accessibleLabel={videoStatus === "preparing" ? "영상 준비 취소" : "영상 저장하기"}
+                  accessibleLabel={videoStatus === "preparing" ? "영상 준비 취소" : "영상 다운로드"}
                   icon={videoStatus === "preparing" ? null : "download"}
                   onClick={() => videoStatus === "preparing"
                     ? cancelVideoPreparation()
@@ -2026,7 +2054,7 @@ function CreateFlow({
                 tabIndex={0}
                 className="result-card result-copy"
               >
-                <ResultCardHeading icon="copy" title="홍보 문구" />
+                <ResultCardHeading icon="copy" title="홍보 글" />
                 <ResultPreview text>
                   <div className="result-main-preview result-text-preview">
                     <div
@@ -2042,7 +2070,7 @@ function CreateFlow({
                 </ResultPreview>
                 <ResultActionBar
                   label="복사하기"
-                  accessibleLabel="문구 전체 복사하기"
+                  accessibleLabel="홍보 글 복사하기"
                   icon="copy"
                   onClick={copyFinalText}
                   onShare={() => shareResult("copy")}
@@ -2099,7 +2127,7 @@ function Records({
   const visible = entries.filter(
     (entry) => filter === "all" || entry.kind === filter,
   )
-  const labels = { all: "전체", poster: "이미지", video: "영상", copy: "문구" }
+  const labels = { all: "전체", poster: "이미지", video: "영상", copy: "홍보 글" }
   return (
     <section className="records-screen">
       <h2 data-screen-heading tabIndex={-1}>
@@ -2263,7 +2291,8 @@ export default function App() {
 
   const [records, setRecords] = useState<GeneratedRecord[]>([])
 
-  const [easyMode, setEasyModeState] = useState(true)
+  const [easyMode, setEasyModeState] = useState(false)
+  const [generatingView, setGeneratingView] = useState(false)
   const [editedHashtags, setEditedHashtags] =
     useState<Record<Channel, boolean>>(() => mapChannels(() => false))
 
@@ -2393,7 +2422,7 @@ export default function App() {
     }
 
     if (page === "home") {
-      return "첫 화면입니다. 홍보물 만들기를 누르면 만들 종류를 고를 수 있어요. 사진을 넣고 제품 설명을 적으면 이미지, 영상, 문구를 확인할 수 있어요. 결과를 다운로드하거나 복사하고 공유할 수 있어요. 가입 없이 체험할 수 있어요."
+      return "첫 화면입니다. 홍보물 만들기 버튼을 누르면 바로 사진을 올릴 수 있어요. 사진을 올리고 어떤 제품인지 적으면 포스터, 짧은 영상, 홍보 글을 만들어 드려요. 회원가입 없이 바로 시작할 수 있어요."
     }
 
     if (page === "records") {
@@ -2409,12 +2438,12 @@ export default function App() {
     if (step === 1) {
       const format =
         creationType === "all"
-          ? [allOutputFormat !== "video" && "이미지", allOutputFormat !== "poster" && "영상", "문구"].filter(Boolean).join(", ")
-          : creationType === "poster" ? "이미지" : creationType === "video" ? "영상" : "문구"
+          ? [allOutputFormat !== "video" && "이미지", allOutputFormat !== "poster" && "영상", "홍보 글"].filter(Boolean).join(", ")
+          : creationType === "poster" ? "이미지" : creationType === "video" ? "영상" : "홍보 글"
 
       return `${speakUi(creationNames[creationType])} 1단계, 사진 올리기입니다. 만들 결과는 ${format}입니다. ${
         imageUrl
-          ? "사진이 준비됐어요. 사진 바꾸기로 다시 고르거나 다음으로 버튼을 누르세요."
+          ? "사진이 준비됐어요. 사진 변경 버튼으로 다시 고르거나 다음으로 버튼을 누르세요."
           : "카메라 버튼이나 사진 선택하기 버튼으로 사진 한 장을 선택해 주세요."
       }`
     }
@@ -2428,11 +2457,15 @@ export default function App() {
         "제품 설명과 알리고 싶은 점은 " +
         ([details.description, details.features].filter(Boolean).join(". ") || "비워 두었어요") +
         ". " +
-        "사진 바꾸기 버튼으로 사진을 바꿀 수 있어요. 내용을 확인한 뒤 홍보물 만들기 버튼을 누르세요."
+        "사진 변경 버튼으로 사진을 바꿀 수 있어요. 다 적었으면 " + { all: "홍보물 만들기", poster: "이미지 만들기", video: "영상 만들기", copy: "홍보 글 만들기" }[creationType] + " 버튼을 누르세요."
       )
     }
 
-    return `결과 보기 화면입니다. ${details.shopName?.trim() || details.name?.trim() || details.description.trim()}. 파일은 저장하기, 문구는 복사하기로 가져오세요. 홈으로 버튼으로 첫 화면에 돌아갈 수 있어요.`
+    if (generatingView) {
+      return "만드는 중입니다. 잠시만 기다려 주세요. 다 만들어지면 결과 화면으로 넘어가요. 멈추려면 취소 버튼을 누르세요."
+    }
+
+    return `결과 보기 화면입니다. ${details.shopName?.trim() || details.name?.trim() || details.description.trim()}. 이미지와 영상은 다운로드 버튼으로 저장하고, 홍보 글은 복사하기 버튼으로 가져가세요. 공유하기 버튼으로 바로 보낼 수도 있어요. 홈으로 버튼을 누르면 첫 화면으로 돌아가요.`
   })()
 
   const stopSpeech = () => {
@@ -2531,8 +2564,8 @@ export default function App() {
       ? "준비 취소 버튼으로 영상 파일 준비를 취소할 수 있어요."
       : "다운로드 버튼으로 파일을 가져오거나 공유하기 버튼을 누르세요."}${videoState ? " " + videoState : ""}`
     const utterance = new SpeechSynthesisUtterance(
-      visibleCopy ? "홍보 문구 결과입니다. " + visibleCopy
-        : visiblePoster ? "이미지 결과입니다. " + visiblePoster
+      visibleCopy ? "홍보 글 결과입니다. " + visibleCopy + " 복사하기 버튼으로 글을 가져가거나 공유하기 버튼을 누르세요."
+        : visiblePoster ? "이미지 결과입니다. " + visiblePoster + " 다운로드 버튼으로 저장하거나 공유하기 버튼을 누르세요."
           : visibleVideo ? videoSpeech
             : speechText,
     )
@@ -2758,6 +2791,7 @@ export default function App() {
       mobileOpen={mobileOpen}
       setMobileOpen={setMobileOpen}
       resultView={page === "create" && step === 3}
+      generating={page === "create" && step === 3 && generatingView}
       creationView={page === "create"}
       navigate={navigate}
       onBack={() => page === "create" && step > 1 ? setStep((step - 1) as Step) : navigate("home")}
@@ -2823,6 +2857,7 @@ export default function App() {
           onDashboard={() => navigate("home")}
           onStartNew={startNew}
           onResultTabChange={stopSpeech}
+          onGeneratingChange={setGeneratingView}
         />
       )}
       {page === "records" && (
