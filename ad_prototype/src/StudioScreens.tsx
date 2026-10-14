@@ -76,22 +76,17 @@ function ReadButton({
   onSpeak,
   compact = false,
 }: Pick<Speech, "speaking" | "speechPreparing" | "onSpeak"> & { compact?: boolean }) {
+  const label = speechPreparing ? "읽기 준비 취소" : speaking ? "읽기 멈추기" : compact ? "읽어주기" : "화면 읽어주기"
   return (
     <button
       type="button"
       className="studio-tool studio-read-button"
       onClick={onSpeak}
       aria-pressed={speaking || speechPreparing}
-      aria-label={speechPreparing ? "읽기 준비 취소" : speaking ? "읽어주기 멈추기" : "화면 읽어주기"}
+      aria-label={label}
     >
       <StudioIcon name="sound" size={28} />
-      <span>
-        {speechPreparing
-          ? compact ? "준비 취소" : "읽기 준비 취소"
-          : speaking
-            ? compact ? "읽기 멈춤" : "읽어주기 멈추기"
-            : compact ? "읽어주기" : "화면 읽어주기"}
-      </span>
+      <span>{label}</span>
     </button>
   )
 }
@@ -597,7 +592,7 @@ export function StudioHome({
             <button className="studio-primary" onClick={onChooseCreation}>
               {hasDraft ? "홍보물 이어 만들기" : "홍보물 만들기"} <StudioIcon name="arrow" />
             </button>
-            <p>가입 없이 시작할 수 있어요.</p>
+            <p>가입 없이 체험할 수 있어요.</p>
           </div>
           <figure className="home-sample-art">
             <ServiceArt name="service-hero" alt="사진에서 이미지·영상·문구로 이어지는 체험 예시" priority />

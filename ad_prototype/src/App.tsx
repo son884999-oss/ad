@@ -683,6 +683,7 @@ function CreateFlow({
   onDashboard,
 
   onStartNew,
+  onResultTabChange,
   initialResultTab,
 }: {
   type: CreationType
@@ -738,6 +739,7 @@ function CreateFlow({
   onDashboard: () => void
 
   onStartNew: () => void
+  onResultTabChange: () => void
   initialResultTab: "poster" | "video" | "copy"
 }) {
   const { notify } = useFeedback()
@@ -749,6 +751,7 @@ function CreateFlow({
 
   const [posterStatus, setPosterStatus] = useState<FileStatus>("idle")
   const [posterPreviewUrl, setPosterPreviewUrl] = useState("")
+  const [posterVisibleText, setPosterVisibleText] = useState("")
   const [posterExpanded, setPosterExpanded] = useState(false)
   const posterPreviewRef = useRef<HTMLDivElement>(null)
   const posterPreviewFileRef = useRef<File | null>(null)
@@ -780,8 +783,11 @@ function CreateFlow({
   const videoFrameRef = useRef<number | null>(null)
 
   const videoCancelledRef = useRef(false)
+  const videoTaskRef = useRef<Promise<File | null> | null>(null)
+  const videoContextRef = useRef(0)
 
   useEffect(() => {
+    videoContextRef.current += 1
     setPlaying(false)
     setPosterExpanded(false)
 
@@ -793,18 +799,23 @@ function CreateFlow({
 
     setCopyMessage("")
 
-    videoCancelledRef.current = true
-
-    if (videoFrameRef.current !== null) {
-      window.cancelAnimationFrame(videoFrameRef.current)
-
-      videoFrameRef.current = null
+    const stopPreparation = () => {
+      videoCancelledRef.current = true
+      if (videoFrameRef.current !== null) {
+        window.cancelAnimationFrame(videoFrameRef.current)
+        videoFrameRef.current = null
+      }
+      if (videoRecorderRef.current?.state === "recording") {
+        videoRecorderRef.current.stop()
+      }
     }
-
-    if (videoRecorderRef.current?.state === "recording") {
-      videoRecorderRef.current.stop()
+    stopPreparation()
+    return () => {
+      videoContextRef.current += 1
+      stopPreparation()
     }
   }, [
+    step,
     type,
 
     outputFormat,
@@ -812,6 +823,8 @@ function CreateFlow({
     channel,
 
     imageUrl,
+
+    details.name,
 
     details.description,
 
@@ -948,6 +961,7 @@ function CreateFlow({
     ? selectedResultTab
     : resultTabs[0].id
   const selectResultTab = (id: "poster" | "video" | "copy", focus = false) => {
+    if (id !== activeResultTab) onResultTabChange()
     setSelectedResultTab(id)
     if (id !== "video") setPlaying(false)
     if (focus)
@@ -1115,12 +1129,21 @@ function CreateFlow({
     let previewUrl = ""
     posterPreviewFileRef.current = null
     setPosterPreviewUrl("")
+    setPosterVisibleText("")
     // The preview and download use the same Canvas renderer and copy.
     void createPosterFile(false).then((file) => {
       if (cancelled || !file) return
       posterPreviewFileRef.current = file
       previewUrl = URL.createObjectURL(file)
       setPosterPreviewUrl(previewUrl)
+      const context = document.createElement("canvas").getContext("2d")
+      if (context) {
+        context.font = '700 72px "Noto Sans KR", sans-serif'
+        const title = wrapCanvasText(context, details.name?.trim() || details.features, 928, 3).join(" ")
+        context.font = '500 48px "Noto Sans KR", sans-serif'
+        const copy = wrapCanvasText(context, mediaText, 928, 3).join(" ")
+        setPosterVisibleText([title, copy].filter(Boolean).join(". "))
+      }
     })
     return () => {
       cancelled = true
@@ -1369,6 +1392,36 @@ function CreateFlow({
       return null
     }
   }
+
+  // Cancelled work settles before another preparation can reuse its recorder refs.
+  const prepareVideoDownload = async () => {
+    const context = videoContextRef.current
+    const previous = videoTaskRef.current
+    if (previous) {
+      if (!videoCancelledRef.current) return previous
+      await previous
+      if (context !== videoContextRef.current) return null
+    }
+    if (context !== videoContextRef.current || step !== 3) return null
+    if (videoTaskRef.current && !videoCancelledRef.current) return videoTaskRef.current
+    const task = createVideoFile(true)
+    videoTaskRef.current = task
+    try {
+      return await task
+    } finally {
+      if (videoTaskRef.current === task) videoTaskRef.current = null
+    }
+  }
+
+  const pendingFiles = (showPoster && posterStatus !== "ready") || (showVideo && videoStatus !== "ready")
+  const pendingCopy = showCopy && (!copyMessage || copyMessage.includes("못했어요"))
+  const retentionNotice = pendingFiles && pendingCopy
+    ? "새로고침하거나 창을 닫기 전에 필요한 이미지·영상은 저장하고 문구는 복사해 주세요."
+    : pendingFiles
+      ? "새로고침하거나 창을 닫기 전에 필요한 파일을 저장해 주세요."
+      : pendingCopy
+        ? "새로고침하거나 창을 닫기 전에 필요한 문구를 복사해 주세요."
+        : ""
 
   return (
     <section
@@ -1790,7 +1843,9 @@ function CreateFlow({
                     tabIndex={posterExpanded ? 0 : undefined}
                   >
                     {posterPreviewUrl ? (
-                      <img src={posterPreviewUrl} alt="저장될 포스터 미리보기" />
+                      <div className="poster-image-canvas">
+                        <img src={posterPreviewUrl} alt={`${details.name?.trim() || "제품"} 홍보 이미지`} aria-describedby={posterVisibleText ? "poster-visible-text" : undefined} />
+                      </div>
                     ) : (
                       <p role="status">
                         {posterStatus === "failed"
@@ -1800,6 +1855,7 @@ function CreateFlow({
                     )}
                   </div>
                 </ResultPreview>
+                {posterVisibleText && <p id="poster-visible-text" className="sr-only">그림에 표시된 문구: {posterVisibleText}</p>}
                 <ResultActionBar
                   label={posterStatus === "preparing" ? "저장 준비 중" : "저장하기"}
                   accessibleLabel="이미지 저장하기"
@@ -1814,7 +1870,7 @@ function CreateFlow({
                       : posterStatus === "ready"
                         ? "PNG 저장을 요청했어요. 다운로드 목록을 확인하세요."
                         : posterExpanded
-                          ? "이미지를 두 배로 키웠어요. 안에서 좌우·위아래로 움직여 보세요."
+                          ? "이미지를 크게 키웠어요. 안에서 좌우·위아래로 움직여 보세요."
                           : ""
                   }
                 />
@@ -1874,10 +1930,12 @@ function CreateFlow({
                   icon={videoStatus === "preparing" ? null : "download"}
                   onClick={() => videoStatus === "preparing"
                     ? cancelVideoPreparation()
-                    : createVideoFile(true)}
+                    : prepareVideoDownload()}
                   busy={videoStatus === "preparing"}
                   error={videoStatus === "failed" || videoStatus === "unsupported"}
-                  message={videoMessage || (playing ? "사진 움직임을 미리 보고 있어요." : "")}
+                  message={videoStatus === "preparing"
+                    ? `${videoMessage} 다른 작업으로 이동하면 준비를 취소해요.`
+                    : videoMessage}
                 />
                 {RESULT_SECONDARY_FEATURES_ENABLED && <details className="media-full-copy">
                   <summary>영상 문구 원문 보기</summary>
@@ -1920,7 +1978,7 @@ function CreateFlow({
                   accessibleLabel="문구 전체 복사하기"
                   icon="copy"
                   onClick={copyFinalText}
-                  message={copyMessage}
+                  message={copyMessage && !copyMessage.includes("못했어요") ? "문구를 복사했어요." : copyMessage}
                   error={copyMessage.includes("못했어요")}
                 />
               </article>
@@ -1937,6 +1995,7 @@ function CreateFlow({
           <p id="copy-edit-help" className="result-edit-help">
             고치려면 아래의 ‘내용 다시 수정하기’를 눌러 주세요.
           </p>
+          {retentionNotice && <p className="result-retention-note">{retentionNotice}</p>}
           <div className="result-followup-actions">
             <button className="studio-secondary" onClick={() => setStep(2)}>
               내용 다시 수정하기
@@ -1988,8 +2047,7 @@ function Records({
         내 홍보물
       </h2>
       <p className="records-retention-note">
-        이 창에서 만든 결과예요. 새로고침하거나 창을 닫기 전에 파일을 저장해
-        주세요.
+        이 창에서 만든 결과예요. 새로고침하거나 창을 닫기 전에 이미지·영상은 저장하고 문구는 복사해 주세요.
       </p>
       <div
         className="records-filters"
@@ -2285,11 +2343,11 @@ export default function App() {
     }
 
     if (page === "home") {
-      return "첫 화면입니다. 홍보물 만들기를 누르면 사진 등록으로 이동합니다. 사진을 넣고 설명을 적으면 이미지, 영상, 홍보 문구를 함께 확인할 수 있어요. 결과를 저장하거나 복사하세요. 개별 제작과 사용 안내는 하단 메뉴에서 볼 수 있어요."
+      return `첫 화면입니다. ${userTouched ? "홍보물 이어 만들기를 누르면 현재 작업으로 돌아갑니다." : "홍보물 만들기를 누르면 사진 올리기로 이동합니다."} 가입 없이 체험할 수 있어요. 사진을 넣고 상품명을 적으면 이미지, 영상, 문구를 확인할 수 있어요. 결과를 저장하거나 복사하세요. 개별 제작과 사용 방법은 메뉴에서 볼 수 있어요.`
     }
 
     if (page === "records") {
-      return "최근 생성 기록 화면입니다. 이 앱에서 만든 결과의 종류와 날짜를 확인하고 다시 열 수 있습니다."
+      return "내 홍보물 화면입니다. 이 창에서 만든 결과를 다시 열 수 있어요. 새로고침하거나 창을 닫기 전에 이미지·영상은 저장하고 문구는 복사해 주세요."
     }
 
     if (page === "plan") {
@@ -2301,13 +2359,13 @@ export default function App() {
     if (step === 1) {
       const format =
         creationType === "all"
-          ? `${speakUi(outputFormatNames[allOutputFormat])}와 홍보 문구`
-          : speakUi(creationNames[creationType])
+          ? [allOutputFormat !== "video" && "이미지", allOutputFormat !== "poster" && "영상", "문구"].filter(Boolean).join(", ")
+          : creationType === "poster" ? "이미지" : creationType === "video" ? "영상" : "문구"
 
-      return `${speakUi(creationNames[creationType])} 1단계입니다. ${speakUi("현재 결과 형식")}은 ${format}, ${speakUi("채널")}은 ${speakUi(channelNames[channel])}입니다. ${
+      return `${speakUi(creationNames[creationType])} 1단계, 사진 올리기입니다. 만들 결과는 ${format}입니다. ${
         imageUrl
-          ? "사진이 준비되었습니다. 설명 적기 버튼을 누르세요."
-          : "제품 사진을 올려 주세요."
+          ? "사진이 준비됐어요. 사진 바꾸기로 다시 고르거나 다음 단계 버튼을 누르세요."
+          : "카메라 버튼이나 제품 사진 올리기 버튼으로 사진 한 장을 선택해 주세요."
       }`
     }
 
@@ -2317,20 +2375,25 @@ export default function App() {
         (details.name?.trim()
           ? "상품명은 " + details.name + ". "
           : "") +
-        "제품 설명은 " +
-        details.description +
-        ". 강조할 특징은 " +
-        details.features +
+        "소개는 " +
+        (details.description || "비워 두었어요") +
+        ". 알리고 싶은 점은 " +
+        (details.features || "비워 두었어요") +
         ". " +
-        (details.audience.trim()
-          ? "주요 고객은 " + details.audience + ". "
-          : "주요 고객은 선택 사항입니다. ") +
-        "사진 변경 버튼으로 사진을 바꿀 수 있습니다. 내용을 확인한 뒤 결과 보기 버튼을 누르세요."
+        "사진 바꾸기 버튼으로 사진을 바꿀 수 있어요. 내용을 확인한 뒤 결과 보기 버튼을 누르세요."
       )
     }
 
-    return `3단계 결과 화면입니다. ${speakUi(channelNames[channel])}용 ${speakUi(creationNames[creationType])} 결과입니다. 가게 또는 제품 이름은 ${details.name?.trim() || "입력하지 않았어요"}. 제품 설명은 ${details.description}. 강조 특징은 ${details.features}. ${speakUi("확정 해시태그")}는 ${parseHashtags(safeUserHashtags[channel]).join(", ")}입니다.`
+    return `결과 보기 화면입니다. 상품명은 ${details.name?.trim() || "입력하지 않았어요"}. 파일은 저장하기, 문구는 복사하기로 가져오세요. 내용을 고치려면 내용 다시 수정하기를 누르세요.`
   })()
+
+  const stopSpeech = () => {
+    speechRequestRef.current += 1
+    if ("speechSynthesis" in window) window.speechSynthesis.cancel()
+    setSpeaking(false)
+    setSpeechPreparing(false)
+    setSpeechMessage("")
+  }
 
   const toggleSpeech = async () => {
     if (
@@ -2407,8 +2470,23 @@ export default function App() {
     const visibleCopy = document.querySelector<HTMLElement>(
       "#result-copy:not([hidden]) .copy-result-text",
     )?.textContent
+    const visiblePoster = document.querySelector<HTMLElement>(
+      "#result-poster:not([hidden]) #poster-visible-text",
+    )?.textContent
+    const visibleVideo = document.querySelector("#result-video:not([hidden])")
+    const videoControl = visibleVideo?.querySelector(".result-preview-action")?.textContent?.trim()
+    const videoAction = visibleVideo?.querySelector(".result-primary-action")?.textContent?.trim()
+    const videoState = visibleVideo?.querySelector(".result-inline-status")?.textContent?.trim()
+    const videoSpeech = `영상 결과입니다. 상품명은 ${details.name?.trim()}. ${videoControl === "일시 정지"
+      ? "일시 정지 버튼으로 사진 움직임을 멈출 수 있어요."
+      : "재생하기 버튼으로 사진 움직임을 확인하세요."} ${videoAction === "준비 취소"
+      ? "준비 취소 버튼으로 영상 파일 준비를 취소할 수 있어요."
+      : "저장하기 버튼으로 파일을 가져오세요."}${videoState ? " " + videoState : ""}`
     const utterance = new SpeechSynthesisUtterance(
-      visibleCopy ? "홍보 문구 결과입니다. " + visibleCopy : speechText,
+      visibleCopy ? "홍보 문구 결과입니다. " + visibleCopy
+        : visiblePoster ? "이미지 결과입니다. " + visiblePoster
+          : visibleVideo ? videoSpeech
+            : speechText,
     )
 
     utterance.lang = "ko-KR"
@@ -2617,7 +2695,7 @@ export default function App() {
 
     create: creationNames[creationType],
 
-    records: "최근 생성 기록",
+    records: "내 홍보물",
 
     plan: "이용권",
   }
@@ -2689,6 +2767,7 @@ export default function App() {
           onResultCreated={saveCurrentResult}
           onDashboard={() => navigate("home")}
           onStartNew={startNew}
+          onResultTabChange={stopSpeech}
         />
       )}
       {page === "records" && (

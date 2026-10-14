@@ -191,10 +191,10 @@ try {
         await page.waitForFunction(() => document.querySelector('.copy-result-text').scrollTop > 0)
         await page.getByRole('button', { name: '문구 전체 복사하기' }).click()
         assert.equal(await page.evaluate(() => navigator.clipboard.readText()), text)
-        await page.getByRole('button', { name: '화면 읽어주기', exact: true }).click()
+        await page.getByRole('button', { name: '읽어주기', exact: true }).click()
         await page.waitForFunction(() => window.cycleSpeechTexts.length === 1)
         assert.equal(await page.evaluate(() => window.cycleSpeechTexts[0]), '홍보 문구 결과입니다. ' + text)
-        await page.getByRole('button', { name: '읽어주기 멈추기', exact: true }).click()
+        await page.getByRole('button', { name: '읽기 멈추기', exact: true }).click()
         evidence = { keyboardImagePan: true, keyboardTextScroll: true, copyMatchesDisplayedText: true, outputNotInput: true, readAloudTextMatches: true, speechMocked: true }
       }
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false)
