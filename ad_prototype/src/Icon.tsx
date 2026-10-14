@@ -1,4 +1,4 @@
-export type IconName = "home" | "plus" | "folder" | "picture" | "video" | "copy" | "arrow" | "menu" | "check" | "upload" | "download" | "window" | "sound" | "settings"
+export type IconName = "home" | "plus" | "folder" | "picture" | "camera" | "zoom-in" | "zoom-out" | "play" | "pause" | "video" | "copy" | "arrow" | "menu" | "check" | "upload" | "download" | "window" | "sound" | "settings"
 export default function Icon({
   name,
   size = 24,
@@ -11,6 +11,11 @@ export default function Icon({
     plus: "M12 5v14M5 12h14",
     folder: "M3 7V5h6l3 3h9v12H3Z",
     picture: "M3 4h18v16H3ZM3 16l5-5 5 5 4-4 4 4M16 8h.01",
+    camera: "M3 6h4l2-3h6l2 3h4v15H3ZM16 12a4 4 0 1 0-8 0 4 4 0 0 0 8 0",
+    "zoom-in": "M21 21l-5-5M17 10a7 7 0 1 0-14 0 7 7 0 0 0 14 0M7 10h6m-3-3v6",
+    "zoom-out": "M21 21l-5-5M17 10a7 7 0 1 0-14 0 7 7 0 0 0 14 0M7 10h6",
+    play: "M8 5v14l11-7Z",
+    pause: "M6 4h4v16H6ZM14 4h4v16h-4Z",
     video: "M3 6h12v12H3Zm12 4 6-3v10l-6-3",
     copy: "M7 3h14v14M3 7h14v14H3Z",
     arrow: "M4 12h16m-6-6 6 6-6 6",
@@ -28,7 +33,7 @@ export default function Icon({
       width={size}
       height={size}
       viewBox="0 0 24 24"
-      fill="none"
+      fill={name === "play" || name === "pause" ? "currentColor" : "none"}
       stroke="currentColor"
       strokeWidth="1.7"
       strokeLinecap="round"

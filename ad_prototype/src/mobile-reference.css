@@ -12,6 +12,8 @@
 .studio-shell .photo-workspace { display: block; }
 .studio-shell .photo-section { max-width: 680px; margin-inline: auto; }
 .studio-shell .photo-upload { margin-top: 16px; }
+.studio-shell .upload-target { min-height: 220px; padding: 20px 16px; gap: 12px; }
+.studio-shell .upload-target .upload-art { width: 72px; height: 72px; }
 .studio-shell .photo-example { display: flex; align-items: center; gap: 16px; padding: 14px; margin-top: 18px; border-radius: 16px; background: var(--color-surface); border: 1px solid var(--color-line); }
 .studio-shell .photo-example img { width: 64px; height: 80px; object-fit: cover; border-radius: 10px; }
 .studio-shell .photo-example figcaption { display: flex; flex: 1; flex-direction: column; gap: 6px; }
@@ -39,11 +41,12 @@
 .studio-shell .result-tab-panels .result-card-heading { display: flex; align-items: center; gap: 10px; padding: 12px 16px; min-height: 0; }
 .studio-shell .result-tab-panels .result-card-heading > span { flex-basis: 34px; height: 34px; border-radius: 10px; }
 .studio-shell .result-tab-panels .result-card-heading h3 { font-size: 20px; }
-.studio-shell .result-card-heading small { margin-left: auto; font-size: 14px; color: var(--color-muted); }
-.studio-shell .result-main-preview { height: min(340px, 42dvh); display: flex; align-items: center; justify-content: center; overflow: hidden; background: var(--color-canvas); }
-.studio-shell .result-main-preview > img { width: auto; max-width: 100%; height: 100%; min-height: 0; object-fit: contain; }
-.studio-shell .result-motion-preview { position: relative; }
-.studio-shell .result-motion-preview > img { width: auto; max-width: 100%; transition: transform 3s; }
+.studio-shell .result-card-heading small { margin-left: auto; font-size: var(--font-small); color: var(--color-muted); white-space: nowrap; }
+/* Give the exported poster room to be checked; short screens may scroll. */
+.studio-shell .result-main-preview { height: auto; min-height: 260px; display: flex; align-items: center; justify-content: center; overflow: hidden; background: var(--color-canvas); }
+.studio-shell .result-main-preview > img { width: min(100%, 480px); max-width: 100%; height: auto; min-height: 0; object-fit: contain; }
+.studio-shell .result-motion-preview { position: relative; height: clamp(300px, 50dvh, 480px); }
+.studio-shell .result-motion-preview > img { width: auto; max-width: 100%; height: 100%; transition: transform 3s; }
 .studio-shell .result-motion-preview > img.is-playing { transform: scale(1.08); }
 .studio-shell .result-motion-preview > strong { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(72%, 240px); padding: 14px; border-radius: 14px; background: #172b24df; color: white; text-align: center; font-size: 20px; line-height: 1.5; }
 .studio-shell .result-motion-preview > strong > span { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; overflow-wrap: anywhere; }
@@ -78,7 +81,7 @@
 .studio-shell .record-video-mark { position: absolute; inset: 0; display: grid; place-items: center; background: #17302777; color: white; }
 .studio-shell .record-item-copy { display: flex; flex: 1; min-width: 0; flex-direction: column; gap: 6px; }
 .studio-shell .record-item-copy strong { font-size: 18px; overflow-wrap: anywhere; }
-.studio-shell .record-item-copy small { font-size: 14px; color: var(--color-muted); }
+.studio-shell .record-item-copy small { font-size: var(--font-small); color: var(--color-muted); }
 .studio-shell .record-item-copy > span { font-size: 16px; color: var(--color-brand); }
 .studio-shell .record-item > svg { flex-shrink: 0; }
 .studio-shell .records-screen .empty-results { padding: 24px 16px; text-align: center; }
@@ -88,7 +91,7 @@
   .studio-shell.has-creation-view main[data-app-scroll-container] { padding-top: 16px; }
 }
 @media (min-width: 1024px) {
-  .studio-shell .result-main-preview { height: clamp(220px, calc(100dvh - 540px), 480px); }
+  .studio-shell .result-motion-preview { height: clamp(360px, 50dvh, 520px); }
   .studio-shell .copy-result-text { height: clamp(190px, calc(100dvh - 620px), 340px); }
   .studio-shell .result-followup-actions { grid-template-columns: repeat(3, minmax(0,1fr)); align-items: center; }
   .studio-shell .result-followup-actions .studio-text-button { margin: 0; }

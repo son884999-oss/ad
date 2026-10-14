@@ -28,16 +28,36 @@ function keepFocusedControlVisible() {
   const field = document.activeElement
   if (!(field instanceof HTMLElement) || !field.matches("input, textarea, select, button, summary, a[href]")) return
   const shell = field.closest<HTMLElement>(".studio-shell")
-  if (!shell || !field.closest("main[data-app-scroll-container]") || field.closest("[inert]")) return
+  if (!shell || field.closest("[inert]")) return
+  const menu = field.closest<HTMLElement>(".studio-menu-panel")
+  if (menu) {
+    if (field.closest(".studio-menu-bottom-nav")) return
+    const box = field.getBoundingClientRect()
+    const top = menu.getBoundingClientRect().top + 12
+    const bottom = (menu.querySelector(".studio-menu-bottom-nav")?.getBoundingClientRect().top ?? window.innerHeight) - 12
+    const delta = box.top < top
+      ? box.top - top
+      : box.height <= bottom - top && box.bottom > bottom
+        ? box.bottom - bottom
+        : 0
+    if (Math.abs(delta) > 1) menu.scrollBy({ top: delta, behavior: "instant" })
+    return
+  }
+  if (!field.closest("main[data-app-scroll-container]")) return
   const viewport = window.visualViewport
-  const reading = shell.querySelector(".studio-reading-bar")?.getBoundingClientRect()
+  const reading = (shell.querySelector(".studio-reading-bar") ?? shell.querySelector(".studio-header"))?.getBoundingClientRect()
   const nav = shell.querySelector(".studio-bottom-nav")?.getBoundingClientRect()
   const tabs = shell.querySelector(".result-tabs-bar")?.getBoundingClientRect()
+  const actions = field.closest(".compact-information") && !field.closest(".details-actions")
+    ? shell.querySelector<HTMLElement>(".details-actions") : null
+  const actionBox = actions && getComputedStyle(actions).position === "sticky"
+    ? actions.getBoundingClientRect() : null
   const stickyTabsBottom = field.closest(".result-tab-panels") && tabs && tabs.top <= (reading?.bottom ?? 0) + 1 ? tabs.bottom : 0
   const top = Math.max(viewport?.offsetTop ?? 0, reading?.bottom ?? 0, stickyTabsBottom) + 12
   const bottom = Math.min(
     (viewport?.offsetTop ?? 0) + (viewport?.height ?? window.innerHeight),
     nav && nav.height > 0 ? nav.top : window.innerHeight,
+    actionBox && actionBox.top > top ? actionBox.top : window.innerHeight,
   ) - 12
   const box = field.getBoundingClientRect()
   if (bottom <= top) return
@@ -54,22 +74,19 @@ function ReadButton({
   speaking,
   speechPreparing,
   onSpeak,
-}: Pick<Speech, "speaking" | "speechPreparing" | "onSpeak">) {
+  compact = false,
+}: Pick<Speech, "speaking" | "speechPreparing" | "onSpeak"> & { compact?: boolean }) {
+  const label = speechPreparing ? "읽기 준비 취소" : speaking ? "읽기 멈추기" : compact ? "읽어주기" : "화면 읽어주기"
   return (
     <button
       type="button"
       className="studio-tool studio-read-button"
       onClick={onSpeak}
       aria-pressed={speaking || speechPreparing}
+      aria-label={label}
     >
       <StudioIcon name="sound" size={28} />
-      <span>
-        {speechPreparing
-          ? "읽기 준비 취소"
-          : speaking
-            ? "읽어주기 멈추기"
-            : "화면 읽어주기"}
-      </span>
+      <span>{label}</span>
     </button>
   )
 }
@@ -86,7 +103,6 @@ export function StudioLogin({
   const [showPassword, setShowPassword] = useState(false)
   const submit = (event: FormEvent) => {
     event.preventDefault()
-    onEnter()
   }
   return (
     <main
@@ -104,15 +120,14 @@ export function StudioLogin({
             {mode === "login" ? "로그인" : "회원가입"}
           </h1>
           <p>
-            {mode === "login"
-              ? "우리 가게 홍보를 시작해 보세요."
-              : "이메일과 비밀번호를 입력해 주세요."}
+            로그인과 회원가입은 연결 준비 중이에요. 아래 바로 시작하기로 체험해 주세요.
           </p>
           <form onSubmit={submit}>
             <label>
               이메일
               <input
                 type="email"
+                disabled
                 required
                 autoComplete="email"
                 placeholder="name@example.com"
@@ -122,6 +137,9 @@ export function StudioLogin({
               비밀번호
               <div className="studio-password-input">
                 <input
+                  id="login-password"
+                  disabled
+                  aria-label="비밀번호"
                   type={showPassword ? "text" : "password"}
                   required
                   minLength={4}
@@ -132,18 +150,20 @@ export function StudioLogin({
                 />
                 <button
                   type="button"
+                  disabled
                   aria-label={
                     showPassword ? "비밀번호 숨기기" : "비밀번호 보기"
                   }
                   aria-pressed={showPassword}
+                  aria-controls="login-password"
                   onClick={() => setShowPassword(!showPassword)}
                 >
                   {showPassword ? "숨기기" : "보기"}
                 </button>
               </div>
             </label>
-            <button type="submit" className="studio-primary">
-              {mode === "login" ? "로그인" : "가입하고 시작하기"}
+            <button type="submit" className="studio-primary" disabled>
+              연결 준비 중
             </button>
           </form>
           <button
@@ -173,11 +193,10 @@ export function StudioLogin({
 const pages: {
   label: string
   page: Page
-  type?: CreationType
   icon: "home" | "plus" | "folder"
 }[] = [
   { label: "홈", page: "home", icon: "home" },
-  { label: "만들기", page: "create", type: "all", icon: "plus" },
+  { label: "만들기", page: "create", icon: "plus" },
   { label: "내 홍보물", page: "records", icon: "folder" },
 ]
 
@@ -187,8 +206,6 @@ export function StudioShell({
   creationType,
   mobileOpen,
   setMobileOpen,
-  menuPurpose,
-  setMenuPurpose,
   resultView,
   creationView,
   navigate,
@@ -206,8 +223,6 @@ export function StudioShell({
   creationType: CreationType
   mobileOpen: boolean
   setMobileOpen: (value: boolean) => void
-  menuPurpose: "create" | "menu"
-  setMenuPurpose: (value: "create" | "menu") => void
   resultView: boolean
   creationView: boolean
   navigate: Navigation
@@ -218,10 +233,7 @@ export function StudioShell({
   const menuRef = useRef<HTMLElement>(null)
   const headerRef = useRef<HTMLElement>(null)
   const readingRef = useRef<HTMLDivElement>(null)
-  const openMenu = (purpose: "create" | "menu") => {
-    setMenuPurpose(purpose)
-    setMobileOpen(true)
-  }
+  const openMenu = () => setMobileOpen(true)
   const bottomNavigation = (insideMenu = false) => (
     <nav
       inert={mobileOpen && !insideMenu}
@@ -231,15 +243,13 @@ export function StudioShell({
       aria-label="모바일 빠른 메뉴"
     >
       {pages.map((item) => {
-        const active = mobileOpen
-          ? item.page === "create" && menuPurpose === "create"
-          : item.page === page
+        const active = !mobileOpen && item.page === page
         return (
           <button
             key={item.page}
             type="button"
             onClick={() =>
-              item.page === "create" ? openMenu("create") : navigate(item.page)
+              navigate(item.page)
             }
             className={active ? "is-active" : ""}
             aria-current={active ? "page" : undefined}
@@ -251,10 +261,10 @@ export function StudioShell({
       })}
       <button
         type="button"
-        onClick={() => openMenu("menu")}
-        className={mobileOpen && menuPurpose === "menu" ? "is-active" : ""}
-        aria-expanded={mobileOpen && menuPurpose === "menu"}
-        aria-label="전체 메뉴 열기"
+        onClick={() => setMobileOpen(!mobileOpen)}
+        className={mobileOpen ? "is-active" : ""}
+        aria-expanded={mobileOpen}
+        aria-label={mobileOpen ? "전체 메뉴 닫기" : "전체 메뉴 열기"}
       >
         <StudioIcon name="menu" />
         <span>메뉴</span>
@@ -272,7 +282,7 @@ export function StudioShell({
       )
       shell.style.setProperty(
         "--studio-reading-height",
-        `${readingRef.current?.getBoundingClientRect().height ?? 64}px`,
+        `${page === "home" ? header.getBoundingClientRect().height : readingRef.current?.getBoundingClientRect().height ?? 64}px`,
       )
     }
     measure()
@@ -280,7 +290,7 @@ export function StudioShell({
     observer.observe(header)
     if (readingRef.current) observer.observe(readingRef.current)
     return () => observer.disconnect()
-  }, [])
+  }, [page])
   useEffect(() => {
     if (!mobileOpen) return
     const previous = document.activeElement as HTMLElement | null
@@ -329,7 +339,7 @@ export function StudioShell({
   }, [mobileOpen, setMobileOpen])
   useEffect(() => {
     if (mobileOpen) menuRef.current?.focus()
-  }, [mobileOpen, menuPurpose])
+  }, [mobileOpen])
   useEffect(() => {
     let frame = 0
     const schedule = () => {
@@ -348,13 +358,21 @@ export function StudioShell({
   }, [])
   return (
     <div
-      className={`prototype-app studio-shell ${easyMode ? "easy-mode" : ""} ${
+      className={`prototype-app studio-shell ${page === "home" ? "is-home" : ""} ${easyMode ? "easy-mode" : ""} ${
         resultView ? "has-result-view" : ""
       } ${creationView ? "has-creation-view" : ""}`}
     >
-      <div ref={readingRef} className="studio-reading-bar" inert={mobileOpen}>
-        <ReadButton {...{ speaking, speechPreparing, onSpeak }} />
-      </div>
+      {page !== "home" && (
+        <div ref={readingRef} className="studio-reading-bar" inert={mobileOpen}>
+          <span className="studio-reading-context">{resultView ? "결과 보기" : title}</span>
+          <div className="studio-header-tools">
+            <ReadButton compact {...{ speaking, speechPreparing, onSpeak }} />
+            <button className="studio-menu-button" onClick={openMenu} aria-label="상단 전체 메뉴 열기" aria-expanded={mobileOpen}>
+              <StudioIcon name="menu" size={22} />
+            </button>
+          </div>
+        </div>
+      )}
       <header ref={headerRef} className="studio-header" inert={mobileOpen}>
         <div className="studio-header-inner">
           <button
@@ -364,35 +382,18 @@ export function StudioShell({
           >
             <BrandLogo />
           </button>
-          <nav className="studio-desktop-nav" aria-label="주요 메뉴">
-            {pages.map((item) => (
-              <button
-                key={item.page}
-                onClick={() =>
-                  item.page === "create"
-                    ? openMenu("create")
-                    : navigate(item.page)
-                }
-                className={item.page === page ? "is-active" : ""}
-                aria-current={item.page === page ? "page" : undefined}
-              >
-                <StudioIcon name={item.icon} />
-                {item.label}
-              </button>
-            ))}
-          </nav>
+          {page === "home" && <ReadButton compact {...{ speaking, speechPreparing, onSpeak }} />}
           <button
             className="studio-menu-button"
-            onClick={() => openMenu("menu")}
-            aria-label="메뉴 열기"
+            onClick={() => openMenu()}
+            aria-label="상단 전체 메뉴 열기"
             aria-expanded={mobileOpen}
           >
             <StudioIcon name="menu" />
-            <span>메뉴</span>
           </button>
         </div>
       </header>
-      <details className="studio-accessibility" inert={mobileOpen}>
+      {page !== "home" && <details className="studio-accessibility" inert={mobileOpen}>
         <summary>
           <StudioIcon name="settings" size={20} />
           글씨·알림 설정
@@ -417,13 +418,10 @@ export function StudioShell({
           </button>
         </div>
         <FeedbackSettings />
-      </details>
+      </details>}
       {mobileOpen && (
         <div
-          className={
-            "studio-menu-layer " +
-            (menuPurpose === "create" ? "studio-creation-layer" : "")
-          }
+          className="studio-menu-layer"
         >
           <button
             className="studio-menu-backdrop"
@@ -433,39 +431,26 @@ export function StudioShell({
           <aside
             ref={menuRef}
             tabIndex={-1}
-            className={
-              "studio-menu-panel " +
-              (menuPurpose === "create" ? "creation-picker-panel" : "")
-            }
+            className="studio-menu-panel unified-menu-panel"
             role="dialog"
             aria-modal="true"
-            aria-label={
-              menuPurpose === "create" ? "홍보물 만들기" : "설정 및 이용 안내"
-            }
+            aria-label="전체 메뉴"
           >
             <div className="studio-menu-heading">
               <BrandLogo />
               <button
                 onClick={() => setMobileOpen(false)}
-                className="studio-tool"
+                className="studio-secondary"
                 aria-label="메뉴 닫기"
               >
                 닫기 ×
               </button>
             </div>
-            <h2 className="studio-panel-title">
-              {menuPurpose === "create"
-                ? "어떤 홍보물을 만들까요?"
-                : "설정 및 이용 안내"}
-            </h2>
-            {menuPurpose === "create" ? (
-              <>
-                <p className="studio-panel-intro">
-                  만들고 싶은 홍보물을 선택하세요.
-                </p>
+            <h2 className="studio-panel-title">어떤 홍보물을 만들까요?</h2>
+            <p className="studio-panel-intro">만들기 버튼은 세 가지 홍보물을 한 번에 만들어요.</p>
                 {[
                   {
-                    label: "한 번에 완성",
+                    label: "한 번에 만들기",
                     type: "all" as CreationType,
                     icon: "plus" as const,
                     description:
@@ -478,13 +463,13 @@ export function StudioShell({
                     description: "사진과 글을 담은 포스터를 만들어요.",
                   },
                   {
-                    label: "동영상 만들기",
+                    label: "영상 만들기",
                     type: "video" as CreationType,
                     icon: "video" as const,
                     description: "사진을 활용한 짧은 영상 예시를 만들어요.",
                   },
                   {
-                    label: "홍보 글 만들기",
+                    label: "문구 만들기",
                     type: "copy" as CreationType,
                     icon: "copy" as const,
                     description: "복사해서 사용할 홍보 문구를 만들어요.",
@@ -511,28 +496,9 @@ export function StudioShell({
                     <StudioIcon name="arrow" />
                   </button>
                 ))}
-                <button className="studio-window-switch" onClick={() => openMenu("menu")}>
-                  <StudioIcon name="settings" size={20} />설정·이용 안내
-                </button>
-              </>
-            ) : (
-              <>
-                <section className="menu-creation-shortcuts" aria-label="홍보물 제작 바로가기">
-                  <h3>홍보물 만들기</h3>
-                  <p>만들 종류를 고르면 사진 입력으로 바로 이동해요.</p>
-                  <div>
-                    {[
-                      { label: "한 번에 만들기", type: "all" as CreationType, icon: "plus" as const },
-                      { label: "이미지 만들기", type: "poster" as CreationType, icon: "picture" as const },
-                      { label: "문구 만들기", type: "copy" as CreationType, icon: "copy" as const },
-                      { label: "영상 만들기", type: "video" as CreationType, icon: "video" as const },
-                    ].map(item => (
-                      <button key={item.type} onClick={() => navigate("create", item.type)}>
-                        <StudioIcon name={item.icon} size={20} /><span>{item.label}</span>
-                      </button>
-                    ))}
-                  </div>
-                </section>
+                <div className="studio-menu-footer">
+                  <button onClick={() => navigate("records")}>내 홍보물 보기</button>
+                </div>
                 <details className="service-menu-section" open>
                   <summary>글씨 크기·간편모드</summary>
                   <p>간편모드에서는 글씨와 버튼을 더 크게 보여줘요.</p>
@@ -557,7 +523,7 @@ export function StudioShell({
                 <details className="service-menu-section">
                   <summary>사용 방법</summary>
                   <ol>
-                    <li>만들기에서 홍보물 종류를 골라요.</li>
+                    <li>만들기를 누르면 사진 등록으로 이동해요.</li>
                     <li>사진을 넣고 제품 정보를 적어요.</li>
                     <li>이미지·영상·문구를 확인하고 저장하거나 복사해요.</li>
                   </ol>
@@ -568,8 +534,6 @@ export function StudioShell({
                   </button>
                   <button onClick={onLogout}>로그인 화면 보기</button>
                 </div>
-              </>
-            )}
             {bottomNavigation(true)}
           </aside>
         </div>
@@ -601,148 +565,61 @@ export function StudioShell({
 }
 
 export function StudioHome({
-  navigate,
   onChooseCreation,
+  hasDraft,
 }: {
   navigate: Navigation
   easyMode: boolean
   onChooseCreation: () => void
+  hasDraft: boolean
 }) {
   return (
-    <div className="studio-home">
+    <div className="studio-home studio-home-simple">
       <section
         className="studio-start-guide"
         aria-labelledby="start-guide-title"
       >
         <div className="studio-hero-copy">
-          <p className="studio-eyebrow">우리 가게의 쉬운 홍보 도우미</p>
           <h1 id="start-guide-title" data-screen-heading tabIndex={-1}>
-            <span className="hero-brand">홍보잇다</span>
             사진 한 장으로
             <br />
             <em>우리 가게를 알려요.</em>
           </h1>
           <p className="studio-hero-description">
-            포스터·짧은 영상·홍보 글을
-            <br />
-            차근차근 함께 만들어요.
+            이미지·영상·문구를 쉽게 만들어요.
           </p>
           <div className="studio-guide-action">
             <button className="studio-primary" onClick={onChooseCreation}>
-              홍보물 만들기 <StudioIcon name="arrow" />
+              {hasDraft ? "홍보물 이어 만들기" : "홍보물 만들기"} <StudioIcon name="arrow" />
             </button>
-            <p>가입 없이 시작 · 제품 사진 한 장이면 돼요</p>
+            <p>가입 없이 체험할 수 있어요.</p>
           </div>
+          <figure className="home-sample-art">
+            <ServiceArt name="service-hero" alt="사진에서 이미지·영상·문구로 이어지는 체험 예시" priority />
+          </figure>
         </div>
       </section>
       <section className="studio-how" aria-labelledby="how-title">
         <div className="studio-section-title">
-          <p className="studio-eyebrow">처음이어도 괜찮아요</p>
           <h2 id="how-title">이렇게 세 단계면 돼요</h2>
         </div>
         <ol className="studio-guide-steps">
           {[
-            {
-              image: "workflow-photo" as const,
-              title: "사진을 넣어요",
-              text: "제품이나 가게 사진 한 장",
-            },
-            {
-              image: "workflow-details" as const,
-              title: "설명을 적어요",
-              text: "제품의 특징을 짧게 적어요",
-            },
-            {
-              image: "workflow-results" as const,
-              title: "결과를 확인해요",
-              text: "만든 결과를 저장해요",
-            },
-          ].map((step, index) => (
-            <li key={step.image}>
-              <ServiceArt name={step.image} />
-              <div>
-                <span className="studio-step-number">{index + 1}단계</span>
-                <h3>{step.title}</h3>
-                <p>{step.text}</p>
-              </div>
+            ["사진을", "넣어요"],
+            ["설명을", "적어요"],
+            ["결과를", "확인해요"],
+          ].map(([first, second], index) => (
+            <li key={first}>
+              <span className="studio-step-number">{index + 1}</span>
+              <h3>{first}<br />{second}</h3>
+              {index < 2 && (
+                <span className="studio-guide-arrow" aria-hidden="true">
+                  <StudioIcon name="arrow" size={24} />
+                </span>
+              )}
             </li>
           ))}
         </ol>
-      </section>
-      <section className="studio-example" aria-labelledby="example-title">
-        <div className="studio-section-title">
-          <h2 id="example-title">사진 한 장으로 이런 홍보물을 만들어요</h2>
-          <p className="studio-demo-note">
-            사진과 설명으로 예시 결과를 만드는 체험 서비스예요.
-          </p>
-        </div>
-        <div className="studio-hero-art">
-          <ServiceArt
-            name="service-hero"
-            alt="제품 사진에서 포스터·짧은 영상·홍보 글로 이어지는 결과 화면과 작은 가게"
-          />
-          <span className="studio-art-caption">
-            포스터 · 짧은 영상 · 홍보 글
-          </span>
-        </div>
-      </section>
-      <section className="studio-shortcuts">
-        <div className="studio-section-title">
-          <span className="studio-eyebrow">필요한 것만 골라도 좋아요</span>
-          <h2>하나씩 만들어 보기</h2>
-        </div>
-        <div>
-          {[
-            {
-              type: "poster" as CreationType,
-              title: "이미지 만들기",
-              note: "사진과 글을 담은 포스터",
-              icon: "picture" as const,
-              art: "service-poster" as const,
-            },
-            {
-              type: "video" as CreationType,
-              title: "동영상 만들기",
-              note: "움직이는 짧은 홍보 영상",
-              icon: "video" as const,
-              art: "service-video" as const,
-            },
-            {
-              type: "copy" as CreationType,
-              title: "홍보 글 만들기",
-              note: "홍보할 곳에 어울리는 말투",
-              icon: "copy" as const,
-              art: "service-copy" as const,
-            },
-          ].map((item) => (
-            <button
-              key={item.type}
-              onClick={() => navigate("create", item.type)}
-            >
-              <ServiceArt name={item.art} className="shortcut-art" />
-              <span>
-                <strong>{item.title}</strong>
-                <small>{item.note}</small>
-              </span>
-              <StudioIcon name="arrow" />
-            </button>
-          ))}
-        </div>
-      </section>
-      <section className="studio-record-banner">
-        <div>
-          <StudioIcon name="folder" size={32} />
-          <span>
-            <h2>만든 홍보물 다시 보기</h2>
-            <p>이 창에서 만든 결과를 한곳에서 다시 볼 수 있어요.</p>
-          </span>
-        </div>
-        <button
-          className="studio-secondary"
-          onClick={() => navigate("records")}
-        >
-          내 홍보물 보기 <StudioIcon name="arrow" />
-        </button>
       </section>
     </div>
   )

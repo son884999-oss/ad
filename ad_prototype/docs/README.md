@@ -27,6 +27,11 @@
 | [Google Flow 영상 샘플 방향](../feedback/2026-10-13-video-sample-direction.md) | 샘플 제작 도구 후보와 향후 영상 API 개발 범위의 구분 |
 | [Holy Korea 차용 후보](../feedback/2026-10-13-holy-korea-reference-review.md) | 실제 모바일·데스크톱 관찰을 근거로 정리한 교수 상의용 디자인 후보, 미적용 |
 | [교수 상담용 한 장 문서](review/professor-consultation-20261013.pdf) | 현재 화면·검증 결과·향후 카드 순환 홈·상담 질문을 담은 출력용 PDF |
+| [결과 UI 통합·휴리스틱 검토](../feedback/2026-10-14-result-consistency-heuristic-review.md) | 공통 미리보기·저장/복사 배치, 14개 화면 조합 검증과 남은 문제 |
+| [더블다이아몬드 통합 사용성 검토](../feedback/2026-10-14-double-diamond-usability-review.md) | 전체 과업의 일관성·입력 보존·메뉴·재생 동작 개선과 실제 참가자 검증 과업 |
+| [10개 관점 UI 검토·교차 토론](../feedback/2026-10-14-ten-perspective-ui-review.md) | 글자·버튼·폰트·일관성·시인성·상태·접근성을 검토한 AI 토론과 개선·검증 기록 |
+| [제출 전 UI·결과 선택 개선](../feedback/2026-10-14-submission-ui-fixes.md) | 결과 가림·긴 글·보조 버튼 개선, 한 화면 사진·토글 배치와 문구 후순위 구성 검증 |
+| [최종 UI·GitHub 통합 검토](../feedback/2026-10-14-final-integration-review.md) | 독립 검토, 초안 소실 경로 수정, 실제 파일 준비·브라우저 회귀 검사와 통합 범위 |
 | [최신 교수 체크리스트 검증](review/2026-10-13-professor-review.md) | 원본 86개 식별자의 검증 범위별 판정과 실제 화면·검사 자료 |
 
 New feedback belongs in `feedback/`. Keep the source message analysis and reference images separate from implementation conclusions.

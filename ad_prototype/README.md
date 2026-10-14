@@ -23,9 +23,14 @@ Relevant checks:
 pnpm build
 pnpm exec tsc --noEmit
 node scripts/verify-documents.mjs
-node scripts/verify-professor-feedback.mjs
+pnpm verify:mobile-flow
+pnpm verify:submission
+pnpm verify:results
+pnpm verify:usability
 ```
 
-The last command needs the local preview running. Historical Phase 4-B scripts inspect archival evidence or create checkpoints; they do not replace current UI verification.
+The browser checks need the local preview running and an installed Playwright Chromium browser. `UI_BASE_URL` can point them to a different preview port. `UI_BROWSER_EXECUTABLE` can select an existing Chromium executable. There is no separate lint command; TypeScript, document links, and the focused browser checks are the current verification entrypoints.
+
+Older professor/phase scripts retain historical selectors and evidence. They do not replace current UI verification. See the [final integration review](feedback/2026-10-14-final-integration-review.md) for the checks actually performed and their limits.
 
 Keep the `ad_prototype` directory name: it is the configured Vercel Root Directory.

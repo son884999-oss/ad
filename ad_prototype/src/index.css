@@ -14,7 +14,7 @@
 }
 
 :root {
-  font-family: "Noto Sans KR", "Malgun Gothic", sans-serif;
+  font-family: "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
   color: var(--color-ink);
   background: var(--color-canvas);
   font-synthesis: none;
