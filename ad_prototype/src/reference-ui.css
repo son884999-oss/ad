@@ -558,3 +558,4 @@ html[data-layout=pc] .reference-app:not(.easy-mode) .field-tag { font-size:14px;
 html[data-layout=pc] .easy-mode .information-photo > div span { font-size:17px; }
 html[data-layout=pc] :is(.reference-home-steps,.reference-photo-examples,.record-item,.compact-information .information-photo) { border-color:#eadccf;box-shadow:0 1px 2px #5a2a120a,0 8px 24px #5a2a120f; }
 html[data-layout=pc] .reference-app .studio-main { padding-bottom:88px; }
+html[data-layout=pc] .is-home .easy-toolbar { padding-inline:var(--pc-gutter); }
