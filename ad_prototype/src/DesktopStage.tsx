@@ -3,7 +3,8 @@ import { useSyncExternalStore } from "react"
 type View = "auto" | "mobile" | "pc"
 export type Layout = "mobile" | "pc"
 type DevState = { view: View; width: number; desktopViewport: boolean; layout: Layout }
-const VIEW_KEY = "hongboitda-dev-view"
+// v2: earlier visits stored "auto"; a new key lets the new default below apply once.
+const VIEW_KEY = "hongboitda-dev-view-v2"
 const WIDTH_KEY = "hongboitda-dev-width"
 const previewWidths = [360, 375, 390, 430] as const
 const DESKTOP_VIEWPORT = "width=1280"
@@ -29,7 +30,9 @@ function store(key: string, value: string) {
 const viewportMeta = document.querySelector<HTMLMetaElement>('meta[name="viewport"]')
 const defaultViewport = viewportMeta?.content ?? "width=device-width, initial-scale=1.0"
 const listeners = new Set<() => void>()
-const storedView = readStored(VIEW_KEY, "auto")
+// Temporary default while the PC layout is unfinished: on a computer the menu's developer option
+// (phone frame) starts on. Switching it off in the menu is remembered.
+const storedView = readStored(VIEW_KEY, Math.min(window.screen.width, window.screen.height) < 768 ? "auto" : "mobile")
 let state: DevState = {
   view: storedView === "mobile" || storedView === "pc" ? storedView : "auto",
   width: Number(readStored(WIDTH_KEY, "390")) || 390,
