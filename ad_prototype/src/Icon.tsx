@@ -1,4 +1,4 @@
-export type IconName = "grid" | "text-size" | "close" | "chevron" | "card" | "user" | "home" | "plus" | "folder" | "picture" | "camera" | "zoom-in" | "zoom-out" | "play" | "pause" | "video" | "copy" | "arrow" | "menu" | "check" | "upload" | "download" | "share" | "window" | "sound" | "settings"
+export type IconName = "grid" | "text-size" | "close" | "chevron" | "card" | "user" | "home" | "plus" | "folder" | "picture" | "camera" | "zoom-in" | "zoom-out" | "play" | "pause" | "video" | "copy" | "arrow" | "menu" | "check" | "upload" | "download" | "share" | "window" | "sound" | "settings" | "mic" | "undo" | "keyboard"
 export default function Icon({
   name,
   size = 24,
@@ -34,6 +34,9 @@ export default function Icon({
       "M3 4h18v16H3ZM3 9h18M7 6.5h.01M10 6.5h.01M7 13h4v4H7Zm7 0h3m-3 4h3",
     sound: "M3 9h4l5-5v16l-5-5H3Zm13-2c3 3 3 7 0 10m3-13c5 4 5 12 0 16",
     settings: "M4 6h16M4 12h16M4 18h16M8 3v6m8 0v6m-8 0v6",
+    mic: "M9 6a3 3 0 0 1 6 0v6a3 3 0 0 1-6 0ZM5 11a7 7 0 0 0 14 0M12 18v3M8.5 21h7",
+    undo: "M9 14 4 9l5-5M4 9h11a5 5 0 0 1 0 10h-3",
+    keyboard: "M2 6h20v12H2ZM6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10",
   }
   return (
     <svg

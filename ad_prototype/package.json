@@ -22,7 +22,13 @@
     "verify:phase2": "node scripts/verify-phase2.mjs",
     "assets:optimize": "node scripts/optimize-illustrations.mjs",
     "format": "oxfmt",
-    "verify:phase3": "node scripts/verify-phase3.mjs"
+    "verify:phase3": "node scripts/verify-phase3.mjs",
+    "verify:ai": "node scripts/verify-ai-api.mjs",
+    "verify:video": "node scripts/verify-video-api.mjs",
+    "live:video": "node scripts/live-video-test.mjs",
+    "verify:easy": "node scripts/verify-easy-mode.mjs",
+    "verify:records": "node scripts/verify-records-and-menu.mjs",
+    "verify:photo": "node scripts/verify-photo-step.mjs"
   },
   "dependencies": {
     "react": "^19.0.0",

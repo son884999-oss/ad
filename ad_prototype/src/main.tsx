@@ -10,6 +10,8 @@ import { DevToolbar } from "./DesktopStage"
 
 import "./index.css"
 import "./reference-ui.css"
+import "./pc-layout.css"
+import "./photo-step.css"
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>

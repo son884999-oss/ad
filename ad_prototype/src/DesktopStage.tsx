@@ -103,8 +103,8 @@ export function DevToolbar() {
   if (!enabled) return null
   const options: [View, string, string][] = [
     ["auto", "자동", "화면 너비에 맞춰 보기"],
-    ["mobile", "📱 모바일", "휴대폰 화면으로 보기"],
-    ["pc", "🖥️ PC", "PC 화면으로 보기"],
+    ["mobile", "모바일", "휴대폰 화면으로 보기"],
+    ["pc", "PC", "PC 화면으로 보기"],
   ]
   return (
     <div className="dev-toolbar" role="toolbar" aria-label="개발자 모드 화면 전환">

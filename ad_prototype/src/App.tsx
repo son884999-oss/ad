@@ -10,6 +10,15 @@ import {
   useState,
 } from "react"
 import { wrapCanvasText } from "./canvasText"
+import { uiText } from "./easyText"
+import { recognitionConstructor, useVoiceInput } from "./useVoiceInput"
+import VoiceField from "./VoiceField"
+import { useLayout } from "./DesktopStage"
+import { analyzePhotoOnce, generatePromoText, type PhotoCheck, type PhotoSuggestion, type PromoTextResult } from "./ai"
+import { useAiVideo, type AiVideoController, type SavedAiVideo } from "./useAiVideo"
+import { AiVideoPlayer, AiVideoStatus, saveRealVideo, shareRealVideo, showsRealVideo } from "./AiVideoPanel"
+import { toVideoDetails } from "./video"
+import { buildPosterContent, loadPosterFonts, posterThemeFor, renderPosterToCanvas } from "./poster"
 import PhotoStep from "./PhotoStep"
 import GenerationProgress from "./GenerationProgress"
 import StepProgress from "./StepProgress"
@@ -63,16 +72,31 @@ type GeneratedRecord = {
 
     keywords?: string
 
-    tone?: Tone
+    /** 홍보 분위기, in the order chosen (the first one leads). Empty = 자동. */
+    tones?: Tone[]
+
+    /** Legacy single value from before multi-select; read by normalizeTones() only. */
+    tone?: string
   }
 
   userHashtags: Record<Channel, string>
+
+  /** AI 홍보 글 used for this result, if it arrived in time. */
+  promo?: AiPromo
+
+  /** Real (Higgsfield) video job for this result; the URL may expire after about a week. */
+  video?: SavedAiVideo
 }
 
+/** AI 홍보 글 for one set of inputs; `signature` ties it to the details and channel it was made for. */
+type AiPromo = PromoTextResult & { signature: string }
 
-type Tone = "" | "natural" | "premium" | "friendly" | "trendy"
 
-const toneOptions: { value: Tone; label: string; name: string }[] = [
+type Tone = "natural" | "premium" | "friendly" | "trendy"
+
+const toneValues: readonly Tone[] = ["natural", "premium", "friendly", "trendy"]
+
+const toneOptions: { value: Tone | ""; label: string; name: string }[] = [
   { value: "", label: "자동", name: "AI 자동 추천" },
   { value: "natural", label: "자연", name: "자연스럽고 건강한" },
   { value: "premium", label: "고급", name: "고급스럽고 전문적인" },
@@ -81,13 +105,47 @@ const toneOptions: { value: Tone; label: string; name: string }[] = [
 ]
 
 // Closing line added to every channel copy so the chosen mood is visible in the result.
+// With several moods the first one chosen leads (see toneClosing).
 const toneLines: Record<Tone, string> = {
-  "": "",
   natural: "꾸밈없이 정성 그대로 담았어요.",
   premium: "특별한 날, 특별한 분께 권하는 선택이에요.",
   friendly: "편하게 들러 주세요. 반갑게 맞이할게요!",
   trendy: "요즘 가장 많이 찾는 바로 그 메뉴, 지금 만나보세요! ✨",
 }
+
+/** Reads `tones`, or migrates the old single `tone` value ("" = 자동). */
+function normalizeTones(details: { tones?: unknown; tone?: unknown }): Tone[] {
+  const raw = Array.isArray(details.tones) ? details.tones : typeof details.tone === "string" ? [details.tone] : []
+  return [...new Set(raw.filter((tone): tone is Tone => toneValues.includes(tone as Tone)))]
+}
+
+function toneClosing(tones: readonly Tone[]) {
+  return tones.length ? toneLines[tones[0]] : ""
+}
+
+/** Identifies the inputs an AI 홍보 글 was written for, so edited inputs fall back to local copy. */
+function promoSignature(details: GeneratedRecord["details"], channel: Channel) {
+  return JSON.stringify([
+    channel,
+    details.name?.trim() ?? "",
+    details.shopName?.trim() ?? "",
+    details.description.trim(),
+    details.features.trim(),
+    details.keywords?.trim() ?? "",
+    details.audience.trim(),
+    normalizeTones(details),
+  ])
+}
+
+/** Joins the AI copy into the 홍보 글 text; makes sure the product name appears. */
+function composePromoText(promo: PromoTextResult, details: GeneratedRecord["details"]) {
+  const name = details.name?.trim() ?? ""
+  const text = [promo.copy, promo.sns, promo.intro].filter(Boolean).join("\n\n")
+  return name && !text.includes(name) ? `${name}\n\n${text}` : text
+}
+
+/** How long 홍보물 만들기 waits for the AI 홍보 글 before using the local template. */
+const PROMO_WAIT_MS = 12_000
 
 const MAX_PHOTO_SIZE = 10 * 1024 * 1024
 const ACCEPTED_PHOTO_TYPES = ["image/jpeg", "image/png", "image/webp"]
@@ -116,7 +174,7 @@ const initialDetails = {
 
   keywords: "",
 
-  tone: "" as Tone,
+  tones: [] as Tone[],
 }
 
 const outputFormatNames: Record<OutputFormat, string> = {
@@ -127,107 +185,6 @@ const outputFormatNames: Record<OutputFormat, string> = {
   both: "포스터와 영상 둘 다",
 }
 
-const easyUiDictionary: Record<string, string> = {
-  "메인 대시보드": "첫 화면",
-
-  "대시보드로 돌아가기": "첫 화면으로 돌아가기",
-
-  이용권: "이용 방법",
-
-  "구독으로 이용": "매달 이용",
-
-  "건당 이용": "필요할 때 이용",
-
-  "쓰레드(Threads)": "쓰레드",
-
-  "엑스(X)": "엑스",
-
-  Threads: "쓰레드",
-
-  X: "엑스",
-
-  "결과 형식": "만들 종류",
-
-  "선택한 결과 형식": "고른 만들 종류",
-
-  "선택된 결과 형식": "고른 만들 종류",
-
-  "결과 형식을 선택해 주세요": "만들 종류를 골라 주세요",
-
-  "홍보 채널": "홍보할 곳",
-
-  채널: "홍보할 곳",
-
-  "현재 결과 형식": "현재 만들 종류",
-
-  "홍보 채널을 선택해 주세요": "홍보할 곳을 골라 주세요",
-
-  "JPG, PNG 등 이미지 파일을 선택해 주세요": "사진 파일을 골라 주세요",
-
-  "설명·해시태그 확인": "설명·검색어(#) 확인",
-
-  "정리된 설명과 추천 해시태그를 확인하고 고쳐 주세요.":
-    "정리된 설명과 추천 검색어(#)를 확인하고 고쳐 주세요.",
-
-  "형식·채널·사진 선택": "만들 종류·홍보할 곳·사진 고르기",
-
-  "결과 형식과 채널을 고르고 제품 사진 한 장을 올려 주세요.":
-    "만들 종류와 홍보할 곳을 고르고 제품 사진 한 장을 넣어 주세요.",
-
-  "제품 정보와 해시태그 확인하기": "제품 설명과 검색어(#) 확인하기",
-
-  "예시 초안을 제품에 맞게 수정하고, 추천 해시태그도 결과를 만들기 전에 직접 고쳐 주세요.":
-    "처음 작성한 설명을 제품에 맞게 고치고, 추천 검색어(#)도 직접 고쳐 주세요.",
-
-  "아래 내용은 실제 AI 분석이 아닌 예시 초안입니다. 제품에 맞게 자유롭게 고쳐 주세요.":
-    "아래 내용은 자동 분석이 아닌 처음 작성한 설명입니다. 제품에 맞게 고쳐 주세요.",
-
-  "사용할 해시태그 직접 수정": "사용할 검색어(#) 직접 수정",
-
-  "추천 해시태그 후보": "추천 검색어(#)",
-
-  "‘추천으로 교체’를 누르면 위 작성란이 추천 후보로 바뀝니다.":
-    "‘추천으로 바꾸기’를 누르면 위 작성란이 추천 검색어(#)로 바뀝니다.",
-
-  "포스터 미리보기": "포스터 확인 화면",
-
-  "영상 다운로드": "영상 저장",
-
-  해시태그: "검색어(#)",
-
-  "확정 해시태그": "확정 검색어(#)",
-
-  "채널에 맞는 홍보 문구": "홍보할 곳에 맞는 글",
-
-  "문구와 확정 해시태그를 복사했어요.": "글과 확정 검색어(#)를 복사했어요.",
-
-  "2단계 제품 정보와 해시태그 확인 화면입니다.":
-    "2단계 제품 설명과 검색어(#) 확인 화면입니다.",
-
-  "사용자가 입력한 확정 해시태그": "사용자가 입력한 검색어(#)",
-
-  "현재 브라우저에서는 예시 영상을 만들 수 없어요.":
-    "이 기기에서는 예시 영상을 만들 수 없어요.",
-
-  "이 브라우저에서 저장할 수 있는 영상 형식을 찾지 못했어요.":
-    "이 기기에서 저장할 수 있는 영상 종류를 찾지 못했어요.",
-
-  "현재 브라우저에서 읽어주기를 사용할 수 없어요.":
-    "이 기기에서는 화면 읽어주기를 사용할 수 없어요.",
-
-  "단독 제작 바로가기": "원하는 것 바로 만들기",
-
-  "내게 맞는 이용 방식을 골라 보세요": "내게 맞는 이용 방법을 골라 보세요",
-
-  "현재는 구조를 확인하는 프로토타입이며, 가격과 제공 수량은 아직 정해지지 않았습니다.":
-    "지금은 화면을 확인하는 시험용이며, 가격과 만들 수 있는 수량은 아직 정해지지 않았습니다.",
-}
-
-function uiText(text: string, easyMode: boolean) {
-  if (!easyMode) return text
-
-  return easyUiDictionary[text] ?? text
-}
 
 const knownRegions = new Set([
   "서울",
@@ -563,17 +520,19 @@ function ResultCardHeading({
   icon,
   title,
   control,
+  easyMode = false,
 }: {
   icon: "picture" | "video" | "copy"
   title: string
   control?: ReactNode
+  easyMode?: boolean
 }) {
   return (
     <div className="result-card-heading">
       <span aria-hidden="true"><Icon name={icon} size={22} /></span>
       <div className="result-card-title">
-        <h3>{title} 결과</h3>
-        <small>확인용 예시</small>
+        <h3>{easyMode ? title : `${title} 결과`}</h3>
+        <small>{uiText("확인용 예시", easyMode)}</small>
       </div>
       {control && <div className="result-preview-controls">{control}</div>}
     </div>
@@ -628,7 +587,9 @@ function ResultActionBar({
   onShare,
   shareMessage = "",
   shareDisabled = false,
+  shareLabel = "공유하기",
 }: {
+  shareLabel?: string
   label: string
   accessibleLabel: string
   icon: "download" | "copy" | null
@@ -671,7 +632,7 @@ function ResultActionBar({
           if (button.isConnected && document.activeElement === document.body) button.focus({preventScroll:true})
         }
       }}>
-        <Icon name="share" /><span>공유하기</span>
+        <Icon name="share" /><span>{shareLabel}</span>
       </button>}
       </div>
       {shareMessage && <p className="result-share-status" role="status" aria-atomic="true">{shareMessage}</p>}
@@ -725,7 +686,7 @@ function StepHeader({
 
   return (
     <div className="creation-header">
-      <StepProgress step={step} onBack={onBack} />
+      <StepProgress step={step} onBack={onBack} easyMode={easyMode} />
       <div className={step < 3 ? "sr-only" : "mt-5"}>
         <h2
           data-screen-heading
@@ -784,7 +745,12 @@ function CreateFlow({
   onResultTabChange,
   initialResultTab,
   onGeneratingChange,
+  aiPromo,
+  setAiPromo,
+  aiVideo,
+  onStopSpeech,
 }: {
+  onStopSpeech?: () => void
   type: CreationType
 
   step: Step
@@ -826,8 +792,19 @@ function CreateFlow({
   onResultTabChange: () => void
   initialResultTab: "poster" | "video" | "copy"
   onGeneratingChange?: (generating: boolean) => void
+  aiPromo: AiPromo | null
+  setAiPromo: (promo: AiPromo | null) => void
+  aiVideo: AiVideoController
 }) {
   const { notify } = useFeedback()
+  const t = (text: string) => uiText(text, easyMode)
+  const isPc = useLayout() === "pc"
+  const saveLabel = isPc ? "컴퓨터에 저장" : "폰에 저장"
+  // 말로 쓰기 (쉬운 화면): one session for the info step; stops 화면 설명 듣기 before listening.
+  const voice = useVoiceInput(onStopSpeech)
+  useEffect(() => {
+    if (step !== 2 || !easyMode) voice.cancel()
+  }, [step, easyMode]) // eslint-disable-line react-hooks/exhaustive-deps
   const [playing, setPlaying] = useState(false)
   const [selectedResultTab, setSelectedResultTab] =
     useState<"poster" | "video" | "copy">(initialResultTab)
@@ -874,6 +851,125 @@ function CreateFlow({
   const missingFields = [
     !details.name?.trim() && "제품 이름",
   ].filter(Boolean)
+
+  const tones = normalizeTones(details)
+  const tonesKey = tones.join(",")
+
+  // ---- Photo auto-fill (AI). Only fields that are empty — or still hold an earlier AI suggestion —
+  // and that the user never edited are filled; stale answers are ignored.
+  const detailsRef = useRef(details)
+  detailsRef.current = details
+  const userEditedRef = useRef(new Set<string>())
+  const aiFilledRef = useRef<Partial<Record<string, string>>>({})
+  const aiEligibleImageRef = useRef("")
+  const analyzedImageRef = useRef("")
+  const [photoFill, setPhotoFill] = useState<"idle" | "loading" | "filled">("idle")
+  // AI photo check (from the same analysis): shown on the photo step only if it arrives while the
+  // user is still there; after moving on it is dropped so nothing interrupts.
+  const [aiPhotoCheck, setAiPhotoCheck] = useState<{ image: string; check: PhotoCheck } | null>(null)
+  const stepRef = useRef(step)
+  stepRef.current = step
+  const startPhotoAnalysis = (image: string) => {
+    void analyzePhotoOnce(image).then((result) => {
+      const check = result?.photoCheck
+      if (check && (!check.isRealPhoto || check.isBlurry) && stepRef.current === 1) setAiPhotoCheck({ image, check })
+    })
+  }
+
+  useEffect(() => {
+    if (imageUrl) return
+    // A new creation starts without a photo: forget what belonged to the previous one.
+    userEditedRef.current.clear()
+    aiFilledRef.current = {}
+    aiEligibleImageRef.current = ""
+    analyzedImageRef.current = ""
+  }, [imageUrl])
+
+  useEffect(() => {
+    if (step !== 2 || !imageUrl || aiEligibleImageRef.current !== imageUrl || analyzedImageRef.current === imageUrl) return
+    const controller = new AbortController()
+    setPhotoFill("loading")
+    void analyzePhotoOnce(imageUrl).then((suggestion) => {
+      if (controller.signal.aborted) return
+      analyzedImageRef.current = imageUrl
+      setPhotoFill(suggestion && applyPhotoSuggestion(suggestion) ? "filled" : "idle")
+    })
+    return () => {
+      controller.abort()
+      setPhotoFill("idle")
+    }
+  }, [step, imageUrl])
+
+  const applyPhotoSuggestion = (suggestion: PhotoSuggestion) => {
+    const current = detailsRef.current
+    const next: GeneratedRecord["details"] = { ...current }
+    const filled = aiFilledRef.current
+    const fillable = (key: string, value: string) =>
+      !userEditedRef.current.has(key) && (!value.trim() || value === filled[key])
+    const textFields: [keyof GeneratedRecord["details"] & string, string][] = [
+      ["name", suggestion.productName],
+      ["description", suggestion.description],
+      ["features", suggestion.highlights],
+      ["keywords", suggestion.keyFeatures.join(", ")],
+      ["audience", suggestion.targetAudience],
+    ]
+    let changed = false
+    for (const [key, value] of textFields) {
+      const currentValue = String(current[key] ?? "")
+      if (!value || !fillable(key, currentValue) || currentValue === value) continue
+      Object.assign(next, { [key]: value })
+      filled[key] = value
+      changed = true
+    }
+    const currentTones = normalizeTones(current)
+    const suggestedTones = normalizeTones({ tones: suggestion.tones })
+    if (suggestedTones.length && fillable("tones", currentTones.join(",")) && currentTones.join(",") !== suggestedTones.join(",")) {
+      next.tones = suggestedTones
+      filled.tones = suggestedTones.join(",")
+      changed = true
+    }
+    if (!changed) return false
+    detailsRef.current = next
+    setDetails(next)
+    return true
+  }
+
+  // ---- AI 홍보 글: requested when 홍보물 만들기 is pressed, in parallel with the local result.
+  const promoControllerRef = useRef<AbortController | null>(null)
+  const [promoPending, setPromoPending] = useState(false)
+  useEffect(() => () => promoControllerRef.current?.abort(), [])
+  const cancelPromoRequest = () => {
+    promoControllerRef.current?.abort()
+    promoControllerRef.current = null
+    setPromoPending(false)
+  }
+  const requestPromoText = () => {
+    cancelPromoRequest()
+    const signature = promoSignature(details, channel)
+    if (aiPromo?.signature === signature) return
+    setAiPromo(null)
+    const controller = new AbortController()
+    promoControllerRef.current = controller
+    setPromoPending(true)
+    void generatePromoText(
+      {
+        productName: details.name?.trim() ?? "",
+        productDescription: details.description.trim(),
+        highlights: details.features.trim().slice(0, 1000),
+        keyFeatures: (details.keywords ?? "").split(",").map((item) => item.trim()).filter(Boolean),
+        targetAudience: details.audience.trim(),
+        tones,
+        shopName: details.shopName?.trim(),
+        channel,
+      },
+      { signal: controller.signal, timeoutMs: PROMO_WAIT_MS },
+    ).then((result) => {
+      if (promoControllerRef.current !== controller) return
+      promoControllerRef.current = null
+      if (result) setAiPromo({ ...result, signature })
+      setPromoPending(false)
+    })
+  }
 
   const videoRecorderRef = useRef<MediaRecorder | null>(null)
 
@@ -936,7 +1032,7 @@ function CreateFlow({
 
     details.keywords,
 
-    details.tone,
+    tonesKey,
   ])
 
   const upload = (event: ChangeEvent<HTMLInputElement>) => {
@@ -985,6 +1081,8 @@ function CreateFlow({
 
           if (request !== uploadRequestRef.current) return
 
+          aiEligibleImageRef.current = reader.result
+          startPhotoAnalysis(reader.result)
           setImageUrl(reader.result)
           setUploadPending(false)
 
@@ -1012,7 +1110,7 @@ function CreateFlow({
     details.description,
     keyFeatureList.length ? keyFeatureList.map((item) => "✔ " + item).join("  ") : "",
   ].filter(Boolean).join("\n")
-  const toneLine = toneLines[details.tone ?? ""]
+  const toneLine = toneClosing(tones)
   const audienceRecommendation = details.audience.trim()
     ? `\n\n${details.audience}께 추천해요.`
     : ""
@@ -1049,7 +1147,13 @@ function CreateFlow({
     details,
   )
 
-  const hashtags = parseHashtags(safeUserHashtags[channel])
+  // The AI 홍보 글 is used only while the inputs still match what it was written for.
+  const activePromo = aiPromo && aiPromo.signature === promoSignature(details, channel) ? aiPromo : null
+  const copyText = activePromo ? composePromoText(activePromo, details) : resultCopy[channel]
+
+  const hashtags = activePromo
+    ? activePromo.hashtags.slice(0, Math.max(channelThemes[channel].tagLimit, 4)).map((tag) => `#${tag}`)
+    : parseHashtags(safeUserHashtags[channel])
 
   const recommendationTags = parseHashtags(safeRecommendations[channel])
 
@@ -1066,8 +1170,8 @@ function CreateFlow({
   const showCopy = type === "copy" || type === "all"
 
   const resultTabs = [
-    { id: "poster" as const, label: "이미지", available: showPoster },
-    { id: "video" as const, label: "영상", available: showVideo },
+    { id: "poster" as const, label: easyMode ? "포스터" : "이미지", available: showPoster },
+    { id: "video" as const, label: easyMode ? "짧은 영상" : "영상", available: showVideo },
     { id: "copy" as const, label: "홍보 글", available: showCopy },
   ].filter((tab) => tab.available)
   const activeResultTab = resultTabs.some((tab) => tab.id === selectedResultTab)
@@ -1083,7 +1187,7 @@ function CreateFlow({
         ?.focus({ preventScroll: true })
   }
 
-  const finalText = `${resultCopy[channel].trim()}\n\n${hashtags.join(" ")}`.trim()
+  const finalText = `${copyText.trim()}\n\n${hashtags.join(" ")}`.trim()
   const mediaText =
     details.name?.trim() &&
     resultCopy[channel].startsWith(details.name.trim() + "\n")
@@ -1091,6 +1195,10 @@ function CreateFlow({
       : resultCopy[channel]
 
   const updateDetails = (nextDetails: GeneratedRecord["details"]) => {
+    for (const key of Object.keys(nextDetails) as (keyof GeneratedRecord["details"])[]) {
+      if (nextDetails[key] !== details[key]) userEditedRef.current.add(key === "tone" ? "tones" : key)
+    }
+    detailsRef.current = nextDetails
     setDetails(nextDetails)
 
     onDraftTouched()
@@ -1143,6 +1251,10 @@ function CreateFlow({
     }
   }
 
+  const posterContent = buildPosterContent(details)
+  const posterKey = JSON.stringify([posterContent, posterThemeFor(tones)])
+  const posterDrawnTextRef = useRef("")
+
   const createPosterFile = async (download: boolean) => {
     if (download && posterPreviewFileRef.current) {
       triggerFileDownload(posterPreviewFileRef.current)
@@ -1160,49 +1272,22 @@ function CreateFlow({
 
     try {
       const image = await loadCanvasImage(imageUrl)
-      await document.fonts.ready
+      // Poster renderer ported from D_고혜숙 (src/poster). The first 홍보 분위기 picks the theme.
+      await loadPosterFonts(Object.values(posterContent).filter(Boolean) as string[])
 
       const canvas = document.createElement("canvas")
 
-      canvas.width = 1080
+      const drawnText = renderPosterToCanvas({
+        canvas,
+        content: posterContent,
+        productImage: image,
+        themeKey: posterThemeFor(tones),
+        ratioKey: "4:5",
+        compositionKey: "vertical",
+      })
 
-      canvas.height = 1350
-
-      const context = canvas.getContext("2d")
-
-      if (!context) throw new Error("canvas-unavailable")
-
-      drawImageCover(context, image, canvas.width, canvas.height)
-
-      const gradient = context.createLinearGradient(0, 620, 0, 1350)
-
-      gradient.addColorStop(0, "rgba(0,0,0,0)")
-
-      gradient.addColorStop(0.35, `rgba(${channelTheme.rgb},0.6)`)
-
-      gradient.addColorStop(1, `rgba(${channelTheme.rgb},0.92)`)
-
-      context.fillStyle = gradient
-
-      context.fillRect(0, 0, canvas.width, canvas.height)
-
-      context.fillStyle = "#ffffff"
-
-      context.font = '700 72px "Noto Sans KR", sans-serif'
-
-      drawWrappedText(
-        context,
-        details.shopName?.trim() || details.name?.trim() || details.description.trim() || details.features,
-        76,
-        960,
-        928,
-        84,
-        3,
-      )
-
-      context.font = '500 48px "Noto Sans KR", sans-serif'
-
-      drawWrappedText(context, mediaText, 76, 1180, 928, 62, 3)
+      if (!drawnText) throw new Error("canvas-unavailable")
+      posterDrawnTextRef.current = drawnText.join(". ")
 
       const blob = await new Promise<Blob | null>((resolve) =>
         canvas.toBlob(resolve, "image/png"),
@@ -1246,14 +1331,7 @@ function CreateFlow({
       setPosterPreviewUrl(previewUrl)
       setPosterPreviewStatus("ready")
       notify("result")
-      const context = document.createElement("canvas").getContext("2d")
-      if (context) {
-        context.font = '700 72px "Noto Sans KR", sans-serif'
-        const title = wrapCanvasText(context, details.shopName?.trim() || details.name?.trim() || details.description.trim() || details.features, 928, 3).join(" ")
-        context.font = '500 48px "Noto Sans KR", sans-serif'
-        const copy = wrapCanvasText(context, mediaText, 928, 3).join(" ")
-        setPosterVisibleText([title, copy].filter(Boolean).join(". "))
-      }
+      setPosterVisibleText(posterDrawnTextRef.current)
     }).catch(() => {
       if (!cancelled) setPosterPreviewStatus("failed")
     })
@@ -1266,10 +1344,7 @@ function CreateFlow({
     step,
     showPoster,
     imageUrl,
-    details.name,
-    details.features,
-    resultCopy[channel],
-    channel,
+    posterKey,
     posterRetry,
   ])
 
@@ -1486,7 +1561,7 @@ function CreateFlow({
 
       setVideoMessage(
         easyMode
-          ? "확인용 예시 영상 파일이 준비됐어요."
+          ? "영상이 준비됐어요."
           : `${extension} 확인용 예시 영상이 준비됐어요.`,
       )
 
@@ -1566,8 +1641,11 @@ function CreateFlow({
           kind={type}
           imageUrl={imageUrl}
           title={details.shopName?.trim() || details.name?.trim() || details.description.trim() || "우리 가게"}
-          ready={!showPoster || posterPreviewStatus !== "preparing"}
+          ready={(!showPoster || posterPreviewStatus !== "preparing") && !promoPending}
+          easyMode={easyMode}
           onCancel={() => {
+            cancelPromoRequest()
+            aiVideo.cancel()
             setGenerating(false)
             setStep(2)
           }}
@@ -1584,9 +1662,9 @@ function CreateFlow({
         <div className="result-screen-heading">
           <div className="sr-only">
             <h2 data-screen-heading tabIndex={-1}>
-              결과 보기
+              {t("결과 보기")}
             </h2>
-            <p>사진과 입력한 내용으로 만든 체험 결과예요. </p>
+            <p>{t("사진과 입력한 내용으로 만든 체험 결과예요. ")}</p>
           </div>
         </div>
       ) : (
@@ -1606,16 +1684,18 @@ function CreateFlow({
           message={uploadMessage}
           onUpload={upload}
           onDropFile={uploadFile}
+          aiCheck={aiPhotoCheck?.image === imageUrl ? aiPhotoCheck.check : null}
           onNext={() => setStep(2)}
+          easyMode={easyMode}
         />
       )}
       {step === 2 && (
         <div className="details-step step-panel compact-information">
           <div className="information-photo" aria-busy={uploadPending}>
-            <img src={imageUrl} alt="선택한 제품 사진" width="88" height="88" />
+            <img src={imageUrl} alt={t("선택한 제품 사진")} width="88" height="88" />
             <div>
-              <strong>선택한 사진</strong>
-              <span>다른 사진으로 바꿀 수 있어요.</span>
+              <strong>{t("선택한 사진")}</strong>
+              <span>{t("다른 사진으로 바꿀 수 있어요.")}</span>
             </div>
             <button
               type="button"
@@ -1624,7 +1704,7 @@ function CreateFlow({
               onClick={() => detailsPhotoRef.current?.click()}
             >
               <Icon name="camera" size={18} />
-              사진 변경
+              {t("사진 변경")}
             </button>
             <input
               ref={detailsPhotoRef}
@@ -1632,7 +1712,7 @@ function CreateFlow({
               type="file"
               hidden
               accept="image/*"
-              aria-label="정보 입력에서 사진 바꾸기"
+              aria-label={t("정보 입력에서 사진 바꾸기")}
               aria-describedby={uploadMessage ? "details-upload-feedback" : undefined}
               onChange={upload}
             />
@@ -1648,14 +1728,14 @@ function CreateFlow({
               role={uploadPending || uploadMessage === "사진이 준비됐어요." ? "status" : "alert"}
               aria-atomic="true"
             >
-              {uploadMessage}
+              {t(uploadMessage)}
             </p>
           )}
           <p
             id="details-example-note"
             className="description-example-note sr-only"
           >
-            제품 이름은 꼭 적고, 나머지는 적지 않아도 돼요.
+            {t("제품 이름은 꼭 적고, 나머지는 적지 않아도 돼요.")}
           </p>
           {type !== "all" && (
             <p className="sr-only">
@@ -1666,102 +1746,134 @@ function CreateFlow({
             </p>
           )}
           <div className="details-fields mt-7 space-y-5">
+            <div className="ai-fill-live" role="status" aria-live="polite" aria-atomic="true">
+              {photoFill !== "idle" && (
+                <p className={`ai-fill-status${photoFill === "loading" ? " is-loading" : ""}`}>
+                  {photoFill === "loading" && <span className="ai-fill-spinner" aria-hidden="true" />}
+                  {t(photoFill === "loading" ? "사진을 보고 내용을 채우고 있어요…" : "사진을 보고 채웠어요. 맞지 않으면 고쳐 주세요.")}
+                </p>
+              )}
+            </div>
             <label className="block text-[18px] font-bold">
-              제품 이름 <span className="field-tag is-required">필수</span>
-              <input
+              제품 이름 <span className="field-tag is-required">{t("필수")}</span>
+              <VoiceField voice={voice} field="name" label="제품 이름" inputId="field-product-name" value={details.name ?? ""} maxLength={50} easyMode={easyMode} onVoiceText={(text) => updateDetails({ ...details, name: text })}>
+              {(bind) => <input
+                {...bind}
                 aria-label="제품 이름"
                 aria-required="true"
                 aria-invalid={nameTouched && missingFields.length > 0 ? true : undefined}
                 aria-describedby="product-name-help"
                 value={details.name ?? ""}
                 maxLength={50}
-                placeholder="예) 수제 쿠키와 커피"
+                placeholder={t("예) 수제 쿠키와 커피")}
                 onBlur={() => setNameTouched(true)}
                 onChange={(event) => updateDetails({ ...details, name: event.target.value })}
                 className="mt-2 w-full rounded-[12px] border-2 border-[#817a74] p-4 text-[18px] font-normal leading-7 outline-none"
-              />
+              />}
+              </VoiceField>
               <span className="field-meta">
                 <span id="product-name-help" className={nameTouched && missingFields.length > 0 ? "field-validation is-error" : "sr-only"} role={nameTouched && missingFields.length > 0 ? "alert" : undefined}>
-                  {nameTouched && missingFields.length > 0 ? "제품 이름을 적어 주세요." : "제품 이름을 적으면 홍보물을 만들 수 있어요."}
+                  {t(nameTouched && missingFields.length > 0 ? "제품 이름을 적어 주세요." : "제품 이름을 적으면 홍보물을 만들 수 있어요.")}
                 </span>
                 {Boolean(details.name) && <span className="field-count" aria-hidden="true">{(details.name ?? "").length}/50</span>}
               </span>
             </label>
             <label className="block text-[18px] font-bold">
-              가게 이름 <span className="field-tag">선택</span>
-              <input
+              가게 이름 <span className="field-tag">{t("선택")}</span>
+              <VoiceField voice={voice} field="shopName" label="가게 이름" inputId="field-shop-name" value={details.shopName ?? ""} maxLength={30} easyMode={easyMode} onVoiceText={(text) => updateDetails({ ...details, shopName: text })}>
+              {(bind) => <input
+                {...bind}
                 aria-label="가게 이름"
                 aria-required="false"
                 value={details.shopName ?? ""}
                 maxLength={30}
                 onChange={(event) => updateDetails({ ...details, shopName: event.target.value })}
-                placeholder="예) 행복한 카페"
+                placeholder={t("예) 행복한 카페")}
                 className="mt-2 w-full rounded-[12px] border p-4"
-              />
+              />}
+              </VoiceField>
             </label>
             <fieldset className="tone-field">
-              <legend>홍보 분위기 <span className="field-tag">선택</span></legend>
-              <div className="tone-options" role="radiogroup" aria-label="홍보 분위기">
-                {toneOptions.map((option) => (
-                  <button
-                    key={option.value || "auto"}
-                    type="button"
-                    role="radio"
-                    aria-checked={(details.tone ?? "") === option.value}
-                    aria-label={option.name}
-                    onClick={() => updateDetails({ ...details, tone: option.value })}
-                  >
-                    {option.label}
-                  </button>
-                ))}
+              <legend>{t("홍보 분위기")} <span className="field-tag">{t("선택")}</span></legend>
+              {/* Several moods can be chosen; the first one leads. 자동 clears them and shows as chosen when none is. */}
+              <div className="tone-options" role="group" aria-label={t("홍보 분위기 · 여러 개 고를 수 있어요")}>
+                {toneOptions.map((option) => {
+                  const value = option.value
+                  const pressed = value ? tones.includes(value) : tones.length === 0
+                  return (
+                    <button
+                      key={value || "auto"}
+                      type="button"
+                      aria-pressed={pressed}
+                      aria-label={t(option.name)}
+                      onClick={() => {
+                        const next = !value ? [] : pressed ? tones.filter((tone) => tone !== value) : [...tones, value]
+                        const { tone: _legacy, ...rest } = details
+                        updateDetails({ ...rest, tones: next })
+                      }}
+                    >
+                      {t(option.label)}
+                    </button>
+                  )
+                })}
               </div>
             </fieldset>
             <details className="details-more" open={Boolean(details.description || details.features || details.keywords || details.audience) || undefined}>
               <summary>
-                <span>더 자세히 알려주기</span>
-                <small>
-                  {[details.description, details.features, details.keywords, details.audience].filter((value) => value?.trim()).length}/4 입력 · 선택
-                </small>
+                <span>{t("더 자세히 알려주기")}</span>
+                {(() => {
+                  const filled = [details.description, details.features, details.keywords, details.audience].filter((value) => value?.trim()).length
+                  return <small>{easyMode ? (filled ? `${filled}개 썼어요` : "안 써도 돼요") : `${filled}/4 입력 · 선택`}</small>
+                })()}
               </summary>
               <div className="details-more-fields">
                 <label className="block text-[18px] font-bold">
-                  제품 설명
-                  <AutoSizeTextarea
-                    aria-label="제품 설명"
+                  {t("제품 설명")}
+                  <VoiceField voice={voice} field="description" label={t("제품 설명")} inputId="field-description" value={details.description} maxLength={500} easyMode={easyMode} onVoiceText={(text) => updateDetails({ ...details, description: text })}>
+                  {(bind) => <AutoSizeTextarea
+                    {...bind}
+                    aria-label={t("제품 설명")}
                     value={details.description}
                     maxLength={500}
-                    placeholder="예) 매일 아침 직접 굽는 촉촉한 초코 케이크예요."
+                    placeholder={t("예) 매일 아침 직접 굽는 촉촉한 초코 케이크예요.")}
                     onChange={(event) => updateDetails({ ...details, description: event.target.value })}
                     rows={2}
                     resizeKey={easyMode}
                     className="mt-2 w-full rounded-[12px] border-2 border-[#817a74] p-4 text-[18px] font-normal leading-7 outline-none"
-                  />
+                  />}
+                  </VoiceField>
                   <span className="field-meta">{Boolean(details.description) && <span className="field-count" aria-hidden="true">{(details.description ?? "").length}/500</span>}</span>
                 </label>
                 <label className="block text-[18px] font-bold">
-                  어떤 점을 알려주고 싶나요?
-                  <AutoSizeTextarea
-                    aria-label="알리고 싶은 점"
+                  {t("어떤 점을 알려주고 싶나요?")}
+                  <VoiceField voice={voice} field="features" label={t("알리고 싶은 점")} inputId="field-features" value={details.features} easyMode={easyMode} onVoiceText={(text) => updateDetails({ ...details, features: text })}>
+                  {(bind) => <AutoSizeTextarea
+                    {...bind}
+                    aria-label={t("알리고 싶은 점")}
                     aria-required="false"
                     value={details.features}
-                    placeholder={"예) 신선한 재료, 직접 만든 디저트,\n아늑한 분위기"}
+                    placeholder={t("예) 신선한 재료, 직접 만든 디저트,\n아늑한 분위기")}
                     onChange={(event) => updateDetails({ ...details, features: event.target.value })}
                     rows={2}
                     resizeKey={easyMode}
                     className="mt-2 w-full rounded-[12px] border-2 border-[#817a74] p-4 text-[18px] font-normal leading-7 outline-none"
-                  />
+                  />}
+                  </VoiceField>
                 </label>
                 <label className="block text-[18px] font-bold">
-                  핵심 특징
-                  <input
-                    aria-label="핵심 특징"
+                  {t("핵심 특징")}
+                  <VoiceField voice={voice} field="keywords" label={t("핵심 특징")} inputId="field-keywords" value={details.keywords ?? ""} easyMode={easyMode} onVoiceText={(text) => updateDetails({ ...details, keywords: text })}>
+                  {(bind) => <input
+                    {...bind}
+                    aria-label={t("핵심 특징")}
                     aria-describedby="keywords-help"
                     value={details.keywords ?? ""}
-                    placeholder="예) 수제, 당일 생산, 무료 포장"
+                    placeholder={t("예) 수제, 당일 생산, 무료 포장")}
                     onChange={(event) => updateDetails({ ...details, keywords: event.target.value })}
                     className="mt-2 w-full rounded-[12px] border p-4"
-                  />
-                  <span id="keywords-help" className="field-hint">쉼표(,)로 나눠 적으면 해시태그와 홍보 글에 넣어요.</span>
+                  />}
+                  </VoiceField>
+                  <span id="keywords-help" className="field-hint">{t("쉼표(,)로 나눠 적으면 해시태그와 홍보 글에 넣어요.")}</span>
                   {Boolean(details.keywords?.trim()) && (
                     <span className="keyword-chips" aria-hidden="true">
                       {(details.keywords ?? "").split(",").map((item) => item.trim()).filter(Boolean).map((item) => <span key={item}>{item}</span>)}
@@ -1769,14 +1881,17 @@ function CreateFlow({
                   )}
                 </label>
                 <label className="block text-[18px] font-bold">
-                  주요 고객층
-                  <input
-                    aria-label="주요 고객층"
+                  {t("주요 고객층")}
+                  <VoiceField voice={voice} field="audience" label={t("주요 고객층")} inputId="field-audience" value={details.audience} easyMode={easyMode} onVoiceText={(text) => updateDetails({ ...details, audience: text })}>
+                  {(bind) => <input
+                    {...bind}
+                    aria-label={t("주요 고객층")}
                     value={details.audience}
-                    placeholder="예) 동네 직장인, 디저트를 좋아하는 20~30대"
+                    placeholder={t("예) 동네 직장인, 디저트를 좋아하는 20~30대")}
                     onChange={(event) => updateDetails({ ...details, audience: event.target.value })}
                     className="mt-2 w-full rounded-[12px] border p-4"
-                  />
+                  />}
+                  </VoiceField>
                 </label>
               </div>
             </details>
@@ -1939,17 +2054,19 @@ function CreateFlow({
                 role="status"
                 className="missing-details-note"
               >
-                {missingFields.length > 0 ? "제품 이름을 적으면 만들 수 있어요." : ""}
+                {missingFields.length > 0 ? t("제품 이름을 적으면 만들 수 있어요.") : ""}
               </p>
               <PrimaryButton
                 disabled={missingFields.length > 0 || uploadPending}
                 onClick={() => {
                   setSelectedResultTab(resultTabs[0].id)
+                  if (showCopy) requestPromoText()
+                  if (showVideo) aiVideo.start({ imageUrl, details: toVideoDetails(details) })
                   setGenerating(true)
                   setStep(3)
                 }}
               >
-                {{ all: "홍보물 만들기", poster: "이미지 만들기", video: "영상 만들기", copy: "홍보 글 만들기" }[type]} <Icon name="arrow" />
+                {t({ all: "홍보물 만들기", poster: "이미지 만들기", video: "영상 만들기", copy: "홍보 글 만들기" }[type])} <Icon name="arrow" />
               </PrimaryButton>
             </div>
           </div>
@@ -1961,7 +2078,7 @@ function CreateFlow({
             <div
               className="result-tabs"
               role="tablist"
-              aria-label="홍보물 결과 종류"
+              aria-label={t("홍보물 결과 종류")}
             >
               {resultTabs.map((tab, index) => (
                 <button
@@ -1996,7 +2113,7 @@ function CreateFlow({
                     }
                     size={22}
                   />
-                  {tab.label}
+                  <span className="result-tab-label">{tab.label}</span>
                 </button>
               ))}
             </div>
@@ -2015,8 +2132,9 @@ function CreateFlow({
                 className="result-card result-poster"
               >
                 <ResultCardHeading
+                  easyMode={easyMode}
                   icon="picture"
-                  title="이미지"
+                  title={easyMode ? "포스터" : "이미지"}
                   control={
                       <button
                         type="button"
@@ -2034,7 +2152,7 @@ function CreateFlow({
                         }}
                       >
                         <Icon name={posterExpanded ? "zoom-out" : "zoom-in"} size={34} />
-                        <span>{posterExpanded ? "작게 보기" : "크게 보기"}</span>
+                        <span>{t(posterExpanded ? "작게 보기" : "크게 보기")}</span>
                       </button>
                   }
                 />
@@ -2044,7 +2162,7 @@ function CreateFlow({
                     id="result-poster-preview"
                     className={`result-main-preview ${posterExpanded ? "is-expanded" : ""}`}
                     role="group"
-                    aria-label={posterExpanded ? "이미지 확대 미리보기" : "이미지 미리보기"}
+                    aria-label={t(posterExpanded ? "이미지 확대 미리보기" : "이미지 미리보기")}
                     tabIndex={posterExpanded ? 0 : undefined}
                   >
                     {posterPreviewUrl ? (
@@ -2054,13 +2172,13 @@ function CreateFlow({
                     ) : (
                       <div className="result-preparation" aria-busy={posterPreviewStatus === "preparing"}>
                         <p role={posterPreviewStatus === "failed" ? "alert" : "status"}>
-                          {posterPreviewStatus === "failed"
+                          {t(posterPreviewStatus === "failed"
                             ? "이미지를 준비하지 못했어요. 다시 시도해 주세요."
-                            : "이미지를 준비하고 있어요."}
+                            : "이미지를 준비하고 있어요.")}
                         </p>
                         {posterPreviewStatus === "failed" && (
                           <button type="button" className="studio-secondary" onClick={() => setPosterRetry((value) => value + 1)}>
-                            이미지 다시 준비
+                            {t("이미지 다시 준비")}
                           </button>
                         )}
                       </div>
@@ -2069,17 +2187,18 @@ function CreateFlow({
                 </ResultPreview>
                 {posterVisibleText && <p id="poster-visible-text" className="sr-only">그림에 표시된 문구: {posterVisibleText}</p>}
                 <ResultActionBar
-                  label={posterStatus === "preparing" ? "다운로드 준비" : "다운로드"}
-                  accessibleLabel="이미지 다운로드"
+                  label={easyMode ? (posterStatus === "preparing" ? "저장 준비 중" : saveLabel) : posterStatus === "preparing" ? "다운로드 준비" : "다운로드"}
+                  accessibleLabel={easyMode ? `포스터 ${posterStatus === "preparing" ? "저장 준비 중" : saveLabel}` : "이미지 다운로드"}
+                  shareLabel={t("공유하기")}
                   icon="download"
                   onClick={() => createPosterFile(true)}
                   onShare={() => shareResult("poster")}
-                  shareMessage={shareMessages.poster}
+                  shareMessage={t(shareMessages.poster ?? "")}
                   shareDisabled={!posterPreviewUrl}
                   disabled={posterStatus === "preparing" || !posterPreviewUrl}
                   busy={posterStatus === "preparing"}
                   error={posterStatus === "failed" || posterPreviewStatus === "failed"}
-                  message={
+                  message={t(
                     posterPreviewStatus === "failed"
                       ? showVideo || showCopy
                         ? "이미지 준비에 실패했어요. 다른 결과는 계속 확인할 수 있어요."
@@ -2091,7 +2210,7 @@ function CreateFlow({
                         : posterExpanded
                           ? "이미지를 크게 키웠어요. 안에서 좌우·위아래로 움직여 보세요."
                           : ""
-                  }
+                  )}
                 />
                 {RESULT_SECONDARY_FEATURES_ENABLED && <details className="media-full-copy">
                   <summary>이미지 문구 원문 보기</summary>
@@ -2111,8 +2230,9 @@ function CreateFlow({
                 className="result-card result-video"
               >
                 <ResultCardHeading
+                  easyMode={easyMode}
                   icon="video"
-                  title="영상"
+                  title={easyMode ? "짧은 영상" : "영상"}
                   control={
                       <button
                         type="button"
@@ -2122,7 +2242,7 @@ function CreateFlow({
                         onClick={() => setPlaying(!playing)}
                       >
                         <Icon name={playing ? "pause" : "play"} size={34} />
-                        <span>{playing ? "일시 정지" : "재생하기"}</span>
+                        <span>{t(playing ? "일시 정지" : "재생하기")}</span>
                       </button>
                   }
                 />
@@ -2131,28 +2251,38 @@ function CreateFlow({
                     id="result-video-preview"
                     className="result-main-preview result-motion-preview"
                   >
+                    {showsRealVideo(aiVideo.state) ? (
+                      <AiVideoPlayer state={aiVideo.state} easyMode={easyMode} playing={playing} onPlayingChange={setPlaying} onBroken={aiVideo.markBroken} />
+                    ) : (<>
                     <img
                       src={imageUrl}
-                      alt="영상에 사용할 제품 사진"
+                      alt={t("영상에 사용할 제품 사진")}
                       className={playing ? "is-playing" : ""}
                     />
                     <strong><span>{details.shopName?.trim() || details.name?.trim() || details.description.trim() || details.features}</span></strong>
+                    </>)}
                   </div>
                 </ResultPreview>
+                <AiVideoStatus state={aiVideo.state} easyMode={easyMode} onRetry={aiVideo.retry} onResume={aiVideo.resume} />
                 <ResultActionBar
-                  label={videoStatus === "preparing" ? "준비 취소" : "다운로드"}
-                  accessibleLabel={videoStatus === "preparing" ? "영상 준비 취소" : "영상 다운로드"}
+                  label={easyMode ? (videoStatus === "preparing" ? "그만하기" : saveLabel) : videoStatus === "preparing" ? "준비 취소" : "다운로드"}
+                  accessibleLabel={easyMode ? `영상 ${videoStatus === "preparing" ? "그만하기" : saveLabel}` : videoStatus === "preparing" ? "영상 준비 취소" : "영상 다운로드"}
+                  shareLabel={t("공유하기")}
                   icon={videoStatus === "preparing" ? null : "download"}
                   onClick={() => videoStatus === "preparing"
                     ? cancelVideoPreparation()
-                    : prepareVideoDownload()}
+                    : showsRealVideo(aiVideo.state)
+                      ? saveRealVideo(aiVideo.state, details.shopName?.trim() || details.name?.trim() || "").then(setVideoMessage)
+                      : prepareVideoDownload()}
                   busy={videoStatus === "preparing"}
-                  onShare={() => shareResult("video")}
-                  shareMessage={shareMessages.video}
+                  onShare={() => showsRealVideo(aiVideo.state)
+                    ? shareRealVideo(aiVideo.state, details.shopName?.trim() || details.name?.trim() || "홍보 영상").then((message) => setShareMessages((current) => ({ ...current, video: message })))
+                    : shareResult("video")}
+                  shareMessage={t(shareMessages.video ?? "")}
                   error={videoStatus === "failed" || videoStatus === "unsupported"}
-                  message={videoStatus === "preparing"
+                  message={t(videoStatus === "preparing"
                     ? `${videoMessage} 다른 작업으로 이동하면 준비를 취소해요.`
-                    : videoMessage}
+                    : videoMessage)}
                 />
                 {RESULT_SECONDARY_FEATURES_ENABLED && <details className="media-full-copy">
                   <summary>영상 문구 원문 보기</summary>
@@ -2170,13 +2300,13 @@ function CreateFlow({
                 tabIndex={0}
                 className="result-card result-copy"
               >
-                <ResultCardHeading icon="copy" title="홍보 글" />
+                <ResultCardHeading easyMode={easyMode} icon="copy" title="홍보 글" />
                 <ResultPreview text>
                   <div className="result-main-preview result-text-preview">
                     <div
                       className="copy-result-text"
                       role="region"
-                      aria-label="홍보 문구 원문"
+                      aria-label={t("홍보 문구 원문")}
                       
                       tabIndex={0}
                     >
@@ -2185,13 +2315,14 @@ function CreateFlow({
                   </div>
                 </ResultPreview>
                 <ResultActionBar
-                  label="복사하기"
+                  label={t("복사하기")}
                   accessibleLabel="홍보 글 복사하기"
                   icon="copy"
                   onClick={copyFinalText}
                   onShare={() => shareResult("copy")}
-                  shareMessage={shareMessages.copy}
-                  message={copyMessage && !copyMessage.includes("못했어요") ? "문구를 복사했어요." : copyMessage}
+                  shareLabel={t("공유하기")}
+                  shareMessage={t(shareMessages.copy ?? "")}
+                  message={t(copyMessage && !copyMessage.includes("못했어요") ? "문구를 복사했어요." : copyMessage)}
                   error={copyMessage.includes("못했어요")}
                 />
               </article>
@@ -2206,7 +2337,7 @@ function CreateFlow({
             <PublishingGuide channel={channel} hasVideo={showVideo} />
           </details>}
           <div className="result-followup-actions">
-            <button className="studio-secondary" onClick={onDashboard}><Icon name="home" size={22} />홈으로</button>
+            <button className="studio-secondary" onClick={onDashboard}><Icon name="home" size={22} />{t("홈으로")}</button>
           </div>
         </div>
       )}
@@ -2214,7 +2345,19 @@ function CreateFlow({
   )
 }
 
+const recordsViewKey = "hongboitda-records-view"
+type RecordsView = "list" | "grid"
+function readRecordsView(): RecordsView | null {
+  try {
+    const value = localStorage.getItem(recordsViewKey)
+    return value === "list" || value === "grid" ? value : null
+  } catch {
+    return null
+  }
+}
+
 function Records({
+  easyMode,
   records,
   onOpen,
   onCreate,
@@ -2229,6 +2372,17 @@ function Records({
   const [filter, setFilter] = useState<"all" | "poster" | "video" | "copy">(
     "all",
   )
+  // 목록/격자: the viewer's own choice wins; without one, 쉬운 화면 starts with big thumbnails.
+  const [chosenView, setChosenView] = useState<RecordsView | null>(readRecordsView)
+  const view: RecordsView = chosenView ?? (easyMode ? "grid" : "list")
+  const chooseView = (value: RecordsView) => {
+    setChosenView(value)
+    try {
+      localStorage.setItem(recordsViewKey, value)
+    } catch {
+      // storage blocked: the choice still holds for this visit
+    }
+  }
   const entries = records.flatMap((record) => {
     const kinds: ("poster" | "video" | "copy")[] =
       record.type === "all"
@@ -2243,19 +2397,22 @@ function Records({
   const visible = entries.filter(
     (entry) => filter === "all" || entry.kind === filter,
   )
-  const labels = { all: "전체", poster: "이미지", video: "영상", copy: "홍보 글" }
+  const labels = easyMode
+    ? { all: "전체", poster: "포스터", video: "영상", copy: "홍보 글" }
+    : { all: "전체", poster: "이미지", video: "영상", copy: "홍보 글" }
+  const t = (text: string) => uiText(text, easyMode)
   return (
-    <section className="records-screen">
+    <section className={`records-screen is-${view}`}>
       <h2 data-screen-heading tabIndex={-1}>
         내 홍보물
       </h2>
       <p className="records-retention-note">
-        이 창에서 만든 홍보물을 확인할 수 있어요.
+        {t("이 창에서 만든 홍보물을 확인할 수 있어요.")}
       </p>
       <div
         className="records-filters"
         role="group"
-        aria-label="홍보물 종류 필터"
+        aria-label={t("홍보물 종류 필터")}
       >
         {(["all", "poster", "video", "copy"] as const).map((kind) => (
           <button
@@ -2268,26 +2425,45 @@ function Records({
           </button>
         ))}
       </div>
-      <p className="records-count" role="status">
-        {labels[filter]} · {visible.length}개
-      </p>
+      <div className="records-toolbar">
+        <p className="records-count" role="status">
+          {labels[filter]} · {visible.length}개
+        </p>
+        {visible.length > 0 && (
+          <div className="records-view-toggle" role="group" aria-label={t("보기 방식")}>
+            {(["list", "grid"] as const).map((value) => (
+              <button
+                key={value}
+                type="button"
+                aria-pressed={view === value}
+                onClick={() => chooseView(value)}
+              >
+                {t(value === "list" ? "목록 보기" : "격자 보기")}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
       {visible.length ? (
-        <div className="records-list">
+        <div className={view === "grid" ? "records-grid" : "records-list"}>
           {visible.map(({ record, kind }) => (
             <button
               key={`${record.id}-${kind}`}
-              className="record-item"
+              className={view === "grid" ? "record-card" : "record-item"}
               onClick={() => onOpen(record, kind)}
             >
-              <span className="record-thumbnail">
+              <span className="record-thumbnail" data-kind={kind}>
                 {kind === "copy" ? (
-                  <Icon name="copy" size={30} />
+                  <>
+                    <Icon name="copy" size={view === "grid" ? 44 : 30} />
+                    <span className="record-copy-mark">{labels.copy}</span>
+                  </>
                 ) : (
                   <>
                     <img src={record.imageUrl} alt="" />
                     {kind === "video" && (
                       <span className="record-video-mark">
-                        <Icon name="video" size={24} />
+                        <Icon name={easyMode || view === "grid" ? "play" : "video"} size={view === "grid" ? 36 : 24} />
                       </span>
                     )}
                   </>
@@ -2300,9 +2476,9 @@ function Records({
                 <small>
                   {labels[kind]} · {record.createdAt}
                 </small>
-                <span className="sr-only">결과 다시 보기</span>
+                <span className="sr-only">{t("결과 다시 보기")}</span>
               </span>
-              <Icon name="arrow" size={20} />
+              {view === "list" && <Icon name="arrow" size={20} />}
             </button>
           ))}
         </div>
@@ -2310,13 +2486,13 @@ function Records({
         <div className="empty-results">
           <span className="empty-results-icon" aria-hidden="true"><Icon name="folder" size={34} /></span>
           <h3>
-            {records.length
+            {t(records.length
               ? "이 종류의 결과는 아직 없어요"
-              : "아직 만든 결과가 없어요"}
+              : "아직 만든 결과가 없어요")}
           </h3>
-          <p>만들기에서 사진 한 장으로 시작해 보세요.</p>
+          <p>{t("만들기에서 사진 한 장으로 시작해 보세요.")}</p>
           <button className="studio-primary" onClick={records.length ? onStartNew : onCreate}>
-            {records.length ? "새 홍보물 만들기" : "홍보물 만들기"}
+            {records.length ? t("새 홍보물 만들기") : "홍보물 만들기"}
           </button>
         </div>
       )}
@@ -2364,9 +2540,9 @@ function Plan({ easyMode }: { easyMode: boolean }) {
             <strong>
               {uiText(title, easyMode)}
             </strong>
-            <span className="plan-option-note">{note}</span>
+            <span className="plan-option-note">{uiText(note, easyMode)}</span>
             <span className="plan-status">
-              세부 조건은 준비 중
+              {uiText("세부 조건은 준비 중", easyMode)}
             </span>
           </button>
         ))}
@@ -2403,6 +2579,14 @@ export default function App() {
 
   const [userTouched, setUserTouched] = useState(false)
 
+  const [aiPromo, setAiPromo] = useState<AiPromo | null>(null)
+
+  // Real video: when a job learns its request id or URL later, update the saved record too.
+  const aiVideo = useAiVideo((jobId, video) =>
+    setRecords((current) => current.some((record) => record.video?.jobId === jobId)
+      ? current.map((record) => (record.video?.jobId === jobId ? { ...record, video: { ...record.video, ...video } } : record))
+      : current))
+
   const [continuationNotice, setContinuationNotice] = useState(false)
 
   const [records, setRecords] = useState<GeneratedRecord[]>([])
@@ -2419,6 +2603,7 @@ export default function App() {
   const [speechMessage, setSpeechMessage] = useState("")
 
   const speechRequestRef = useRef(0)
+  const isPcLayout = useLayout() === "pc"
 
   const outputFormat: OutputFormat =
     creationType === "all"
@@ -2530,9 +2715,32 @@ export default function App() {
     }
   }
 
-  const speechText = (() => {
+  const saveLabel = isPcLayout ? "컴퓨터에 저장" : "폰에 저장"
+  const easySpeechText = (() => {
+    const shopOrName = details.shopName?.trim() || details.name?.trim() || details.description.trim()
+    const createLabel = uiText({ all: "홍보물 만들기", poster: "이미지 만들기", video: "영상 만들기", copy: "홍보 글 만들기" }[creationType], true)
+    if (page === "login") return "로그인 화면이에요. 아래 바로 시작하기를 누르면 가입 없이 쓸 수 있어요."
+    if (page === "home") return "첫 화면이에요. 사진 한 장이면 홍보물이 돼요. 홍보물 만들기를 누르세요. 다음 화면에서 사진을 넣어요."
+    if (page === "records") return "내 홍보물 화면이에요. 만든 것을 누르면 다시 볼 수 있어요."
+    if (page === "plan") return "이용 요금 화면이에요. 가격은 아직 안 정했어요."
+    if (step === 1) {
+      return imageUrl
+        ? "사진을 넣었어요. 다음으로를 누르세요. 다른 사진은 사진 바꾸기를 누르세요."
+        : "사진을 넣는 화면이에요. 사진 넣기를 누르세요. 휴대폰 사진이면 돼요."
+    }
+    if (step === 2) {
+      return (
+        "제품 이름을 쓰는 화면이에요. 제품 이름만 꼭 써 주세요. " +
+        (recognitionConstructor() ? "말로 하기를 누르면 말로 쓸 수 있어요. " : "") +
+        (details.name?.trim() ? "지금 제품 이름은 " + details.name.trim() + "이에요. " : "") +
+        "다 썼으면 아래 " + createLabel + "를 누르세요."
+      )
+    }
+    if (generatingView) return "만들고 있어요. 조금만 기다려 주세요. 다 되면 바로 보여 드려요."
+    return `다 만들었어요. ${shopOrName}. ${saveLabel}을 누르면 저장돼요. 보내기를 누르면 바로 보낼 수 있어요.`
+  })()
+  const speechText = easyMode ? easySpeechText : (() => {
     const speakUi = (text: string) => uiText(text, easyMode)
-
     if (page === "login") {
       return "이메일과 비밀번호를 입력하고 로그인하거나, 바로 시작하기 버튼을 누르세요."
     }
@@ -2631,8 +2839,7 @@ export default function App() {
     speechRequestRef.current = requestId
 
     setSpeechPreparing(true)
-
-    setSpeechMessage("읽어주기를 준비하고 있어요.")
+    setSpeechMessage(uiText("읽어주기를 준비하고 있어요.", easyMode))
 
     let voices = synthesis.getVoices()
 
@@ -2679,8 +2886,17 @@ export default function App() {
       : "재생하기 버튼으로 사진 움직임을 확인하세요."} ${videoAction === "준비 취소"
       ? "준비 취소 버튼으로 영상 파일 준비를 취소할 수 있어요."
       : "다운로드 버튼으로 파일을 가져오거나 공유하기 버튼을 누르세요."}${videoState ? " " + videoState : ""}`
+    const name = details.shopName?.trim() || details.name?.trim() || details.description.trim()
+    const easyResultSpeech = visibleCopy
+      ? "홍보 글이에요. " + visibleCopy + " 글 복사하기를 누르면 복사돼요. 그다음 원하는 곳에 붙여 넣으세요."
+      : visiblePoster
+        ? "포스터예요. " + visiblePoster + " " + saveLabel + "을 누르면 저장돼요. 보내기를 누르면 바로 보낼 수 있어요."
+        : visibleVideo
+          ? `짧은 영상이에요. ${name}. 틀어 보기를 누르면 사진이 움직여요. ${saveLabel}을 누르면 저장돼요.`
+          : ""
     const utterance = new SpeechSynthesisUtterance(
-      visibleCopy ? "홍보 글 결과입니다. " + visibleCopy + " 복사하기 버튼으로 글을 가져가거나 공유하기 버튼을 누르세요."
+      easyMode ? easyResultSpeech || speechText
+      : visibleCopy ? "홍보 글 결과입니다. " + visibleCopy + " 복사하기 버튼으로 글을 가져가거나 공유하기 버튼을 누르세요."
         : visiblePoster ? "이미지 결과입니다. " + visiblePoster + " 다운로드 버튼으로 저장하거나 공유하기 버튼을 누르세요."
           : visibleVideo ? videoSpeech
             : speechText,
@@ -2711,7 +2927,7 @@ export default function App() {
         setSpeechPreparing(false)
 
         setSpeechMessage(
-          "일시적으로 읽어주기를 시작하지 못했어요. 다시 눌러 시도해 주세요.",
+          uiText("일시적으로 읽어주기를 시작하지 못했어요. 다시 눌러 시도해 주세요.", easyMode),
         )
       }
     }, 8000)
@@ -2755,7 +2971,7 @@ export default function App() {
       }
 
       setSpeechMessage(
-        "일시적으로 읽어주기를 시작하지 못했어요. 화면을 한 번 누른 뒤 다시 시도해 주세요.",
+        uiText("일시적으로 읽어주기를 시작하지 못했어요. 화면을 한 번 누른 뒤 다시 시도해 주세요.", easyMode),
       )
     }
 
@@ -2769,7 +2985,7 @@ export default function App() {
       setSpeechPreparing(false)
 
       setSpeechMessage(
-        "일시적으로 읽어주기를 시작하지 못했어요. 다시 눌러 시도해 주세요.",
+        uiText("일시적으로 읽어주기를 시작하지 못했어요. 다시 눌러 시도해 주세요.", easyMode),
       )
     }
   }
@@ -2786,6 +3002,8 @@ export default function App() {
       setUserHashtagsByChannel(initialHashtagValues())
       setUserTouched(false)
       setContinuationNotice(false)
+      setAiPromo(null)
+      aiVideo.reset()
       setStep(1)
     }
     setPage(nextPage)
@@ -2807,6 +3025,10 @@ export default function App() {
     setUserTouched(false)
 
     setContinuationNotice(false)
+
+    setAiPromo(null)
+
+    aiVideo.reset()
 
     setStep(1)
 
@@ -2836,9 +3058,13 @@ export default function App() {
 
       imageUrl,
 
-      details: { ...details },
+      details: { ...details, tones: normalizeTones(details) },
 
       userHashtags: { ...safeUserHashtags },
+
+      ...(aiPromo && aiPromo.signature === promoSignature(details, channel) ? { promo: aiPromo } : {}),
+
+      ...(aiVideo.saved() ? { video: aiVideo.saved() } : {}),
     }
 
     setRecords((current) => [record, ...current])
@@ -2859,7 +3085,13 @@ export default function App() {
 
     setImageUrl(record.imageUrl)
 
-    setDetails({ ...record.details })
+    // Older records stored a single `tone`; normalizeTones() migrates it to `tones`.
+    const { tone: _legacyTone, ...recordDetails } = record.details
+    setDetails({ ...recordDetails, tones: normalizeTones(record.details) })
+
+    setAiPromo(record.promo ?? null)
+
+    aiVideo.restore(record.video)
 
     setUserHashtagsByChannel(
       normalizeHashtagValues(record.userHashtags, record.details),
@@ -2973,7 +3205,11 @@ export default function App() {
           onDashboard={() => navigate("home")}
           onStartNew={startNew}
           onResultTabChange={stopSpeech}
+          onStopSpeech={stopSpeech}
           onGeneratingChange={setGeneratingView}
+          aiPromo={aiPromo}
+          setAiPromo={setAiPromo}
+          aiVideo={aiVideo}
         />
       )}
       {page === "records" && (

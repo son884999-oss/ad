@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react"
 import Icon from "./Icon"
+import { uiText } from "./easyText"
 
 type Kind = "all" | "poster" | "video" | "copy"
 type Step = { label: string; active: string; until: number }
@@ -36,7 +37,9 @@ export default function GenerationProgress({
   ready,
   onDone,
   onCancel,
+  easyMode = false,
 }: {
+  easyMode?: boolean
   kind: Kind
   imageUrl: string
   title: string
@@ -44,6 +47,7 @@ export default function GenerationProgress({
   onDone: () => void
   onCancel: () => void
 }) {
+  const t = (text: string) => uiText(text, easyMode)
   const [percent, setPercent] = useState(0)
   const headingRef = useRef<HTMLHeadingElement>(null)
   const doneRef = useRef(onDone)
@@ -74,7 +78,7 @@ export default function GenerationProgress({
   return (
     <section className="generation" aria-labelledby="generation-title">
       <h2 id="generation-title" ref={headingRef} tabIndex={-1} data-screen-heading>
-        {heading}
+        {t(heading)}
       </h2>
       <div className={`generation-card is-${kind}${percent >= 100 ? " is-done" : ""}`} aria-hidden="true">
         <div className="generation-photo">
@@ -112,21 +116,21 @@ export default function GenerationProgress({
                 {state === "done" && <Icon name="check" size={16} />}
               </span>
               <span>
-                {state === "current" ? step.active : step.label}
-                <span className="sr-only">{state === "done" ? " 완료" : state === "current" ? " 진행 중" : " 대기"}</span>
+                {t(state === "current" ? step.active : step.label)}
+                <span className="sr-only">{t(state === "done" ? " 완료" : state === "current" ? " 진행 중" : " 대기")}</span>
               </span>
             </li>
           )
         })}
       </ol>
       <p className="sr-only" role="status">
-        {activeIndex < steps.length ? steps[activeIndex].active : done}
+        {t(activeIndex < steps.length ? steps[activeIndex].active : done)}
       </p>
       <div className="generation-bar">
         <div
           className="generation-track"
           role="progressbar"
-          aria-label="홍보물 만드는 중"
+          aria-label={t("홍보물 만드는 중")}
           aria-valuemin={0}
           aria-valuemax={100}
           aria-valuenow={percent}
@@ -138,7 +142,7 @@ export default function GenerationProgress({
         </span>
       </div>
       <button type="button" className="studio-secondary generation-cancel" onClick={onCancel}>
-        취소
+        {t("취소")}
       </button>
     </section>
   )

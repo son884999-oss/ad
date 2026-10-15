@@ -18,6 +18,8 @@ async function capture(page,name,width,selectors){
 try{
 for(const [width,height] of [[320,640],[360,740],[390,844],[430,932],[768,1024],[1024,844],[1440,900]]){
  const page=await browser.newPage({viewport:{width,height},reducedMotion:'reduce',permissions:['clipboard-read','clipboard-write']})
+ // Keep this layout check deterministic and off the free AI quota: answer /api/* as if no key is set.
+ if(!process.env.REFERENCE_REBUILD_ALLOW_AI)await page.route('**/api/**',r=>r.fulfill({status:503,contentType:'application/json',body:'{"error":"AI_NOT_CONFIGURED"}'}))
  const errors=[];page.on('pageerror',e=>errors.push(e.message))
  await page.goto('http://127.0.0.1:5173/')
  await capture(page,'home',width,['.reference-home-create','.reference-home-steps'])
