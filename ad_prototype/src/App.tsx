@@ -22,6 +22,7 @@ import { useAiVideo, type AiVideoController, type SavedAiVideo } from "./useAiVi
 import { AiVideoPlayer, AiVideoStatus, saveRealVideo, shareRealVideo, showsRealVideo } from "./AiVideoPanel"
 import { toVideoDetails } from "./video"
 import { buildPosterContent, loadPosterFonts, POSTER_THEMES, posterThemeFor, renderPosterToCanvas } from "./poster"
+import { photoPalette } from "./poster/photoColor"
 import type { PosterThemeKey } from "./poster"
 import PhotoStep from "./PhotoStep"
 import GenerationProgress from "./GenerationProgress"
@@ -1090,10 +1091,12 @@ function CreateFlow({
   const stepRef = useRef(step)
   stepRef.current = step
   // What the photo shows (colour, texture, plating…) for the 홍보 글 prompt; kept per photo, never waited for.
-  const photoDetailsRef = useRef<{ image: string; details: string[] }>({ image: "", details: [] })
+  const photoDetailsRef = useRef<{ image: string; details: string[]; box: [number, number, number, number] | null }>({ image: "", details: [], box: null })
+  const [photoBox, setPhotoBox] = useState<{ image: string; box: [number, number, number, number] } | null>(null)
   const startPhotoAnalysis = (image: string) => {
     void analyzePhotoOnce(image).then((result) => {
-      if (result?.visualDetails?.length) photoDetailsRef.current = { image, details: result.visualDetails }
+      if (result) photoDetailsRef.current = { image, details: result.visualDetails ?? [], box: result.subjectBox ?? null }
+      if (result?.subjectBox) setPhotoBox({ image, box: result.subjectBox })
       const check = result?.photoCheck
       if (check && (!check.isRealPhoto || check.isBlurry) && stepRef.current === 1) setAiPhotoCheck({ image, check })
     })
@@ -1530,7 +1533,7 @@ function CreateFlow({
   // D's renderer has no side-by-side layout for a square; it would quietly fall back.
   const posterLayout: PosterLayoutKey = posterRatio === "1:1" && details.posterLayout === "split" ? "vertical" : details.posterLayout ?? "vertical"
   const posterTheme: PosterThemeKey = details.posterTheme || posterThemeFor(tones)
-  const posterKey = JSON.stringify([posterContent, posterTheme, posterRatio, posterLayout])
+  const posterKey = JSON.stringify([posterContent, posterTheme, posterRatio, posterLayout, photoBox?.image === imageUrl ? photoBox.box : null])
   const posterDrawnTextRef = useRef("")
 
   const createPosterFile = async (download: boolean) => {
@@ -1563,6 +1566,9 @@ function CreateFlow({
         ratioKey: posterRatio,
         compositionKey: posterLayout,
         aiMark: Boolean(activePromo),
+        // "색: 분위기대로" follows the product photo; a colour the user picked is kept as is.
+        photoColors: details.posterTheme ? null : photoPalette(image),
+        focusBox: photoBox?.image === imageUrl ? photoBox.box : null,
       })
 
       if (!drawnText) throw new Error("canvas-unavailable")

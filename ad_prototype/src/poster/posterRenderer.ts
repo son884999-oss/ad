@@ -179,6 +179,24 @@ function drawCoverImage(ctx: Ctx, image: Img, x: number, y: number, width: numbe
   ctx.drawImage(image, x + (width - drawWidth) / 2, y + (height - drawHeight) / 2, drawWidth, drawHeight)
 }
 
+/** Product box on a 0–1000 grid ([ymin, xmin, ymax, xmax]) from the photo analysis. */
+export type FocusBox = [number, number, number, number]
+
+/** Source rectangle around the product: the box plus a 15% margin, clamped to the photo. */
+function sourceRect(size: { width: number; height: number }, focus?: FocusBox | null) {
+  if (!focus) return { x: 0, y: 0, width: size.width, height: size.height }
+  const [ymin, xmin, ymax, xmax] = focus
+  const marginX = ((xmax - xmin) / 1000) * size.width * 0.15
+  const marginY = ((ymax - ymin) / 1000) * size.height * 0.15
+  const x = Math.max(0, (xmin / 1000) * size.width - marginX)
+  const y = Math.max(0, (ymin / 1000) * size.height - marginY)
+  const right = Math.min(size.width, (xmax / 1000) * size.width + marginX)
+  const bottom = Math.min(size.height, (ymax / 1000) * size.height + marginY)
+  return { x, y, width: right - x, height: bottom - y }
+}
+
+let currentFocus: FocusBox | null = null
+
 function drawPortraitBackdrop(ctx: Ctx, image: Img, background: Img, width: number, height: number, theme: PosterTheme, photoTop: number) {
   ctx.fillStyle = theme.bgGradient[1]
   ctx.fillRect(0, 0, width, height)
@@ -198,12 +216,13 @@ function drawPortraitBackdrop(ctx: Ctx, image: Img, background: Img, width: numb
   ctx.restore()
 
   // The photo fills the area under the text panel so the title never covers the product.
-  const photo = getContainedImageRect(size, 0, photoTop, width, height - photoTop)
+  const source = sourceRect(size, currentFocus)
+  const photo = getContainedImageRect(source, 0, photoTop, width, height - photoTop)
   ctx.save()
   ctx.shadowColor = "rgba(18,35,24,.24)"
   ctx.shadowBlur = 34
   ctx.shadowOffsetY = 8
-  ctx.drawImage(image, photo.x, photo.y, photo.width, photo.height)
+  ctx.drawImage(image, source.x, source.y, source.width, source.height, photo.x, photo.y, photo.width, photo.height)
   ctx.restore()
 
   ctx.save()
@@ -358,8 +377,9 @@ function drawProductPhoto(ctx: Ctx, image: Img, rect: { x: number; y: number; wi
     ctx.fillStyle = theme.paper
     ctx.fillRect(x, y, width, height)
     ctx.restore()
-    const photo = getContainedImageRect(size, x + width * 0.035, y + height * 0.035, width * 0.93, height * 0.93)
-    ctx.drawImage(image, photo.x, photo.y, photo.width, photo.height)
+    const source = sourceRect(size, currentFocus)
+    const photo = getContainedImageRect(source, x + width * 0.035, y + height * 0.035, width * 0.93, height * 0.93)
+    ctx.drawImage(image, source.x, source.y, source.width, source.height, photo.x, photo.y, photo.width, photo.height)
   } else {
     ctx.fillStyle = theme.paper
     ctx.fillRect(x, y, width, height)
@@ -375,6 +395,10 @@ export type RenderPosterOptions = {
   themeKey?: PosterThemeKey
   ratioKey?: PosterRatioKey
   compositionKey?: PosterCompositionKey
+  /** Product box from the photo analysis; the photo is cropped around it so the product reads larger. */
+  focusBox?: FocusBox | null
+  /** Colours taken from the product photo; they replace the theme's accent, tints and ink. */
+  photoColors?: { accent: string; bg: [string, string, string]; ink: string; sub: string } | null
   /** Small visible "AI 활용" mark (인공지능기본법 제31조) when an AI wrote part of the poster text. */
   aiMark?: boolean
 }
@@ -408,8 +432,15 @@ export function renderPosterToCanvas({
   ratioKey = "4:5",
   compositionKey = "vertical",
   aiMark = false,
+  photoColors = null,
+  focusBox = null,
 }: RenderPosterOptions): string[] | null {
-  const theme: PosterTheme = POSTER_THEMES[themeKey] ?? POSTER_THEMES.nature
+  currentFocus = focusBox
+  const baseTheme: PosterTheme = POSTER_THEMES[themeKey] ?? POSTER_THEMES.nature
+  // Photo colours apply to the light themes only; the dark luxury theme keeps its own palette.
+  const theme: PosterTheme = photoColors && themeKey !== "luxury"
+    ? { ...baseTheme, accent: photoColors.accent, accentText: photoColors.ink, bgGradient: photoColors.bg, ink: photoColors.ink, sub: photoColors.sub, paper: "#ffffff" }
+    : baseTheme
   const ratio = POSTER_RATIOS[ratioKey] ?? POSTER_RATIOS["4:5"]
   const { width, height } = ratio
   canvas.width = width

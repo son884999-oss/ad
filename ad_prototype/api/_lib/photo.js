@@ -31,6 +31,7 @@ ${Object.entries(TONE_NAMES).map(([id, name]) => `  ${id}: ${name}`).join("\n")}
 - visualDetails: 사진에 실제로 보이는 모습 2~5개. 각각 15자 안팎의 짧은 명사구(최대 30자).
   색, 질감, 담음새·놓인 모양, 장소·배경 같은 것만 쓴다. 맛·효능·품질 평가는 쓰지 않는다.
   예) "윤기 나는 딸기", "흰 생크림 층", "나무 쟁반 위", "창가 햇빛"
+- subjectBox: 홍보할 제품이 사진에서 차지하는 영역 [ymin, xmin, ymax, xmax], 0~1000 정수(위·왼쪽이 0). 가게 사진이면 가게 입구. 찾기 어려우면 [0, 0, 1000, 1000].
 - photoCheck: 홍보물에 쓸 사진으로 괜찮은지 확인한 결과.
   - isRealPhoto: 가게·제품·음식·사람을 카메라로 직접 찍은 사진이면 true. 그림, 일러스트, 만화, 화면 캡처, 글자만 있는 이미지, 밈, 포스터·전단 같은 디자인 이미지면 false.
   - isBlurry: 초점이 안 맞거나 흔들려서 무엇인지 알아보기 어려우면 true. 배경만 흐리고 제품이 또렷하면 false.
@@ -38,9 +39,9 @@ ${Object.entries(TONE_NAMES).map(([id, name]) => `  ${id}: ${name}`).join("\n")}
 
 [출력 형식]
 다른 설명 없이 JSON 객체 하나만 출력한다.
-{"productName":"","description":"","highlights":"","keyFeatures":[],"targetAudience":"","tones":[],"visualDetails":[],"photoCheck":{"isRealPhoto":true,"isBlurry":false,"reason":""}}`
+{"productName":"","description":"","highlights":"","keyFeatures":[],"targetAudience":"","tones":[],"visualDetails":[],"subjectBox":[0,0,1000,1000],"photoCheck":{"isRealPhoto":true,"isBlurry":false,"reason":""}}`
 
-const PHOTO_FIELDS = ["productName", "description", "highlights", "keyFeatures", "targetAudience", "tones", "visualDetails", "photoCheck"]
+const PHOTO_FIELDS = ["productName", "description", "highlights", "keyFeatures", "targetAudience", "tones", "visualDetails", "subjectBox", "photoCheck"]
 
 /**
  * Gemini structured output (generationConfig.responseJsonSchema). Shapes the answer only:
@@ -56,6 +57,7 @@ export const PHOTO_RESPONSE_SCHEMA = {
     targetAudience: { type: "string", description: "어울리는 손님, 30자 이내" },
     tones: { type: "array", items: { type: "string", enum: Object.keys(TONE_NAMES) }, maxItems: 2 },
     visualDetails: { type: "array", description: "사진에 보이는 색·질감·담음새·장소, 짧은 명사구", items: { type: "string" }, maxItems: 5 },
+    subjectBox: { type: "array", description: "제품 영역 [ymin, xmin, ymax, xmax], 0~1000", items: { type: "integer" }, minItems: 4, maxItems: 4 },
     photoCheck: {
       type: "object",
       properties: { isRealPhoto: { type: "boolean" }, isBlurry: { type: "boolean" }, reason: { type: "string" } },
@@ -113,6 +115,18 @@ export function parsePhotoCheck(value) {
   return { isRealPhoto, isBlurry, reason }
 }
 
+/**
+ * The product's box [ymin, xmin, ymax, xmax] on a 0–1000 grid, or null. A box covering almost the whole
+ * photo (or a tiny or broken one) is not useful for framing the poster, so it is dropped.
+ */
+export function parseSubjectBox(value) {
+  if (!Array.isArray(value) || value.length !== 4 || !value.every((n) => typeof n === "number" && Number.isFinite(n))) return null
+  const [ymin, xmin, ymax, xmax] = value.map((n) => Math.round(Math.min(1000, Math.max(0, n))))
+  if (ymax <= ymin || xmax <= xmin) return null
+  const area = ((ymax - ymin) * (xmax - xmin)) / 1_000_000
+  return area < 0.02 || area > 0.9 ? null : [ymin, xmin, ymax, xmax]
+}
+
 /** Cleans the model output into the response contract; unknown fields are dropped. */
 export function parsePhotoSuggestion(data) {
   const keyFeatures = Array.isArray(data.keyFeatures)
@@ -126,6 +140,7 @@ export function parsePhotoSuggestion(data) {
     targetAudience: withoutForbidden(cleanText(data.targetAudience, 60)),
     tones: cleanTones(data.tones, 2),
     visualDetails: visualDetailList(data.visualDetails),
+    subjectBox: parseSubjectBox(data.subjectBox),
     photoCheck: parsePhotoCheck(data.photoCheck),
   }
 }

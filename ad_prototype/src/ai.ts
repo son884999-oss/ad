@@ -19,6 +19,8 @@ export type PhotoSuggestion = {
   /** What the photo visibly shows (color, texture, plating, setting): 0–5 short phrases, ≤30 chars, no claims.
    *  Pass it on as PromoTextRequest.visualDetails. */
   visualDetails: string[]
+  /** Where the product is, [ymin, xmin, ymax, xmax] on 0–1000; null when unknown. Used to frame the poster. */
+  subjectBox: [number, number, number, number] | null
   photoCheck: PhotoCheck
 }
 
@@ -96,6 +98,12 @@ async function postJson(url: string, body: unknown, { signal, timeoutMs = DEFAUL
   }
 }
 
+function box(value: unknown): [number, number, number, number] | null {
+  if (!Array.isArray(value) || value.length !== 4 || !value.every((n) => typeof n === "number" && n >= 0 && n <= 1000)) return null
+  const [ymin, xmin, ymax, xmax] = value as number[]
+  return ymax > ymin && xmax > xmin ? [ymin, xmin, ymax, xmax] : null
+}
+
 function text(value: unknown, max: number) {
   return typeof value === "string" ? Array.from(value.trim()).slice(0, max).join("").trim() : ""
 }
@@ -154,6 +162,7 @@ export async function analyzePhoto(source: Blob | string, options: RequestOption
     targetAudience: text(value.targetAudience, 100),
     tones: textList(value.tones, 4, 20).filter((tone): tone is AiTone => AI_TONES.includes(tone as AiTone)),
     visualDetails: textList(value.visualDetails, 5, 30),
+    subjectBox: box(value.subjectBox),
     photoCheck: photoCheck(value.photoCheck),
   }
 }
