@@ -110,7 +110,7 @@ export function DevToolbar() {
     <div className="dev-toolbar" role="toolbar" aria-label="개발자 모드 화면 전환">
       <span className="dev-toolbar-title">개발자 모드</span>
       {options.map(([value, label, name]) => (
-        <button key={value} type="button" aria-pressed={devState.view === value} aria-label={name} onClick={() => setDevState({ view: value })}>
+        <button key={value} type="button" aria-pressed={devState.view === value} title={name} onClick={() => setDevState({ view: value })}>
           {label}
         </button>
       ))}

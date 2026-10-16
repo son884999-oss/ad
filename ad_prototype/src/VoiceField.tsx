@@ -175,7 +175,7 @@ export default function VoiceField({
         </span>
       )}
       <span className="sr-only" role="status" aria-live="polite" aria-atomic="true">
-        {announcement}
+        {notice ? "" : announcement}
       </span>
     </span>
   )

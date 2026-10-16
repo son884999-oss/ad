@@ -107,10 +107,10 @@ export default function PhotoStep({imageUrl,pending,message,onUpload,onDropFile,
    </div>
    <div className="photo-check" aria-live="polite" aria-atomic="true">
     {issue&&<div ref={warningRef} className="photo-check-warning">
-     <p><span className="photo-check-mark" aria-hidden="true">!</span><span>{t(ISSUE_TEXT[issue])}</span></p>
+     <p><span className="photo-check-mark" aria-hidden="true">!</span><span id="photo-issue-text">{t(ISSUE_TEXT[issue])}</span></p>
      {choosing?<div ref={choiceRef} className="photo-choice">{pickers(false)}</div>:<div className="photo-check-actions">
-      <button type="button" className="studio-primary" disabled={pending} onClick={retake}>{camera?t("다시 찍기"):t("다른 사진 고르기")}</button>
-      <button type="button" className="studio-secondary" disabled={pending} onClick={useAnyway}>{t("이 사진 그대로 쓰기")}</button>
+      <button type="button" className="studio-primary" aria-describedby="photo-issue-text" disabled={pending} onClick={retake}>{camera?t("다시 찍기"):t("다른 사진 고르기")}</button>
+      <button type="button" className="studio-secondary" aria-describedby="photo-issue-text" disabled={pending} onClick={useAnyway}>{t("이 사진 그대로 쓰기")}</button>
      </div>}
     </div>}
    </div>

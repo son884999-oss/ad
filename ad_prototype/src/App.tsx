@@ -124,6 +124,22 @@ function toneClosing(tones: readonly Tone[]) {
 }
 
 /** Identifies the inputs an AI 홍보 글 was written for, so edited inputs fall back to local copy. */
+// Mirrors api/_lib/promo.js featureText(): ≤20 items of ≤40 chars, joined with ", " to ≤300 chars.
+// Over-long lists are cut here because the server rejects them instead of trimming.
+function promoKeyFeatures(keywords: string) {
+  const items: string[] = []
+  let length = 0
+  for (const raw of keywords.split(",")) {
+    const item = Array.from(raw.replace(/\s+/g, " ").trim()).slice(0, 40).join("").trim()
+    if (!item) continue
+    const next = length + (items.length ? 2 : 0) + item.length
+    if (items.length === 20 || next > 300) break
+    items.push(item)
+    length = next
+  }
+  return items
+}
+
 function promoSignature(details: GeneratedRecord["details"], channel: Channel) {
   return JSON.stringify([
     channel,
@@ -821,6 +837,14 @@ function CreateFlow({
     onGeneratingChange?.(generating)
     return () => onGeneratingChange?.(false)
   }, [generating, onGeneratingChange])
+  // Focus the result heading once the result screen has actually rendered (a rAF from onDone could
+  // run before the commit and leave focus on <body>).
+  const focusResultRef = useRef(false)
+  useEffect(() => {
+    if (generating || !focusResultRef.current) return
+    focusResultRef.current = false
+    document.querySelector<HTMLElement>(".result-screen-heading [data-screen-heading]")?.focus({ preventScroll: true })
+  }, [generating])
   const [posterRetry, setPosterRetry] = useState(0)
   const [posterPreviewUrl, setPosterPreviewUrl] = useState("")
   const [posterVisibleText, setPosterVisibleText] = useState("")
@@ -956,8 +980,9 @@ function CreateFlow({
         productName: details.name?.trim() ?? "",
         productDescription: details.description.trim(),
         highlights: details.features.trim().slice(0, 1000),
-        keyFeatures: (details.keywords ?? "").split(",").map((item) => item.trim()).filter(Boolean),
-        targetAudience: details.audience.trim(),
+        keyFeatures: promoKeyFeatures(details.keywords ?? ""),
+        // The server rejects (400) instead of cutting, which would silently drop to the template text.
+        targetAudience: Array.from(details.audience.trim()).slice(0, 200).join(""),
         tones,
         shopName: details.shopName?.trim(),
         channel,
@@ -1650,12 +1675,10 @@ function CreateFlow({
             setStep(2)
           }}
           onDone={() => {
+            focusResultRef.current = true
             setGenerating(false)
             onResultCreated()
             if (!showPoster) notify("result")
-            window.requestAnimationFrame(() =>
-              document.querySelector<HTMLElement>(".result-screen-heading [data-screen-heading]")?.focus({ preventScroll: true }),
-            )
           }}
         />
       ) : step === 3 ? (
@@ -1849,7 +1872,7 @@ function CreateFlow({
                   <VoiceField voice={voice} field="features" label={t("알리고 싶은 점")} inputId="field-features" value={details.features} easyMode={easyMode} onVoiceText={(text) => updateDetails({ ...details, features: text })}>
                   {(bind) => <AutoSizeTextarea
                     {...bind}
-                    aria-label={t("알리고 싶은 점")}
+                    aria-label={t("어떤 점을 알려주고 싶나요?")}
                     aria-required="false"
                     value={details.features}
                     placeholder={t("예) 신선한 재료, 직접 만든 디저트,\n아늑한 분위기")}

@@ -222,7 +222,7 @@ try {
     assert.ok(analyzeBody.image.data.length < 4 * 1024 * 1024)
     assert.equal(await page.getByLabel("제품 이름", { exact: true }).inputValue(), "내가 쓴 이름")
     assert.equal(await page.getByLabel("제품 설명", { exact: true }).inputValue(), suggestion.description)
-    assert.equal(await page.getByLabel("알리고 싶은 점", { exact: true }).inputValue(), suggestion.highlights)
+    assert.equal(await page.getByLabel("어떤 점을 알려주고 싶나요?", { exact: true }).inputValue(), suggestion.highlights)
     assert.equal(await page.getByLabel("핵심 특징", { exact: true }).inputValue(), "수제, 당일 생산")
     assert.equal(await page.getByLabel("주요 고객층", { exact: true }).inputValue(), suggestion.targetAudience)
     assert.equal(await pressed(page, toneNames.premium), "true")
