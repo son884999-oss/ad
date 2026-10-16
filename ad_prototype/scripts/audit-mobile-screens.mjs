@@ -190,10 +190,12 @@ for (const [width, height] of sizes) {
     const tag = `${width}×${height} ${easy ? "쉬운" : "기본"}`
     const report = async (name) => {
       await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))))
-      const problems = [...(await page.evaluate(measure)), ...(await keyboard(page))]
+      const measured = await page.evaluate(measure)
+      // Capture before the Tab walk so the picture shows the screen as a user sees it, not the last focus ring.
+      if (shots) await page.screenshot({ path: `${shots}/${width}x${height}-${easy ? "easy" : "basic"}-${name}.png` })
+      const problems = [...measured, ...(await keyboard(page))]
       total += problems.length
       console.log(`${problems.length ? "✗" : "ok"} ${tag} ${name}${problems.length ? "\n    " + problems.join("\n    ") : ""}`)
-      if (shots) await page.screenshot({ path: `${shots}/${width}x${height}-${easy ? "easy" : "basic"}-${name}.png` })
     }
     await page.goto(base)
     await page.getByRole("button", { name: /홍보물 만들기|홍보물 만들어요/ }).first().waitFor()
