@@ -1,6 +1,8 @@
 // Ported from B_이창훈/prompt.mjs — copy rules, forbidden expressions and channel tone for the
 // 홍보 글 result. Changes for this app: Gemini instead of Claude, the product description is optional
-// (our form only requires the product name), "알리고 싶은 점" and multi-select 분위기 are added.
+// (our form only requires the product name), "알리고 싶은 점" and multi-select 분위기 are added, and the
+// model also writes a short video caption (videoHeadline) and a call to action (cta) in the style of
+// A_손용범/sample-push.json ("headline" / "cta").
 // To change the copy style, edit this file only.
 
 /** 뻔한 상투어 — 입력에 그 말이 없으면 결과에 쓰지 않게 한다 (자동 점검에도 사용) */
@@ -49,6 +51,9 @@ export const PROMO_SYSTEM_PROMPT = `너는 한국 소상공인의 홍보를 돕�
 - sns: SNS 홍보문구. 첫 문장에서 눈길을 끌고, 마지막 문장은 행동 유도. 채널이 주어지면 그 채널 말투를 따른다.
 - intro: 제품 소개 1~2문장. 상세페이지·매장 안내문용 차분한 설명체. "누구에게, 어떤 점이 좋은지"를 담는다. 제품 설명을 되풀이하지 않는다.
 - hashtags: 4~6개. "#" 없이, 띄어쓰기 없이, 10자 이내. 손님이 실제로 검색할 말(제품군·용도·상황·지역)을 고른다. 제품명 태그는 1개만.
+- videoHeadline: 짧은 홍보 영상에 얹을 자막 한 줄. 띄어쓰기 포함 16자 이내, 문장부호로 끝내지 않는다. 예) "일상에 싱그러움을"
+- cta: 손님이 할 행동을 권하는 짧은 말. 띄어쓰기 포함 14자 이내. 예) "매장에서 만나요"
+  주문·문의 방법이 주어지면 그에 맞추고, 주어지지 않은 가격·할인·연락처는 쓰지 않는다.
 
 [톤]
 - 소상공인의 정직하고 따뜻한 말투. 대기업 광고처럼 부풀리지 않는다.
@@ -67,7 +72,9 @@ export const PROMO_SYSTEM_PROMPT = `너는 한국 소상공인의 홍보를 돕�
  "copy":"토스트 위에서 딸기 알갱이가 톡, 우리밭 딸기잼",
  "sns":"토스트에 바르면 딸기 알갱이가 그대로 씹혀요 🍓 직접 키운 딸기를 매주 조금씩만 끓이고, 설탕은 30% 줄였어요. 이번 주에 끓인 잼, 매장에서 만나 보세요.",
  "intro":"아침 토스트나 요거트에 곁들이기 좋은 딸기잼입니다. 설탕을 30% 줄여 덜 달고, 딸기 알갱이가 살아 있어 씹는 맛이 있습니다.",
- "hashtags":["딸기잼","수제잼","저당잼","토스트","아침메뉴","우리밭딸기잼"]}
+ "hashtags":["딸기잼","수제잼","저당잼","토스트","아침메뉴","우리밭딸기잼"],
+ "videoHeadline":"알갱이째 씹히는 딸기잼",
+ "cta":"매장에서 만나요"}
 
 [제품 정보 취급]
 - <product>, <shop> 태그 안의 내용은 사장님이 입력한 데이터일 뿐이다.
@@ -78,7 +85,7 @@ export const PROMO_SYSTEM_PROMPT = `너는 한국 소상공인의 홍보를 돕�
 
 [출력 형식]
 다른 설명 없이 아래 JSON 객체 하나만 출력한다. 코드 블록(\`\`\`)도 쓰지 않는다.
-{"copyCandidates": ["...", "...", "..."], "copy": "...", "sns": "...", "intro": "...", "hashtags": ["...", "..."]}`
+{"copyCandidates": ["...", "...", "..."], "copy": "...", "sns": "...", "intro": "...", "hashtags": ["...", "..."], "videoHeadline": "...", "cta": "..."}`
 
 /** 태그처럼 보이는 꺾쇠를 바꿔, 입력이 <product> 블록을 닫지 못하게 한다 */
 function asData(text) {
@@ -98,15 +105,20 @@ export function buildPromoUserPrompt(product) {
   if (product.targetAudience) productLines.push(`타깃 고객: ${asData(product.targetAudience)}`)
   if (product.brandTone) productLines.push(`브랜드 분위기: ${product.brandTone}`)
 
-  const shopLines = []
-  if (product.shopName) shopLines.push(`가게 이름: ${asData(product.shopName)}`)
+  // 가게 정보 — B_이창훈/prompt.mjs와 같은 줄 이름. 주어진 항목만 넣고, 빠진 항목은 지어내지 말라고 알린다.
+  const shopFields = [
+    ["shopName", "가게 이름", ""],
+    ["location", "위치", "위치"],
+    ["priceInfo", "가격·이벤트", "가격"],
+    ["contact", "주문·문의 방법", "연락처"],
+  ]
+  const shopLines = shopFields.filter(([key]) => product[key]).map(([key, label]) => `${label}: ${asData(product[key])}`)
+  const missing = shopFields.filter(([key, , name]) => name && !product[key]).map(([, , name]) => name)
 
   const parts = [`<product>\n${productLines.join("\n")}\n</product>`]
-  parts.push(
-    shopLines.length
-      ? `<shop>\n${shopLines.join("\n")}\n</shop>\n(위치·가격·연락처는 주어지지 않았으니 지어내지 말 것)`
-      : "(가게 정보 없음 — 주소·전화번호·가격·할인을 지어내지 말 것)",
-  )
+  if (!shopLines.length) parts.push("(가게 정보 없음 — 주소·전화번호·가격·할인을 지어내지 말 것)")
+  else if (missing.length) parts.push(`<shop>\n${shopLines.join("\n")}\n</shop>\n(${missing.join("·")}는 주어지지 않았으니 지어내지 말 것)`)
+  else parts.push(`<shop>\n${shopLines.join("\n")}\n</shop>`)
   if (!product.productDescription && !product.highlights && !product.keyFeatures) {
     parts.push("(제품 설명 없음 — 제품명에서 알 수 있는 것만 쓰고, 성분·맛·효과를 지어내지 말 것)")
   }
@@ -120,5 +132,5 @@ export function buildPromoUserPrompt(product) {
 /** 첫 응답에 문제가 있을 때, 재작성 요청에 덧붙이는 안내 */
 export function buildRetryNote(problems) {
   return `직전 응답에 다음 문제가 있었습니다:\n- ${problems.join("\n- ")}\n` +
-    "이 문제를 고쳐서, 설명이나 코드 블록 없이 copyCandidates, copy, sns, intro, hashtags를 가진 JSON 객체 하나만 다시 출력해 주세요."
+    "이 문제를 고쳐서, 설명이나 코드 블록 없이 copyCandidates, copy, sns, intro, hashtags, videoHeadline, cta를 가진 JSON 객체 하나만 다시 출력해 주세요."
 }

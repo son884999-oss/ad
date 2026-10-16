@@ -27,6 +27,10 @@ export type PromoTextRequest = {
   targetAudience?: string
   tones?: AiTone[]
   shopName?: string
+  /** 가게 위치 · 가격/이벤트 · 주문/문의 방법 (server limit: 60 characters each) */
+  location?: string
+  priceInfo?: string
+  contact?: string
   channel?: string
 }
 
@@ -35,6 +39,12 @@ export type PromoTextResult = {
   sns: string
   intro: string
   hashtags: string[]
+  /** B_이창훈's one-line copy angles (0–3). `copy` is the chosen one. */
+  copyCandidates: string[]
+  /** Short caption for the video (≤16 characters); derived from `copy` on the server if needed. */
+  videoHeadline: string
+  /** Call to action (≤14 characters); "" when the model gave none — use a local fallback. */
+  cta: string
 }
 
 type RequestOptions = { signal?: AbortSignal; timeoutMs?: number }
@@ -58,8 +68,15 @@ async function postJson(url: string, body: unknown, { signal, timeoutMs = DEFAUL
       body: JSON.stringify(body),
       signal: controller.signal,
     })
-    if (response.status === 503 || response.status === 404 || response.status === 405) {
+    // Stop asking only when the API is missing (static preview) or our server says the key is not set.
+    // Any other 503 (e.g. a platform hiccup) fails just this request.
+    if (response.status === 404 || response.status === 405) {
       aiUnavailable = true
+      return null
+    }
+    if (response.status === 503) {
+      const data = (await response.json().catch(() => null)) as { error?: unknown } | null
+      if (data?.error === "AI_NOT_CONFIGURED") aiUnavailable = true
       return null
     }
     if (!response.ok) return null
@@ -155,11 +172,15 @@ export async function generatePromoText(details: PromoTextRequest, options: Requ
   const data = await postJson("/api/promo-text", details, options)
   if (!data || typeof data !== "object") return null
   const value = data as Record<string, unknown>
-  const result = {
+  const result: PromoTextResult = {
     copy: text(value.copy, 200),
     sns: text(value.sns, 800),
     intro: text(value.intro, 500),
     hashtags: textList(value.hashtags, 6, 30).map((tag) => tag.replace(/^#+/, "")).filter(Boolean),
+    // Optional extras: a missing or malformed value becomes empty, never failing the whole result.
+    copyCandidates: textList(value.copyCandidates, 3, 60),
+    videoHeadline: text(value.videoHeadline, 16),
+    cta: text(value.cta, 14),
   }
   return result.copy && result.sns && result.intro && result.hashtags.length ? result : null
 }

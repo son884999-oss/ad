@@ -344,3 +344,9 @@ html[data-layout=pc] .easy-mode .result-tabs button { gap:0;min-height:66px;font
 html[data-layout=pc] .pc-pagebar { position:relative;z-index:2;box-shadow:0 10px 12px -12px #2b242040; }
 /* 홍보 글: a short text no longer sits in a tall empty box */
 html[data-layout=pc] .results-step .result-card > .result-preview--copy,html[data-layout=pc] .easy-mode .results-step .result-card > .result-preview--copy { min-height:300px; }
+/* poster shape picker in the action panel */
+html[data-layout=pc] .results-step .result-preview-controls { flex-direction:column;align-items:stretch;width:auto;min-width:0; }
+html[data-layout=pc] .poster-style { flex:none;order:2;border:1.5px solid var(--pc-action-line); }
+html[data-layout=pc] .poster-style > summary { min-height:var(--pc-control-h);font-size:var(--pc-fs-body); }
+html[data-layout=pc] .poster-style-group button { font-size:16px; }
+html[data-layout=pc] .easy-mode .poster-style-group button { font-size:19px; }

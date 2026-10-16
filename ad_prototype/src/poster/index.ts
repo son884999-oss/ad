@@ -16,7 +16,7 @@ export function posterThemeFor(tones: readonly string[] | undefined): PosterThem
   return toneThemes[tones?.[0] ?? ""] ?? "minimal"
 }
 
-type Details = { shopName?: string; name?: string; description: string; features: string; keywords?: string; audience: string }
+type Details = { shopName?: string; name?: string; description: string; features: string; keywords?: string; audience: string; location?: string; priceInfo?: string }
 
 const same = (a: string, b: string) => a.replace(/\s+/g, "") === b.replace(/\s+/g, "")
 
@@ -34,13 +34,15 @@ export function buildPosterContent(details: Details, headline = ""): PosterConte
   const keywords = (details.keywords ?? "").split(",").map((item) => item.trim()).filter(Boolean)
   const line = headline.replace(/s+/g, " ").trim()
   const body = [description, features, line].find((value) => value && !same(value, title)) ?? ""
-  const point = keywords.length
-    ? keywords.slice(0, 3).join("  ·  ")
+  const price = details.priceInfo?.trim() ?? ""
+  // A price is the most useful short line on a poster, so it leads the highlight line.
+  const point = keywords.length || price
+    ? [price, ...keywords].filter(Boolean).slice(0, 3).join("  ·  ")
     : description && features && body === description && !same(features, title)
       ? features
       : line && body !== line && !same(line, title) ? line : ""
   return {
-    eyebrow: shopName && !same(shopName, title) ? shopName : "",
+    eyebrow: [shopName && !same(shopName, title) ? shopName : "", details.location?.trim() ?? ""].filter(Boolean).join("  ·  "),
     productName: title,
     productDescription: body,
     keySellingPoint: point,

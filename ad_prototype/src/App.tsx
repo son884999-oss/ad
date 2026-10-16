@@ -18,7 +18,8 @@ import { analyzePhotoOnce, generatePromoText, type PhotoCheck, type PhotoSuggest
 import { useAiVideo, type AiVideoController, type SavedAiVideo } from "./useAiVideo"
 import { AiVideoPlayer, AiVideoStatus, saveRealVideo, shareRealVideo, showsRealVideo } from "./AiVideoPanel"
 import { toVideoDetails } from "./video"
-import { buildPosterContent, loadPosterFonts, posterThemeFor, renderPosterToCanvas } from "./poster"
+import { buildPosterContent, loadPosterFonts, POSTER_THEMES, posterThemeFor, renderPosterToCanvas } from "./poster"
+import type { PosterThemeKey } from "./poster"
 import PhotoStep from "./PhotoStep"
 import GenerationProgress from "./GenerationProgress"
 import StepProgress from "./StepProgress"
@@ -72,11 +73,22 @@ type GeneratedRecord = {
 
     keywords?: string
 
+    /** Shop info (B_이창훈 prompt fields): 위치, 가격, 주문·연락 방법. ≤60 characters each. */
+    location?: string
+    priceInfo?: string
+    contact?: string
+
     /** 홍보 분위기, in the order chosen (the first one leads). Empty = 자동. */
     tones?: Tone[]
 
     /** Legacy single value from before multi-select; read by normalizeTones() only. */
     tone?: string
+
+    /** Poster shape chosen on the result screen (D_고혜숙 ratios / compositions / themes). */
+    posterRatio?: PosterRatioKey
+    posterLayout?: PosterLayoutKey
+    /** Empty = follow the first 홍보 분위기. */
+    posterTheme?: PosterThemeKey | ""
   }
 
   userHashtags: Record<Channel, string>
@@ -93,6 +105,28 @@ type AiPromo = PromoTextResult & { signature: string }
 
 
 type Tone = "natural" | "premium" | "friendly" | "trendy"
+
+type PosterRatioKey = "4:5" | "1:1" | "9:16"
+type PosterLayoutKey = "vertical" | "split" | "editorial"
+// Labels say what each shape is for, so nobody has to know what "4:5" means.
+const posterRatioOptions: [PosterRatioKey, string, string][] = [
+  ["4:5", "세로", "인스타 피드"],
+  ["1:1", "정사각", "카톡·블로그"],
+  ["9:16", "길쭉", "스토리·쇼츠"],
+]
+const posterLayoutOptions: [PosterLayoutKey, string][] = [
+  ["vertical", "사진 크게"],
+  ["split", "나란히"],
+  ["editorial", "사진 먼저"],
+]
+const posterThemeOptions: [PosterThemeKey | "", string][] = [
+  ["", "분위기대로"],
+  ["warm", "따뜻한"],
+  ["nature", "자연"],
+  ["minimal", "깔끔한"],
+  ["vibrant", "생기"],
+  ["luxury", "고급"],
+]
 
 const toneValues: readonly Tone[] = ["natural", "premium", "friendly", "trendy"]
 
@@ -151,6 +185,9 @@ function promoSignature(details: GeneratedRecord["details"], channel: Channel) {
     details.features.trim(),
     details.keywords?.trim() ?? "",
     details.audience.trim(),
+    details.location?.trim() ?? "",
+    details.priceInfo?.trim() ?? "",
+    details.contact?.trim() ?? "",
     normalizeTones(details),
   ])
 }
@@ -559,11 +596,14 @@ function ResultCardHeading({
   icon,
   title,
   control,
+  extra,
   easyMode = false,
 }: {
   icon: "picture" | "video" | "copy"
   title: string
   control?: ReactNode
+  /** Extra controls under the main one (e.g. the poster shape picker). */
+  extra?: ReactNode
   easyMode?: boolean
 }) {
   return (
@@ -573,8 +613,52 @@ function ResultCardHeading({
         <h3>{easyMode ? title : `${title} 결과`}</h3>
         <small>{uiText("확인용 예시", easyMode)}</small>
       </div>
-      {control && <div className="result-preview-controls">{control}</div>}
+      {control && <div className="result-preview-controls">{control}{extra}</div>}
     </div>
+  )
+}
+
+/** Poster shape (D_고혜숙): ratio, layout and colour, folded away until asked for. */
+function PosterStyleControls({
+  ratio,
+  layout,
+  theme,
+  easyMode,
+  onChange,
+}: {
+  ratio: PosterRatioKey
+  layout: PosterLayoutKey
+  theme: PosterThemeKey | ""
+  easyMode: boolean
+  onChange: (next: { posterRatio?: PosterRatioKey; posterLayout?: PosterLayoutKey; posterTheme?: PosterThemeKey | "" }) => void
+}) {
+  const t = (text: string) => uiText(text, easyMode)
+  const group = <T extends string>(legend: string, options: [T, string, string?][], value: T, pick: (value: T) => void, swatch?: (value: T) => ReactNode) => (
+    <fieldset className="poster-style-group">
+      <legend>{t(legend)}</legend>
+      <div role="radiogroup" aria-label={t(legend)}>
+        {options.map(([id, label, note]) => (
+          <button key={id} type="button" role="radio" aria-checked={value === id} onClick={() => pick(id)}>
+            {swatch?.(id)}
+            <span>{t(label)}</span>
+            {note && !easyMode && <small>{note}</small>}
+          </button>
+        ))}
+      </div>
+    </fieldset>
+  )
+  return (
+    <details className="poster-style">
+      <summary>{t("포스터 모양 바꾸기")}</summary>
+      <div className="poster-style-body">
+        {group("크기", posterRatioOptions, ratio, (posterRatio) => onChange({ posterRatio }))}
+        {group("배치", posterLayoutOptions.filter(([id]) => !(ratio === "1:1" && id === "split")), layout, (posterLayout) => onChange({ posterLayout }))}
+        {group("색", posterThemeOptions, theme, (posterTheme) => onChange({ posterTheme }), (id) => {
+          const colors = POSTER_THEMES[id || "minimal"]
+          return <i className={`poster-swatch${id ? "" : " is-auto"}`} aria-hidden="true" style={{ background: `linear-gradient(135deg, ${colors.bgGradient[0]}, ${colors.bgGradient[2]})`, borderColor: colors.accent }} />
+        })}
+      </div>
+    </details>
   )
 }
 
@@ -1008,6 +1092,9 @@ function CreateFlow({
         targetAudience: Array.from(details.audience.trim()).slice(0, 200).join(""),
         tones,
         shopName: details.shopName?.trim(),
+        location: details.location?.trim() || undefined,
+        priceInfo: details.priceInfo?.trim() || undefined,
+        contact: details.contact?.trim() || undefined,
         channel,
       },
       { signal: controller.signal, timeoutMs: PROMO_WAIT_MS },
@@ -1168,6 +1255,11 @@ function CreateFlow({
       : shopName
         ? `${shopName}에서 직접 준비했어요. 편하게 들러 보세요.`
         : "가까이에서 편하게 만나 보세요.")
+  const shopInfo = [
+    details.location?.trim() && `위치 · ${details.location.trim()}`,
+    details.priceInfo?.trim() && `가격 · ${details.priceInfo.trim()}`,
+    details.contact?.trim() && `문의 · ${details.contact.trim()}`,
+  ].filter(Boolean).join("\n")
   const audienceRecommendation = details.audience.trim()
     ? `\n\n${details.audience}께 추천해요.`
     : ""
@@ -1189,7 +1281,7 @@ function CreateFlow({
 
     threads: `오늘은 이걸 소개하고 싶어요.\n${productSummary}\n${details.features.trim() ? `특히 ${details.features.trim()} 이 부분이 좋아요. ` : body ? `${body} ` : ""}궁금한 점은 편하게 물어보세요.`,
   }
-  const resultCopy = mapChannels((id) => (toneLine ? `${baseCopy[id]}\n\n${toneLine}` : baseCopy[id]).replace(/\n{3,}/g, "\n\n").trim())
+  const resultCopy = mapChannels((id) => [baseCopy[id], shopInfo, toneLine].filter(Boolean).join("\n\n").replace(/\n{3,}/g, "\n\n").trim())
   const channelTheme = channelThemes[channel]
 
   const safeRecommendations = normalizeHashtagValues(
@@ -1206,7 +1298,15 @@ function CreateFlow({
 
   // The AI 홍보 글 is used only while the inputs still match what it was written for.
   const activePromo = aiPromo && aiPromo.signature === promoSignature(details, channel) ? aiPromo : null
-  const copyText = activePromo ? composePromoText(activePromo, details) : resultCopy[channel]
+  // B_이창훈 writes three one-line angles; the user can pick one. It leads the 홍보 글 and the poster.
+  const headlineOptions = activePromo
+    ? [...new Set([activePromo.copy, ...(activePromo.copyCandidates ?? [])].filter(Boolean))].slice(0, 4)
+    : []
+  const [headlineChoice, setHeadlineChoice] = useState({ signature: "", index: 0 })
+  const headlineIndex = headlineChoice.signature === activePromo?.signature ? headlineChoice.index : 0
+  const chosenHeadline = headlineOptions[headlineIndex] ?? activePromo?.copy ?? ""
+  const pickHeadline = (index: number) => setHeadlineChoice({ signature: activePromo?.signature ?? "", index })
+  const copyText = activePromo ? composePromoText({ ...activePromo, copy: chosenHeadline }, details) : resultCopy[channel]
 
   const hashtags = activePromo
     ? activePromo.hashtags.slice(0, Math.max(channelThemes[channel].tagLimit, 4)).map((tag) => `#${tag}`)
@@ -1308,8 +1408,22 @@ function CreateFlow({
     }
   }
 
-  const posterContent = buildPosterContent(details, activePromo?.copy || body)
-  const posterKey = JSON.stringify([posterContent, posterThemeFor(tones)])
+  const posterContent = buildPosterContent(details, chosenHeadline || body)
+  const videoCaption = (() => {
+    const name = details.name?.trim() ?? ""
+    const shop = details.shopName?.trim() ?? ""
+    const headline = activePromo?.videoHeadline || name || shop || details.description.trim()
+    return {
+      headline,
+      brand: [shop, name].filter((value) => value && value !== headline).join(" · "),
+      cta: activePromo?.cta || (shop ? `${shop}에서 만나요` : ""),
+    }
+  })()
+  const posterRatio: PosterRatioKey = details.posterRatio ?? "4:5"
+  // D's renderer has no side-by-side layout for a square; it would quietly fall back.
+  const posterLayout: PosterLayoutKey = posterRatio === "1:1" && details.posterLayout === "split" ? "vertical" : details.posterLayout ?? "vertical"
+  const posterTheme: PosterThemeKey = details.posterTheme || posterThemeFor(tones)
+  const posterKey = JSON.stringify([posterContent, posterTheme, posterRatio, posterLayout])
   const posterDrawnTextRef = useRef("")
 
   const createPosterFile = async (download: boolean) => {
@@ -1338,9 +1452,9 @@ function CreateFlow({
         canvas,
         content: posterContent,
         productImage: image,
-        themeKey: posterThemeFor(tones),
-        ratioKey: "4:5",
-        compositionKey: "vertical",
+        themeKey: posterTheme,
+        ratioKey: posterRatio,
+        compositionKey: posterLayout,
       })
 
       if (!drawnText) throw new Error("canvas-unavailable")
@@ -1873,12 +1987,12 @@ function CreateFlow({
                 })}
               </div>
             </fieldset>
-            <details className="details-more" open={Boolean(details.description || details.features || details.keywords || details.audience) || undefined}>
+            <details className="details-more" open={Boolean(details.description || details.features || details.keywords || details.audience || details.location || details.priceInfo || details.contact) || undefined}>
               <summary>
                 <span>{t("더 자세히 알려주기")}</span>
                 {(() => {
-                  const filled = [details.description, details.features, details.keywords, details.audience].filter((value) => value?.trim()).length
-                  return <small>{easyMode ? (filled ? `${filled}개 썼어요` : "안 써도 돼요") : `${filled}/4 입력 · 선택`}</small>
+                  const filled = [details.description, details.features, details.keywords, details.audience, details.location, details.priceInfo, details.contact].filter((value) => value?.trim()).length
+                  return <small>{easyMode ? (filled ? `${filled}개 썼어요` : "안 써도 돼요") : `${filled}/7 입력 · 선택`}</small>
                 })()}
               </summary>
               <div className="details-more-fields">
@@ -1947,6 +2061,48 @@ function CreateFlow({
                     maxLength={200}
                     placeholder={t("예) 동네 직장인, 디저트를 좋아하는 20~30대")}
                     onChange={(event) => updateDetails({ ...details, audience: event.target.value })}
+                    className="mt-2 w-full rounded-[12px] border p-4"
+                  />}
+                  </VoiceField>
+                </label>
+                <label className="block text-[18px] font-bold">
+                  {t("가게 위치")}
+                  <VoiceField voice={voice} field="location" label={t("가게 위치")} inputId="field-location" value={details.location ?? ""} maxLength={60} easyMode={easyMode} onVoiceText={(text) => updateDetails({ ...details, location: text })}>
+                  {(bind) => <input
+                    {...bind}
+                    aria-label={t("가게 위치")}
+                    value={details.location ?? ""}
+                    maxLength={60}
+                    placeholder={t("예) 성수역 3번 출구 앞")}
+                    onChange={(event) => updateDetails({ ...details, location: event.target.value })}
+                    className="mt-2 w-full rounded-[12px] border p-4"
+                  />}
+                  </VoiceField>
+                </label>
+                <label className="block text-[18px] font-bold">
+                  {t("가격")}
+                  <VoiceField voice={voice} field="priceInfo" label={t("가격")} inputId="field-priceInfo" value={details.priceInfo ?? ""} maxLength={60} easyMode={easyMode} onVoiceText={(text) => updateDetails({ ...details, priceInfo: text })}>
+                  {(bind) => <input
+                    {...bind}
+                    aria-label={t("가격")}
+                    value={details.priceInfo ?? ""}
+                    maxLength={60}
+                    placeholder={t("예) 아메리카노 3,500원")}
+                    onChange={(event) => updateDetails({ ...details, priceInfo: event.target.value })}
+                    className="mt-2 w-full rounded-[12px] border p-4"
+                  />}
+                  </VoiceField>
+                </label>
+                <label className="block text-[18px] font-bold">
+                  {t("주문·연락 방법")}
+                  <VoiceField voice={voice} field="contact" label={t("주문·연락 방법")} inputId="field-contact" value={details.contact ?? ""} maxLength={60} easyMode={easyMode} onVoiceText={(text) => updateDetails({ ...details, contact: text })}>
+                  {(bind) => <input
+                    {...bind}
+                    aria-label={t("주문·연락 방법")}
+                    value={details.contact ?? ""}
+                    maxLength={60}
+                    placeholder={t("예) 전화 02-123-4567, 매장 방문")}
+                    onChange={(event) => updateDetails({ ...details, contact: event.target.value })}
                     className="mt-2 w-full rounded-[12px] border p-4"
                   />}
                   </VoiceField>
@@ -2213,6 +2369,15 @@ function CreateFlow({
                         <span>{t(posterExpanded ? "작게 보기" : "크게 보기")}</span>
                       </button>
                   }
+                  extra={
+                    <PosterStyleControls
+                      ratio={posterRatio}
+                      layout={posterLayout}
+                      theme={details.posterTheme ?? ""}
+                      easyMode={easyMode}
+                      onChange={(next) => updateDetails({ ...details, ...next })}
+                    />
+                  }
                 />
                 <ResultPreview>
                   <div
@@ -2311,14 +2476,19 @@ function CreateFlow({
                   >
                     {showsRealVideo(aiVideo.state) ? (
                       <AiVideoPlayer state={aiVideo.state} easyMode={easyMode} playing={playing} onPlayingChange={setPlaying} onBroken={aiVideo.markBroken} />
-                    ) : (<>
+                    ) : (
                     <img
                       src={imageUrl}
                       alt={t("영상에 사용할 제품 사진")}
                       className={playing ? "is-playing" : ""}
                     />
-                    <strong><span>{details.shopName?.trim() || details.name?.trim() || details.description.trim() || details.features}</span></strong>
-                    </>)}
+                    )}
+                    {/* Caption band in A_손용범's compose-push layout: headline first, then shop · product and the call to action. */}
+                    <strong className={`video-caption${playing ? " is-playing" : ""}`}>
+                      <span className="video-caption-headline">{videoCaption.headline}</span>
+                      {videoCaption.brand && <span className="video-caption-brand">{videoCaption.brand}</span>}
+                      {videoCaption.cta && <span className="video-caption-cta">{videoCaption.cta}</span>}
+                    </strong>
                   </div>
                 </ResultPreview>
                 <AiVideoStatus state={aiVideo.state} easyMode={easyMode} onRetry={aiVideo.retry} onResume={aiVideo.resume} />
@@ -2358,7 +2528,29 @@ function CreateFlow({
                 tabIndex={0}
                 className="result-card result-copy"
               >
-                <ResultCardHeading easyMode={easyMode} icon="copy" title="홍보 글" />
+                <ResultCardHeading
+                  easyMode={easyMode}
+                  icon="copy"
+                  title="홍보 글"
+                  control={headlineOptions.length > 1 ? (
+                    easyMode ? (
+                      <button type="button" className="result-preview-action" onClick={() => pickHeadline((headlineIndex + 1) % headlineOptions.length)}>
+                        <span>{t("다른 말로 바꾸기")}</span>
+                      </button>
+                    ) : (
+                      <fieldset className="headline-choice">
+                        <legend>{t("첫 줄 고르기")}</legend>
+                        <div role="radiogroup" aria-label={t("첫 줄 고르기")}>
+                          {headlineOptions.map((option, index) => (
+                            <button key={option} type="button" role="radio" aria-checked={index === headlineIndex} onClick={() => pickHeadline(index)}>
+                              {option}
+                            </button>
+                          ))}
+                        </div>
+                      </fieldset>
+                    )
+                  ) : undefined}
+                />
                 <ResultPreview text>
                   <div className="result-main-preview result-text-preview">
                     <div

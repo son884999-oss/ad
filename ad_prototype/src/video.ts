@@ -74,11 +74,15 @@ export async function startAiVideo(
     })
     // Like src/ai.ts: 503 (our server only sends it for VIDEO_NOT_CONFIGURED; provider outages are 502)
     // or no API at all (404/405, static preview) → keep the sample video, ask no more.
-    if (response.status === 503 || response.status === 404 || response.status === 405) {
+    if (response.status === 404 || response.status === 405) {
       videoUnavailable = true
       return { kind: "off" }
     }
     const data = (await response.json().catch(() => null)) as Record<string, unknown> | null
+    if (response.status === 503 && (data?.error === "VIDEO_NOT_CONFIGURED" || data?.error === "AI_NOT_CONFIGURED")) {
+      videoUnavailable = true
+      return { kind: "off" }
+    }
     if (!response.ok) return { kind: "error", code: typeof data?.error === "string" ? data.error : `HTTP_${response.status}` }
     const requestId = data?.requestId
     return typeof requestId === "string" && REQUEST_ID.test(requestId)

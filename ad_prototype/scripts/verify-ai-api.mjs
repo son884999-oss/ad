@@ -113,13 +113,16 @@ try {
     assert.equal(body.contents[0].parts[1].inlineData.mimeType, "image/jpeg")
   })
 
-  await check("promo-text success → copy/sns/intro/hashtags without #, B prompt rules sent", async () => {
+  await check("promo-text success → copy/sns/intro/hashtags without #, candidates/videoHeadline/cta, B prompt rules sent", async () => {
     reply = () => geminiReply(goodPromo)
     const before = sent.length
     const r = await call(promoText, request("POST", promoBody))
     assert.equal(r.status, 200)
-    assert.deepEqual(Object.keys(r.json), ["copy", "sns", "intro", "hashtags"])
+    assert.deepEqual(Object.keys(r.json), ["copy", "sns", "intro", "hashtags", "copyCandidates", "videoHeadline", "cta"])
     assert.deepEqual(r.json.hashtags, ["딸기잼", "수제잼", "토스트", "아침메뉴"])
+    assert.deepEqual(r.json.copyCandidates, ["a", "b", "c"])
+    assert.equal(r.json.videoHeadline, "토스트 위에서 딸기 알갱이가", "no headline from the model → cut from copy at a word boundary")
+    assert.equal(r.json.cta, "")
     assert.equal(sent.length - before, 1, "no rewrite needed")
     const body = JSON.parse(sent.at(-1).init.body)
     assert.match(body.systemInstruction.parts[0].text, /의학적 효능/)
@@ -162,7 +165,8 @@ try {
   })
 
   await check("promo-text input validation → 400 INVALID_INPUT", async () => {
-    for (const body of [{}, { productName: "" }, { productName: "a".repeat(51) }, { ...promoBody, channel: "facebook" }, { ...promoBody, tones: "natural" }]) {
+    for (const body of [{}, { productName: "" }, { productName: "a".repeat(51) }, { ...promoBody, channel: "facebook" }, { ...promoBody, tones: "natural" },
+      { ...promoBody, location: "가".repeat(61) }, { ...promoBody, priceInfo: "1".repeat(61) }, { ...promoBody, contact: 1234 }]) {
       const r = await call(promoText, request("POST", body))
       assert.equal(r.status, 400, JSON.stringify(body).slice(0, 60))
       assert.equal(r.json.error, "INVALID_INPUT")

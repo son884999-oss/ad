@@ -709,3 +709,44 @@ html[data-layout=mobile] .results-step .result-card > .result-preview.result-pre
 html[data-layout=mobile] .studio-shell :is(.studio-secondary,.result-share-action,.result-preview-action) { border-color:#9a8c81; }
 /* very short screens (e.g. 200% zoom): fixed bars give way so the form stays usable */
 @media (max-height:480px) { .studio-shell .compact-information .details-actions,.easy-mode .compact-information .details-actions { position:static; } }
+/* Poster shape picker (D_고혜숙 ratios / layouts / colours). Collapsed it shares the row with 크게 보기. */
+.result-preview-controls { display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:flex-end;gap:8px;width:100%; }
+.poster-style { flex:1 1 0;min-width:0;border:1px solid #9a8c81;border-radius:var(--radius-control,10px);background:#fff; }
+.poster-style[open] { flex-basis:100%;order:2; }
+.poster-style > summary { display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:max(44px,calc(46px * var(--s)));padding:0 14px;list-style:none;cursor:pointer;font-size:calc(16px * var(--s));font-weight:700;color:var(--color-brand-hover); }
+.poster-style > summary::-webkit-details-marker { display:none; }
+.poster-style > summary::after { content:"";width:8px;height:8px;flex:none;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:translateY(-2px) rotate(45deg); }
+.poster-style[open] > summary::after { transform:translateY(2px) rotate(-135deg); }
+.poster-style-body { display:grid;gap:12px;padding:2px 12px 14px; }
+.poster-style-group { min-width:0;margin:0;padding:0;border:0; }
+.poster-style-group legend { margin-bottom:6px;padding:0;font-size:max(14px,calc(14px * var(--s)));font-weight:700;color:var(--color-muted); }
+.poster-style-group [role=radiogroup] { display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px; }
+.poster-style-group button { display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:48px;padding:6px 4px;border:1px solid #9a8c81;border-radius:var(--radius-control,10px);background:#fff;color:var(--color-ink);font-size:max(15px,calc(15px * var(--s)));font-weight:700;line-height:1.25; }
+.poster-style-group button small { font-size:max(14px,calc(13px * var(--s)));font-weight:500;color:var(--color-muted); }
+.poster-style-group button[aria-checked=true] { border-color:var(--color-brand);background:var(--color-brand-soft);color:var(--color-brand-hover);box-shadow:inset 0 0 0 1px var(--color-brand); }
+.poster-swatch { display:block;width:24px;height:24px;border:2px solid;border-radius:50%; }
+.poster-swatch.is-auto { background:conic-gradient(#f2b48a,#70a55f,#8ca095,#e7683f,#caa557,#f2b48a)!important;border-color:#fff!important;box-shadow:0 0 0 1px #9a8c81; }
+.easy-mode .poster-style > summary { font-size:calc(19px * var(--s));min-height:calc(54px * var(--s)); }
+.easy-mode .poster-style-group legend { font-size:calc(17px * var(--s)); }
+.easy-mode .poster-style-group button { min-height:56px;font-size:calc(18px * var(--s)); }
+/* Video caption band (A_손용범 compose-push): headline, then shop · product and the call to action.
+   On a real video it sits at the top so the player controls stay free. */
+.result-motion-preview .video-caption { display:flex;flex-direction:column;align-items:center;gap:4px;padding:12px 14px;pointer-events:none;box-shadow:0 6px 18px #2b242026; }
+.video-caption-headline { font-size:calc(19px * var(--s,1));font-weight:800;line-height:1.3;color:var(--color-ink); }
+.video-caption-brand { font-size:max(14px,calc(14px * var(--s,1)));font-weight:600;color:var(--color-muted); }
+.video-caption-cta { margin-top:2px;padding:3px 12px;border-radius:999px;background:var(--color-brand);color:#fff;font-size:max(14px,calc(14px * var(--s,1)));font-weight:700; }
+.easy-mode .video-caption-headline { font-size:calc(22px * var(--s,1)); }
+.easy-mode :is(.video-caption-brand,.video-caption-cta) { font-size:calc(17px * var(--s,1)); }
+.result-motion-preview:has(.ai-video-player) .video-caption { top:16px;bottom:auto; }
+@media (prefers-reduced-motion:no-preference) {
+  .video-caption.is-playing > * { animation:caption-rise .45s ease-out both; }
+  .video-caption.is-playing .video-caption-headline { animation-delay:.35s; }
+  .video-caption.is-playing :is(.video-caption-brand,.video-caption-cta) { animation-delay:1.4s; }
+}
+@keyframes caption-rise { from { opacity:0;transform:translateY(10px); } }
+/* 홍보 글: choose the first line among B_이창훈's three angles */
+.headline-choice { flex:1 1 100%;min-width:0;margin:0;padding:0;border:0; }
+.headline-choice legend { margin-bottom:6px;padding:0;font-size:max(14px,calc(15px * var(--s)));font-weight:700;color:var(--color-muted); }
+.headline-choice [role=radiogroup] { display:grid;gap:6px; }
+.headline-choice button { min-height:44px;padding:8px 12px;border:1px solid #9a8c81;border-radius:var(--radius-control,10px);background:#fff;color:var(--color-ink);font-size:max(15px,calc(15px * var(--s)));font-weight:600;line-height:1.4;text-align:left; }
+.headline-choice button[aria-checked=true] { border-color:var(--color-brand);background:var(--color-brand-soft);color:var(--color-brand-hover);box-shadow:inset 0 0 0 1px var(--color-brand); }
