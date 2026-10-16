@@ -549,6 +549,9 @@ try {
     statuses.splice(0, statuses.length, { status: "in_progress" })
     await retry.click() // accepted → one new paid start
     await page.locator(".ai-video-status[role=status]").waitFor()
+    // The status card can render before the stubbed start request is counted.
+    for (let i = 0; i < 50 && counts.start < 2; i += 1) await page.waitForTimeout(100)
+    await page.waitForTimeout(300) // and no second (duplicate) start follows
     assert.equal(counts.start, 2)
     assert.deepEqual(errors, [])
     await page.close()

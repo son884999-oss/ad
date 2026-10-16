@@ -685,3 +685,13 @@ html[data-layout=mobile] .easy-mode .result-preview,html[data-layout=mobile] .ea
  .easy-mode .reference-home .reference-home-steps li { gap:calc(8px * var(--s)); }
  .easy-mode .reference-home .reference-home-steps li > span { width:calc(38px * var(--s));height:calc(38px * var(--s)); }
 }
+/* Phone: 크게 보기 / 틀어 보기 sit under the preview so they never cover the poster's title panel
+   (the poster has three layouts; the title can be at the top or the bottom). */
+html[data-layout=mobile] .results-step:not(.is-single) .result-card:not([hidden]) { display:flex;flex-direction:column; }
+html[data-layout=mobile] .results-step:not(.is-single) .result-card-heading { position:static;order:1;justify-content:flex-end;margin:8px 0 0; }
+html[data-layout=mobile] .results-step:not(.is-single) .result-card > .result-card-actions { order:2; }
+html[data-layout=mobile] .results-step:not(.is-single) .result-preview-action { min-height:max(44px,calc(46px * var(--s)));background:#fff;box-shadow:none; }
+html[data-layout=mobile] .results-step:not(.is-single) .result-card:has(.result-preview-controls) .result-action-buttons { margin-top:10px; }
+html[data-layout=mobile] .results-step:not(.is-single) .result-card:has(.result-preview-controls) .result-preview { height:calc(358px * var(--s)); }
+html[data-layout=mobile] .easy-mode .results-step:not(.is-single) .result-card:has(.result-preview-controls) .result-preview { height:clamp(180px,calc(100cqh - 276px),calc(380px * var(--s))); }
+@media (max-height:680px) { html[data-layout=mobile] .results-step:not(.is-single) .result-card:has(.result-preview-controls) .result-preview { height:calc(100dvh - 472px);min-height:140px; } }
