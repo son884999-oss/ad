@@ -106,11 +106,13 @@ const toneOptions: { value: Tone | ""; label: string; name: string }[] = [
 
 // Closing line added to every channel copy so the chosen mood is visible in the result.
 // With several moods the first one chosen leads (see toneClosing).
+// Same rules as the AI copy (api/_lib/promo-prompt.js, B_이창훈): no clichés such as 정성/특별한/최고,
+// no unverified rankings ("가장 많이 찾는").
 const toneLines: Record<Tone, string> = {
-  natural: "꾸밈없이 정성 그대로 담았어요.",
-  premium: "특별한 날, 특별한 분께 권하는 선택이에요.",
+  natural: "꾸밈없이 있는 그대로 담았어요.",
+  premium: "소중한 날, 고마운 분께 권하기 좋아요.",
   friendly: "편하게 들러 주세요. 반갑게 맞이할게요!",
-  trendy: "요즘 가장 많이 찾는 바로 그 메뉴, 지금 만나보세요! ✨",
+  trendy: "가볍게 들러서 지금 바로 만나 보세요!",
 }
 
 /** Reads `tones`, or migrates the old single `tone` value ("" = 자동). */
@@ -123,7 +125,6 @@ function toneClosing(tones: readonly Tone[]) {
   return tones.length ? toneLines[tones[0]] : ""
 }
 
-/** Identifies the inputs an AI 홍보 글 was written for, so edited inputs fall back to local copy. */
 // Mirrors api/_lib/promo.js featureText(): ≤20 items of ≤40 chars, joined with ", " to ≤300 chars.
 // Over-long lists are cut here because the server rejects them instead of trimming.
 function promoKeyFeatures(keywords: string) {
@@ -140,6 +141,7 @@ function promoKeyFeatures(keywords: string) {
   return items
 }
 
+/** Identifies the inputs an AI 홍보 글 was written for, so edited inputs fall back to local copy. */
 function promoSignature(details: GeneratedRecord["details"], channel: Channel) {
   return JSON.stringify([
     channel,
@@ -349,9 +351,18 @@ function makeHashtags(
     audience: string
 
     keywords?: string
+
+    name?: string
+
+    shopName?: string
   },
 ) {
+  // B_이창훈 rule: tags without spaces, ≤10 characters. The product and shop names lead so a
+  // name-only input still gets tags.
+  const nameTag = (value?: string) => (value ?? "").replace(/[^0-9A-Za-z가-힣]/g, "")
   const keywords = [
+    ...[nameTag(details.name), nameTag(details.shopName)].filter((tag) => tag.length > 1 && tag.length <= 10),
+
     ...(details.keywords ?? "").split(",").map((item) => item.replace(/[^0-9A-Za-z가-힣]/g, "")).filter((item) => item.length > 1),
 
     ...extractHashtagKeywords(details.description),
@@ -375,6 +386,10 @@ function initialHashtagValues(
     features: string
 
     audience: string
+
+    name?: string
+
+    shopName?: string
   } = initialDetails,
 ) {
   return mapChannels((channel) => makeHashtags(channel, details).join(" "))
@@ -479,6 +494,14 @@ function drawWrappedText(
   lines.forEach((value, index) =>
     context.fillText(value, x, y + index * lineHeight),
   )
+}
+
+/** "바닐라_라떼_포스터_20261016.png" — product name and date, like D_고혜숙's generatePosterFilename. */
+function outputFileName(title: string, kind: string, extension: string) {
+  const safe = title.replace(/[\\/:*?"<>|\s]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 30) || "홍보잇다"
+  const now = new Date()
+  const date = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(now.getDate()).padStart(2, "0")}`
+  return `${safe}_${kind}_${date}.${extension}`
 }
 
 function triggerFileDownload(file: File) {
@@ -1136,6 +1159,15 @@ function CreateFlow({
     keyFeatureList.length ? keyFeatureList.map((item) => "✔ " + item).join("  ") : "",
   ].filter(Boolean).join("\n")
   const toneLine = toneClosing(tones)
+  // Without 설명 / 특징 the copy would be the name alone; give it one plain sentence and an invitation.
+  const shopName = details.shopName?.trim() ?? ""
+  const body =
+    details.features.trim() ||
+    (details.description.trim() || keyFeatureList.length
+      ? ""
+      : shopName
+        ? `${shopName}에서 직접 준비했어요. 편하게 들러 보세요.`
+        : "가까이에서 편하게 만나 보세요.")
   const audienceRecommendation = details.audience.trim()
     ? `\n\n${details.audience}께 추천해요.`
     : ""
@@ -1144,18 +1176,18 @@ function CreateFlow({
     : ""
   const baseCopy: Record<Channel, string> = {
     ...mapChannels(
-      () => `${productSummary}\n\n${details.features}${audienceRecommendation}`,
+      () => `${productSummary}\n\n${body}${audienceRecommendation}`,
     ),
-    naver_place: `${productSummary}\n\n${details.features}${audienceLabel}`,
-    kakao: `우리 가게 소식을 전해요.\n\n${productSummary}\n${details.features}\n\n궁금한 점은 편하게 문의해 주세요.`,
-    naver_blog: `${productSummary}\n\n이런 특징이 있어요\n${details.features}${audienceLabel}`,
-    daangn: `이웃 여러분께 우리 가게를 소개해요.\n\n${productSummary}\n${details.features}\n\n궁금한 점은 문의해 주세요.`,
-    youtube: `${details.features}\n\n${productSummary}${audienceLabel}`,
-    instagram: `오늘을 더 특별하게 만드는 ${productSummary}\n\n${details.features}\n지금 사진으로 만나보세요.`,
+    naver_place: `${productSummary}\n\n${body}${audienceLabel}`,
+    kakao: `우리 가게 소식을 전해요.\n\n${productSummary}\n${body}\n\n궁금한 점은 편하게 문의해 주세요.`,
+    naver_blog: `${productSummary}\n\n${details.features.trim() ? "이런 특징이 있어요\n" : ""}${body}${audienceLabel}`,
+    daangn: `이웃 여러분께 우리 가게를 소개해요.\n\n${productSummary}\n${body}\n\n궁금한 점은 문의해 주세요.`,
+    youtube: `${body}\n\n${productSummary}${audienceLabel}`,
+    instagram: `오늘 소개할 ${productSummary}\n\n${body}\n지금 사진으로 만나 보세요.`,
 
-    x: `${details.features} — 필요한 분은 바로 확인해 보세요.${audienceRecommendation}`,
+    x: `${body || productSummary.split("\n")[0]} — 필요한 분은 바로 확인해 보세요.${audienceRecommendation}`,
 
-    threads: `요즘 손님들이 자주 찾는 이유가 있더라고요.\n${productSummary}\n특히 ${details.features} 이 부분이 참 좋아요. 궁금한 점은 편하게 물어보세요.`,
+    threads: `오늘은 이걸 소개하고 싶어요.\n${productSummary}\n${details.features.trim() ? `특히 ${details.features.trim()} 이 부분이 좋아요. ` : body ? `${body} ` : ""}궁금한 점은 편하게 물어보세요.`,
   }
   const resultCopy = mapChannels((id) => (toneLine ? `${baseCopy[id]}\n\n${toneLine}` : baseCopy[id]).replace(/\n{3,}/g, "\n\n").trim())
   const channelTheme = channelThemes[channel]
@@ -1276,7 +1308,7 @@ function CreateFlow({
     }
   }
 
-  const posterContent = buildPosterContent(details)
+  const posterContent = buildPosterContent(details, activePromo?.copy || body)
   const posterKey = JSON.stringify([posterContent, posterThemeFor(tones)])
   const posterDrawnTextRef = useRef("")
 
@@ -1320,7 +1352,7 @@ function CreateFlow({
 
       if (!blob || blob.size === 0) throw new Error("empty-png")
 
-      const file = new File([blob], `hongboitda-poster-${Date.now()}.png`, {
+      const file = new File([blob], outputFileName(posterContent.productName, "포스터", "png"), {
         type: "image/png",
       })
 
@@ -1512,7 +1544,7 @@ function CreateFlow({
             : "webm"
 
           resolve(
-            new File([blob], `hongboitda-preview-${Date.now()}.${extension}`, {
+            new File([blob], outputFileName(posterContent.productName, "영상", extension), {
               type: actualType,
             }),
           )
@@ -1869,12 +1901,13 @@ function CreateFlow({
                 </label>
                 <label className="block text-[18px] font-bold">
                   {t("어떤 점을 알려주고 싶나요?")}
-                  <VoiceField voice={voice} field="features" label={t("알리고 싶은 점")} inputId="field-features" value={details.features} easyMode={easyMode} onVoiceText={(text) => updateDetails({ ...details, features: text })}>
+                  <VoiceField voice={voice} field="features" label={t("알리고 싶은 점")} inputId="field-features" value={details.features} maxLength={1000} easyMode={easyMode} onVoiceText={(text) => updateDetails({ ...details, features: text })}>
                   {(bind) => <AutoSizeTextarea
                     {...bind}
                     aria-label={t("어떤 점을 알려주고 싶나요?")}
                     aria-required="false"
                     value={details.features}
+                    maxLength={1000}
                     placeholder={t("예) 신선한 재료, 직접 만든 디저트,\n아늑한 분위기")}
                     onChange={(event) => updateDetails({ ...details, features: event.target.value })}
                     rows={2}
@@ -1885,12 +1918,13 @@ function CreateFlow({
                 </label>
                 <label className="block text-[18px] font-bold">
                   {t("핵심 특징")}
-                  <VoiceField voice={voice} field="keywords" label={t("핵심 특징")} inputId="field-keywords" value={details.keywords ?? ""} easyMode={easyMode} onVoiceText={(text) => updateDetails({ ...details, keywords: text })}>
+                  <VoiceField voice={voice} field="keywords" label={t("핵심 특징")} inputId="field-keywords" value={details.keywords ?? ""} maxLength={300} easyMode={easyMode} onVoiceText={(text) => updateDetails({ ...details, keywords: text })}>
                   {(bind) => <input
                     {...bind}
                     aria-label={t("핵심 특징")}
                     aria-describedby="keywords-help"
                     value={details.keywords ?? ""}
+                    maxLength={300}
                     placeholder={t("예) 수제, 당일 생산, 무료 포장")}
                     onChange={(event) => updateDetails({ ...details, keywords: event.target.value })}
                     className="mt-2 w-full rounded-[12px] border p-4"
@@ -1905,11 +1939,12 @@ function CreateFlow({
                 </label>
                 <label className="block text-[18px] font-bold">
                   {t("주요 고객층")}
-                  <VoiceField voice={voice} field="audience" label={t("주요 고객층")} inputId="field-audience" value={details.audience} easyMode={easyMode} onVoiceText={(text) => updateDetails({ ...details, audience: text })}>
+                  <VoiceField voice={voice} field="audience" label={t("주요 고객층")} inputId="field-audience" value={details.audience} maxLength={200} easyMode={easyMode} onVoiceText={(text) => updateDetails({ ...details, audience: text })}>
                   {(bind) => <input
                     {...bind}
                     aria-label={t("주요 고객층")}
                     value={details.audience}
+                    maxLength={200}
                     placeholder={t("예) 동네 직장인, 디저트를 좋아하는 20~30대")}
                     onChange={(event) => updateDetails({ ...details, audience: event.target.value })}
                     className="mt-2 w-full rounded-[12px] border p-4"

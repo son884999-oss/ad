@@ -57,7 +57,7 @@ export function moodFor(tones = []) {
   return "Use a calm mood with soft balanced lighting consistent with the reference."
 }
 
-/** Rules-only prompt (E's rulesPrompt). The first chosen tone leads the mood. */
+/** Rules-only prompt (E's rulesPrompt). With several tones the mood follows E's order: 고급 > 밝음 > 따뜻함. */
 export function rulesPrompt(details, duration = 5) {
   const text = `${details.productName} ${details.productDescription ?? ""} ${details.highlights ?? ""}`
   const rule = categories.find(({ pattern }) => pattern.test(text)) ?? general
