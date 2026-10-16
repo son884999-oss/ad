@@ -16,6 +16,7 @@ import { uiText } from "./easyText"
 import { recognitionConstructor, useVoiceInput } from "./useVoiceInput"
 import VoiceField from "./VoiceField"
 import { isMobileDevice } from "./DesktopStage"
+import { loadRecords, saveRecords } from "./recordsStore"
 import { analyzePhotoOnce, generatePromoText, type PhotoCheck, type PhotoSuggestion, type PromoTextResult } from "./ai"
 import { useAiVideo, type AiVideoController, type SavedAiVideo } from "./useAiVideo"
 import { AiVideoPlayer, AiVideoStatus, saveRealVideo, shareRealVideo, showsRealVideo } from "./AiVideoPanel"
@@ -2780,12 +2781,15 @@ function readRecordsView(): RecordsView | null {
 
 function Records({
   easyMode,
+  stored,
   records,
   onOpen,
   onCreate,
   onStartNew,
 }: {
   easyMode: boolean
+  /** True when the list is kept on this device (IndexedDB); false = this window only. */
+  stored: boolean
   records: GeneratedRecord[]
   onOpen: (record: GeneratedRecord, kind: "poster" | "video" | "copy") => void
   onCreate: () => void
@@ -2829,7 +2833,7 @@ function Records({
         내 홍보물
       </h2>
       <p className="records-retention-note">
-        {t("이 창에서 만든 홍보물을 확인할 수 있어요.")}
+        {t(stored ? "이 기기에 저장된 홍보물이에요. 다른 기기에서는 보이지 않아요." : "이 창에서 만든 홍보물을 확인할 수 있어요.")}
       </p>
       <div
         className="records-filters"
@@ -3012,6 +3016,22 @@ export default function App() {
   const [continuationNotice, setContinuationNotice] = useState(false)
 
   const [records, setRecords] = useState<GeneratedRecord[]>([])
+  // 내 홍보물 on this device: read once, then saved whenever the list changes.
+  const [recordsStored, setRecordsStored] = useState(false)
+  const recordsLoadedRef = useRef(false)
+  useEffect(() => {
+    void loadRecords<GeneratedRecord>().then((saved) => {
+      if (saved) {
+        setRecords((current) => [...current, ...saved.filter((record) => !current.some((item) => item.id === record.id))])
+        setRecordsStored(true)
+      }
+      recordsLoadedRef.current = true
+    })
+  }, [])
+  useEffect(() => {
+    if (!recordsLoadedRef.current) return
+    void saveRecords(records).then(setRecordsStored)
+  }, [records])
   /** The record shown on the result screen; poster shape and first-line choices made there are saved into it. */
   const [currentRecordId, setCurrentRecordId] = useState("")
 
@@ -3434,8 +3454,9 @@ export default function App() {
     return () => window.cancelAnimationFrame(frame)
   }, [page, step, generatingView, easyMode])
 
-  // 내 홍보물 lives in memory only, so warn before a reload or tab close would throw results or a draft away.
-  const hasWorkToLose = records.length > 0 || Boolean(imageUrl)
+  // Warn before a reload or tab close would throw work away: results when they could not be stored on this
+  // device, and a photo that has not become a result yet.
+  const hasWorkToLose = (records.length > 0 && !recordsStored) || (Boolean(imageUrl) && page === "create" && step < 3)
   useEffect(() => {
     if (!hasWorkToLose) return
     const warn = (event: BeforeUnloadEvent) => {
@@ -3690,6 +3711,7 @@ export default function App() {
       {page === "records" && (
         <Records
           easyMode={easyMode}
+          stored={recordsStored}
           records={records}
           onOpen={openRecord}
           onCreate={() => navigate("create", "all")}
