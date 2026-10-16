@@ -33,7 +33,8 @@
     "verify:guard": "node scripts/verify-api-guard.mjs",
     "eval:promo": "node scripts/eval-promo.mjs",
     "audit:screens": "node scripts/audit-mobile-screens.mjs",
-    "eval:poster": "node scripts/eval-poster.mjs"
+    "eval:poster": "node scripts/eval-poster.mjs",
+    "eval:video": "node scripts/eval-video.mjs"
   },
   "dependencies": {
     "react": "^19.0.0",

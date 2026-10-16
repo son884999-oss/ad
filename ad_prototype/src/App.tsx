@@ -1826,8 +1826,9 @@ function CreateFlow({
         // Ken Burns with three keyframes (whole photo → push in → slight drift), eased so it never jerks.
         const keyframes = [
           { at: 0, zoom: 1, x: 0, y: 0 },
-          { at: 0.55, zoom: 1.08, x: 0, y: -0.02 },
-          { at: 1, zoom: 1.12, x: 0.02, y: -0.03 },
+          // Up to 1.2× (the usual short-video push-in); at 1.12× the movement was hard to notice in 5 s.
+          { at: 0.55, zoom: 1.13, x: 0, y: -0.02 },
+          { at: 1, zoom: 1.2, x: 0.03, y: -0.035 },
         ]
         const ease = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2)
         const camera = (progress: number) => {
