@@ -112,12 +112,12 @@ html[data-layout=pc] .easy-mode .home-samples { height:clamp(280px,calc(100dvh -
 /* ---------- 5. Menu: anchored panel under the top bar, page dimmed behind it ---------- */
 html[data-layout=pc] .reference-menu,html[data-layout=pc] .easy-mode .reference-menu { top:84px;right:var(--pc-gutter);bottom:auto;left:auto;width:460px;max-height:calc(100dvh - 104px);border:1px solid var(--pc-card-line);border-radius:20px;background:var(--pc-card);box-shadow:0 0 0 100vmax #2b242038,0 24px 60px #3a1a0838; }
 html[data-layout=pc] .easy-mode .reference-menu { width:520px; }
-html[data-layout=pc] .reference-menu-header { position:absolute;top:16px;right:18px;z-index:1;height:auto;min-height:0;padding:0; }
+html[data-layout=pc] .reference-menu-header { justify-content:flex-end;height:auto;min-height:0;padding:14px 18px 0; }
 html[data-layout=pc] .reference-menu-header .reference-logo { display:none; }
 html[data-layout=pc] .reference-menu-header > button { min-height:44px;padding:0 14px;font-size:16px; }
 html[data-layout=pc] .easy-mode .reference-menu-header > button { min-height:50px;font-size:18px; }
-html[data-layout=pc] .reference-menu-content { padding:24px 22px 12px; }
-html[data-layout=pc] .reference-menu h2 { margin:6px 0 16px;padding-right:104px;font-size:22px; }
+html[data-layout=pc] .reference-menu-content { padding:4px 22px 12px; }
+html[data-layout=pc] .reference-menu h2 { margin:0 0 16px;font-size:22px; }
 html[data-layout=pc] .easy-mode .reference-menu h2 { font-size:25px; }
 html[data-layout=pc] .studio-menu-row { border:1px solid transparent;background:var(--color-card,#faf6f1); }
 html[data-layout=pc] .studio-menu-row:hover { border-color:#e3c3aa;background:var(--color-brand-soft); }
@@ -338,3 +338,9 @@ html[data-layout=pc] .easy-mode .journey-progress [data-state=current] .journey-
 html[data-layout=pc] .easy-mode .results-step .result-card-heading > span { display:none; }
 html[data-layout=pc] .easy-mode .results-step .result-card-title { margin-left:28px; }
 html[data-layout=pc] .easy-mode .result-tabs button { gap:0;min-height:66px;font-size:23px; }
+
+/* ---------- Review 2026-10-16 ---------- */
+/* page title band: soft edge where content scrolls under it */
+html[data-layout=pc] .pc-pagebar { position:relative;z-index:2;box-shadow:0 10px 12px -12px #2b242040; }
+/* 홍보 글: a short text no longer sits in a tall empty box */
+html[data-layout=pc] .results-step .result-card > .result-preview--copy,html[data-layout=pc] .easy-mode .results-step .result-card > .result-preview--copy { min-height:300px; }

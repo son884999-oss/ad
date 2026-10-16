@@ -695,3 +695,17 @@ html[data-layout=mobile] .results-step:not(.is-single) .result-card:has(.result-
 html[data-layout=mobile] .results-step:not(.is-single) .result-card:has(.result-preview-controls) .result-preview { height:calc(358px * var(--s)); }
 html[data-layout=mobile] .easy-mode .results-step:not(.is-single) .result-card:has(.result-preview-controls) .result-preview { height:clamp(180px,calc(100cqh - 276px),calc(380px * var(--s))); }
 @media (max-height:680px) { html[data-layout=mobile] .results-step:not(.is-single) .result-card:has(.result-preview-controls) .result-preview { height:calc(100dvh - 472px);min-height:140px; } }
+/* 크게 보기: the zoomed poster keeps its shape and scrolls, instead of a squeezed image with a blank strip */
+.result-main-preview.is-expanded .poster-image-canvas { height:auto; }
+.result-main-preview.is-expanded .poster-image-canvas img { height:auto;object-fit:fill; }
+/* video caption sits on the photo, not across the letterbox */
+.result-motion-preview strong { left:50%;right:auto;transform:translateX(-50%);width:min(84%,440px);border-radius:10px;font-size:calc(17px * var(--s,1));font-weight:700;line-height:1.4; }
+.easy-mode .result-motion-preview strong { font-size:calc(20px * var(--s,1)); }
+/* 홍보 글 box on phones follows short text */
+html[data-layout=mobile] .results-step .result-card > .result-preview.result-preview--copy { height:auto;min-height:clamp(160px,25dvh,280px);max-height:calc(440px * var(--s)); }
+/* developer toolbar stays out of the way: faint until hovered/focused, hidden while the menu is open */
+@media (min-width:768px) { .dev-toolbar { opacity:.45;transition:opacity .15s; } .dev-toolbar:is(:hover,:focus-within) { opacity:1; } body:has(.reference-menu) .dev-toolbar { display:none; } }
+/* low-vision: secondary button edges 3.26:1 on white (PC has its own tokens) */
+html[data-layout=mobile] .studio-shell :is(.studio-secondary,.result-share-action,.result-preview-action) { border-color:#9a8c81; }
+/* very short screens (e.g. 200% zoom): fixed bars give way so the form stays usable */
+@media (max-height:480px) { .studio-shell .compact-information .details-actions,.easy-mode .compact-information .details-actions { position:static; } }
