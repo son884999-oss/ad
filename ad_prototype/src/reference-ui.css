@@ -779,3 +779,15 @@ html[data-layout=mobile] .compact-information .details-actions { position:sticky
 .easy-offer > div { display:grid;grid-template-columns:1fr 1fr;gap:8px; }
 .easy-offer button { min-height:48px;padding:0 8px;font-size:16px; }
 html[data-view=mobile] .easy-offer { top:calc(64px * var(--s) + 34px); }
+/* Very short screens (e.g. 200% zoom, phone in landscape): fixed bars get thin so the content stays visible. */
+@media (max-height:480px) {
+  .reference-header { height:48px;min-height:48px;padding-block:4px; }
+  .easy-toolbar { padding-bottom:4px; }
+  .easy-toolbar .reference-read,.easy-mode .easy-toolbar .reference-read { min-height:44px;font-size:16px; }
+  .studio-bottom-nav,.easy-mode .studio-bottom-nav { height:calc(52px + env(safe-area-inset-bottom));min-height:calc(52px + env(safe-area-inset-bottom)); }
+  .studio-bottom-nav button svg,.easy-mode .studio-bottom-nav button svg { width:20px;height:20px; }
+  .studio-bottom-nav button,.easy-mode .studio-bottom-nav button { gap:2px;font-size:14px; }
+  .reference-menu,.easy-mode .reference-menu { bottom:calc(52px + env(safe-area-inset-bottom)); }
+  /* the sticky 홍보물 만들기 bar would cover the form here; it scrolls with the page instead */
+  html[data-layout=mobile] .compact-information .details-actions,html[data-layout=mobile] .easy-mode .compact-information .details-actions { position:static;box-shadow:none;background:none; }
+}
