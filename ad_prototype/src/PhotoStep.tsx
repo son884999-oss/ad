@@ -118,8 +118,8 @@ export default function PhotoStep({imageUrl,pending,message,onUpload,onDropFile,
   </>:<><div className={`reference-upload-box${dragging?" is-dragging":""}`} aria-busy={pending} {...dragProps}>
     <button className="reference-upload-icon" tabIndex={-1} aria-hidden="true" disabled={pending} onClick={camera?openCamera:openGallery}><span className="reference-upload-badge"><Icon name="camera" size={40}/></span></button>
     {/* Upfront guide = the box headline: a real photo you took yourself, no drawings or screenshots. */}
-    <p className="photo-guide" id="photo-guide"><strong>{t("가게나 제품을 직접 찍은 실사 사진을 넣어 주세요")}</strong><span>{t("그림, 캡처 화면, 글자만 있는 이미지는 피해 주세요")}</span></p>
-    {!easyMode&&<small className="upload-hint">{camera?t("바로 찍거나 앨범에서 골라 주세요."):<>JPG · PNG · WebP / 최대 10MB<span className="upload-drag-hint"> · 끌어다 놓아도 돼요</span></>}</small>}
+    <p className="photo-guide" id="photo-guide"><strong>{t("가게나 제품을 직접 찍은 실사 사진을 넣어 주세요")}</strong><span>{t("그림·캡처·글자 이미지는 피해 주세요")}</span></p>
+    {!easyMode&&!camera&&<small className="upload-hint">JPG · PNG · WebP / 최대 10MB<span className="upload-drag-hint"> · 끌어다 놓아도 돼요</span></small>}
     {pickers(true)}
    </div>
    <div ref={slotRef} className="photo-examples-slot">

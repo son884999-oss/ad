@@ -133,7 +133,7 @@ try {
       const guide = page.locator(".reference-upload-box .photo-guide")
       assert.ok(await guide.isVisible(), "guide shown before a photo is chosen")
       const text = (await guide.innerText()).replace(/\s+/g, " ").trim()
-      assert.equal(text, easy ? "직접 찍은 사진을 넣어 주세요 그림이나 캡처는 안 돼요" : "가게나 제품을 직접 찍은 실사 사진을 넣어 주세요 그림, 캡처 화면, 글자만 있는 이미지는 피해 주세요")
+      assert.equal(text, easy ? "직접 찍은 사진을 넣어 주세요 그림이나 캡처는 안 돼요" : "가게나 제품을 직접 찍은 실사 사진을 넣어 주세요 그림·캡처·글자 이미지는 피해 주세요")
       if (easy) for (const part of ["strong", "span"]) assert.ok(Number(await guide.locator(part).evaluate((e) => getComputedStyle(e).fontWeight)) >= 700, "easy guide is bold")
       const box = await guide.boundingBox()
       const navTop = await page.evaluate(() => { const n = document.querySelector(".studio-bottom-nav"); return n && !n.classList.contains("is-top") ? n.getBoundingClientRect().top : innerHeight })
