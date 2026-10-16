@@ -554,6 +554,31 @@ function outputFileName(title: string, kind: string, extension: string) {
   return `${safe}_${kind}_${date}.${extension}`
 }
 
+/**
+ * Adds a UTF-8 iTXt chunk to a PNG (after IHDR). Used to mark posters whose text an AI wrote, the
+ * machine-readable half of the AI 표시 rule (인공지능기본법 제31조); the result screen says it visibly.
+ */
+async function withPngText(blob: Blob, keyword: string, text: string) {
+  const bytes = new Uint8Array(await blob.arrayBuffer())
+  const encode = (value: string) => new TextEncoder().encode(value)
+  // keyword \0, compression flag 0, method 0, language "" \0, translated keyword "" \0, text
+  const data = new Uint8Array([...encode(keyword), 0, 0, 0, 0, 0, ...encode(text)])
+  const type = encode("iTXt")
+  let crc = ~0
+  for (const byte of [...type, ...data]) {
+    crc ^= byte
+    for (let bit = 0; bit < 8; bit += 1) crc = (crc >>> 1) ^ (0xedb88320 & -(crc & 1))
+  }
+  const chunk = new Uint8Array(12 + data.length)
+  const view = new DataView(chunk.buffer)
+  view.setUint32(0, data.length)
+  chunk.set(type, 4)
+  chunk.set(data, 8)
+  view.setUint32(8 + data.length, ~crc >>> 0)
+  const afterHeader = 33 // 8-byte signature + 25-byte IHDR chunk
+  return new Blob([bytes.slice(0, afterHeader), chunk, bytes.slice(afterHeader)], { type: "image/png" })
+}
+
 function triggerFileDownload(file: File) {
   const url = URL.createObjectURL(file)
 
@@ -1477,7 +1502,11 @@ function CreateFlow({
 
       if (!blob || blob.size === 0) throw new Error("empty-png")
 
-      const file = new File([blob], outputFileName(posterContent.productName, "포스터", "png"), {
+      const marked = activePromo
+        ? await withPngText(blob, "Comment", "홍보잇다: 포스터 문구 일부를 AI(Gemini)가 작성함 / Text partly AI-generated").catch(() => blob)
+        : blob
+
+      const file = new File([marked], outputFileName(posterContent.productName, "포스터", "png"), {
         type: "image/png",
       })
 
@@ -1924,6 +1953,11 @@ function CreateFlow({
             </h2>
             <p>{t("사진과 입력한 내용으로 만든 체험 결과예요. ")}</p>
           </div>
+          {(showCopy || showPoster) && (
+            <p className={`ai-notice${activePromo ? " is-ai" : ""}`}>
+              {t(activePromo ? "AI가 쓴 글이 들어 있어요. 올리기 전에 읽어 봐 주세요." : "AI 없이 기본 문구로 만들었어요.")}
+            </p>
+          )}
         </div>
       ) : (
         <StepHeader step={step} onBack={setStep} easyMode={easyMode} />
@@ -2564,7 +2598,10 @@ function CreateFlow({
                     className="result-main-preview result-motion-preview"
                   >
                     {showsRealVideo(aiVideo.state) ? (
-                      <AiVideoPlayer state={aiVideo.state} easyMode={easyMode} playing={playing} onPlayingChange={setPlaying} onBroken={aiVideo.markBroken} />
+                      <>
+                        <AiVideoPlayer state={aiVideo.state} easyMode={easyMode} playing={playing} onPlayingChange={setPlaying} onBroken={aiVideo.markBroken} />
+                        <span className="ai-badge">{t("AI 생성 영상")}</span>
+                      </>
                     ) : (
                     <img
                       src={imageUrl}
@@ -2932,7 +2969,14 @@ export default function App() {
   /** The record shown on the result screen; poster shape and first-line choices made there are saved into it. */
   const [currentRecordId, setCurrentRecordId] = useState("")
 
-  const [easyMode, setEasyModeState] = useState(false)
+  // Remembered on this device so an older user does not have to find the switch again after a reload.
+  const [easyMode, setEasyModeState] = useState(() => {
+    try {
+      return localStorage.getItem("hongboitda-easy-mode") === "1"
+    } catch {
+      return false
+    }
+  })
   const [generatingView, setGeneratingView] = useState(false)
   const [editedHashtags, setEditedHashtags] =
     useState<Record<Channel, boolean>>(() => mapChannels(() => false))
@@ -3036,6 +3080,11 @@ export default function App() {
 
   const setEasyMode = (enabled: boolean) => {
     setEasyModeState(enabled)
+    try {
+      localStorage.setItem("hongboitda-easy-mode", enabled ? "1" : "0")
+    } catch {
+      // Storage can be off (private mode); the choice still applies to this visit.
+    }
 
     if (!enabled) {
       speechRequestRef.current += 1

@@ -49,6 +49,13 @@ export default function GenerationProgress({
 }) {
   const t = (text: string) => uiText(text, easyMode)
   const [percent, setPercent] = useState(0)
+  // The bar holds at 95% while the AI text is still coming; after 3 s say so instead of looking frozen.
+  const [slow, setSlow] = useState(false)
+  useEffect(() => {
+    if (ready || percent < 95) return
+    const timer = window.setTimeout(() => setSlow(true), 3000)
+    return () => window.clearTimeout(timer)
+  }, [ready, percent])
   const headingRef = useRef<HTMLHeadingElement>(null)
   const doneRef = useRef(onDone)
   doneRef.current = onDone
@@ -133,7 +140,7 @@ export default function GenerationProgress({
           aria-label={t("홍보물 만드는 중")}
           aria-valuemin={0}
           aria-valuemax={100}
-          aria-valuenow={percent}
+          aria-valuenow={Math.floor(percent / 10) * 10}
         >
           <span style={{ width: `${percent}%` }} />
         </div>
@@ -141,6 +148,7 @@ export default function GenerationProgress({
           {percent}%
         </span>
       </div>
+      <p className="generation-eta">{t(slow ? "조금 더 걸리고 있어요. 곧 나와요." : "보통 10초쯤 걸려요.")}</p>
       <button type="button" className="studio-secondary generation-cancel" onClick={onCancel}>
         {t("취소")}
       </button>

@@ -692,7 +692,7 @@ html[data-layout=mobile] .results-step:not(.is-single) .result-card-heading { po
 html[data-layout=mobile] .results-step:not(.is-single) .result-card > .result-card-actions { order:2; }
 html[data-layout=mobile] .results-step:not(.is-single) .result-preview-action { min-height:max(44px,calc(46px * var(--s)));background:#fff;box-shadow:none; }
 html[data-layout=mobile] .results-step:not(.is-single) .result-card:has(.result-preview-controls) .result-action-buttons { margin-top:10px; }
-html[data-layout=mobile] .results-step:not(.is-single) .result-card:has(.result-preview-controls) .result-preview { height:calc(358px * var(--s)); }
+html[data-layout=mobile] .results-step:not(.is-single) .result-card:has(.result-preview-controls) .result-preview { height:calc(318px * var(--s)); }
 html[data-layout=mobile] .easy-mode .results-step:not(.is-single) .result-card:has(.result-preview-controls) .result-preview { height:clamp(180px,calc(100cqh - 276px),calc(380px * var(--s))); }
 @media (max-height:680px) { html[data-layout=mobile] .results-step:not(.is-single) .result-card:has(.result-preview-controls) .result-preview { height:calc(100dvh - 472px);min-height:140px; } }
 /* 크게 보기: the zoomed poster keeps its shape and scrolls, instead of a squeezed image with a blank strip */
@@ -762,3 +762,10 @@ html[data-layout=mobile] .studio-shell :is(.studio-secondary,.result-share-actio
 .reference-login.easy-mode .reference-login-note { font-size:17px; }
 .reference-login.easy-mode .reference-read { min-height:50px;padding:0 16px;border:1px solid #c9b3a2;border-radius:var(--radius-control,10px);background:#fff;font-size:18px;font-weight:700; }
 .reference-login.easy-mode :is(.reference-login-divider,.reference-login-notice) { font-size:17px; }
+/* AI disclosure on the result screen (인공지능기본법 제31조) and on a real AI video */
+.ai-notice { margin:0 0 8px;padding:5px 10px;border-radius:var(--radius-control,10px);background:#f3ece6;color:#4e443e;font-size:14px;line-height:1.4; }
+.ai-notice.is-ai { background:var(--color-brand-soft);color:var(--color-brand-hover); }
+.easy-mode .ai-notice { font-size:calc(17px * var(--s)); }
+.result-motion-preview .ai-badge { position:absolute;right:12px;bottom:58px;z-index:2;padding:4px 10px;border-radius:999px;background:#2b2420cc;color:#fff;font-size:14px;font-weight:700;pointer-events:none; }
+.generation-eta { margin:0 0 calc(14px * var(--s));font-size:max(14px,calc(15px * var(--s)));color:var(--color-muted);text-align:center; }
+.easy-mode .generation-eta { font-size:calc(18px * var(--s)); }
