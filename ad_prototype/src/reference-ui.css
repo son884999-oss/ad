@@ -807,3 +807,7 @@ html[data-view=mobile] .easy-offer { top:calc(64px * var(--s) + 34px); }
 /* Short notices break into even lines (no lone "주세요." on the last line); words are not split */
 :is(.ai-notice,.ai-fill-live) { text-wrap:balance;word-break:keep-all; }
 .result-card-actions p { text-wrap:pretty;word-break:keep-all; }
+/* 쉬운 화면 메뉴: links to other screens sit under their own heading and look lighter than the 만들기 choices (same text size: verify-records-and-menu keeps it) */
+.easy-mode .reference-menu .menu-more-heading { margin:calc(20px * var(--s)) 0 0;font-size:calc(20px * var(--s));font-weight:800;color:var(--color-ink); }
+.easy-mode .reference-menu-links button { border-color:#d9cdc2;background:#fff; }
+.easy-mode .reference-menu-links button:hover { background:#fdf9f5; }
