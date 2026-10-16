@@ -375,6 +375,27 @@ export type RenderPosterOptions = {
   themeKey?: PosterThemeKey
   ratioKey?: PosterRatioKey
   compositionKey?: PosterCompositionKey
+  /** Small visible "AI 활용" mark (인공지능기본법 제31조) when an AI wrote part of the poster text. */
+  aiMark?: boolean
+}
+
+function drawAiMark(ctx: Ctx, width: number, height: number, isStory: boolean) {
+  const label = "AI 활용"
+  ctx.save()
+  ctx.font = font(700, 24)
+  const w = ctx.measureText(label).width + 28
+  const h = 40
+  const x = width - w - 24
+  // Stories: above Instagram's bottom UI band (340px); otherwise near the bottom-right corner.
+  const y = height - h - (isStory ? 352 : 24)
+  ctx.fillStyle = "rgba(29,26,23,.62)"
+  roundedRect(ctx, x, y, w, h, h / 2)
+  ctx.fill()
+  ctx.fillStyle = "#ffffff"
+  ctx.textAlign = "left"
+  ctx.textBaseline = "middle"
+  ctx.fillText(label, x + 14, y + h / 2 + 1)
+  ctx.restore()
 }
 
 /** Draws the poster and returns the visible text lines, or null when the canvas is unusable. */
@@ -386,6 +407,7 @@ export function renderPosterToCanvas({
   themeKey = "nature",
   ratioKey = "4:5",
   compositionKey = "vertical",
+  aiMark = false,
 }: RenderPosterOptions): string[] | null {
   const theme: PosterTheme = POSTER_THEMES[themeKey] ?? POSTER_THEMES.nature
   const ratio = POSTER_RATIOS[ratioKey] ?? POSTER_RATIOS["4:5"]
@@ -396,7 +418,9 @@ export function renderPosterToCanvas({
   if (!ctx) return null
 
   if (compositionKey === "vertical") {
-    return renderVerticalPoster({ ctx, image: productImage, background: backgroundImage, content, theme, width, height })
+    const drawn = renderVerticalPoster({ ctx, image: productImage, background: backgroundImage, content, theme, width, height })
+    if (aiMark) drawAiMark(ctx, width, height, ratioKey === "9:16")
+    return drawn
   }
 
   const { eyebrow = "", productName, productDescription = "", keySellingPoint = "", targetAudience = "" } = content
@@ -504,6 +528,7 @@ export function renderPosterToCanvas({
     drawLines(ctx, [line], { x: titleX, y: Math.min(metaY + 14, height - (isStory ? 340 : 104)), font: font(600, 32), color: theme.ink, lineHeight: 38 })
     drawn.push(line)
   }
+  if (aiMark) drawAiMark(ctx, width, height, isStory)
   return drawn
 }
 

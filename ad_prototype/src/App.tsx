@@ -1370,6 +1370,9 @@ function CreateFlow({
   // Stored on the AI answer itself: a fresh answer starts at its own first line, and the record keeps the choice.
   const headlineIndex = Math.min(activePromo?.chosen ?? 0, Math.max(headlineOptions.length - 1, 0))
   const chosenHeadline = headlineOptions[headlineIndex] ?? activePromo?.copy ?? ""
+  // AI 표시 at the moment a result leaves the app (save, share, copy), when an AI wrote part of it.
+  const aiNote = (message: string) =>
+    activePromo && message && !/못|실패|않/.test(message) ? `${message} ${t("AI가 쓴 글이 들어 있어요.")}` : message
   const pickHeadline = (index: number) => { if (activePromo) setAiPromo({ ...activePromo, chosen: index }) }
   const copyText = activePromo ? composePromoText({ ...activePromo, copy: chosenHeadline }, details) : resultCopy[channel]
 
@@ -1514,6 +1517,7 @@ function CreateFlow({
         themeKey: posterTheme,
         ratioKey: posterRatio,
         compositionKey: posterLayout,
+        aiMark: Boolean(activePromo),
       })
 
       if (!drawnText) throw new Error("canvas-unavailable")
@@ -2566,7 +2570,7 @@ function CreateFlow({
                   icon="download"
                   onClick={() => createPosterFile(true)}
                   onShare={() => shareResult("poster")}
-                  shareMessage={t(shareMessages.poster ?? "")}
+                  shareMessage={aiNote(t(shareMessages.poster ?? ""))}
                   shareDisabled={!posterPreviewUrl}
                   disabled={posterStatus === "preparing" || !posterPreviewUrl}
                   busy={posterStatus === "preparing"}
@@ -2579,7 +2583,7 @@ function CreateFlow({
                       : posterStatus === "failed"
                       ? "저장에 실패했어요. 다시 시도해 주세요."
                       : posterStatus === "ready"
-                        ? "PNG 저장을 요청했어요. 다운로드 목록을 확인하세요."
+                        ? aiNote("PNG 저장을 요청했어요. 다운로드 목록을 확인하세요.")
                         : posterExpanded
                           ? "이미지를 크게 키웠어요. 안에서 좌우·위아래로 움직여 보세요."
                           : ""
@@ -2659,7 +2663,7 @@ function CreateFlow({
                   onShare={() => showsRealVideo(aiVideo.state)
                     ? shareRealVideo(aiVideo.state, details.shopName?.trim() || details.name?.trim() || "홍보 영상").then((message) => setShareMessages((current) => ({ ...current, video: message })))
                     : shareResult("video")}
-                  shareMessage={t(shareMessages.video ?? "")}
+                  shareMessage={aiNote(t(shareMessages.video ?? ""))}
                   error={videoStatus === "failed" || videoStatus === "unsupported"}
                   message={t(videoStatus === "preparing"
                     ? `${videoMessage} 다른 작업으로 이동하면 준비를 취소해요.`
@@ -2739,8 +2743,8 @@ function CreateFlow({
                   onClick={copyFinalText}
                   onShare={() => shareResult("copy")}
                   shareLabel={t("공유하기")}
-                  shareMessage={t(shareMessages.copy ?? "")}
-                  message={t(copyMessage && !copyMessage.includes("못했어요") ? "문구를 복사했어요." : copyMessage)}
+                  shareMessage={aiNote(t(shareMessages.copy ?? ""))}
+                  message={aiNote(t(copyMessage && !copyMessage.includes("못했어요") ? "문구를 복사했어요." : copyMessage))}
                   error={copyMessage.includes("못했어요")}
                 />
               </article>
