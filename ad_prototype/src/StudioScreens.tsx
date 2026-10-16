@@ -53,8 +53,8 @@ export function StudioLogin({onEnter,speaking,speechPreparing,onSpeak,easyMode}:
   <div className="reference-login-top"><Logo/><ReadButton easy={easyMode} {...{speaking,speechPreparing,onSpeak}}/></div>
   <h1 data-screen-heading tabIndex={-1}>로그인</h1>
   <p className="reference-login-lead">{t("홍보잇다에 오신 것을 환영해요.")}</p>
-  <form className="reference-login-form" onSubmit={e=>{e.preventDefault();pending('아이디')}}>
-   <label>{t("아이디")}<input type="email" name="email" autoComplete="username" placeholder={t("이메일 주소")}/></label>
+  <form className="reference-login-form" onSubmit={e=>{e.preventDefault();pending('이메일')}}>
+   <label>이메일<input type="email" name="email" autoComplete="username" placeholder={t("이메일 주소")}/></label>
    <label>비밀번호<input type="password" name="password" autoComplete="current-password" placeholder="비밀번호"/></label>
    <button type="submit" className="studio-primary">로그인</button>
   </form>

@@ -268,7 +268,6 @@ export const easyUiDictionary: Record<string, string> = {
 
   // ---- Login
   "홍보잇다에 오신 것을 환영해요.": "어서 오세요.",
-  아이디: "이메일",
   "이메일 주소": "이메일",
   "간편 로그인": "다른 방법",
   "Google로 시작하기": "구글로 시작하기",
