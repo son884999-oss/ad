@@ -582,7 +582,24 @@ async function withPngText(blob: Blob, keyword: string, text: string) {
   return new Blob([bytes.slice(0, afterHeader), chunk, bytes.slice(afterHeader)], { type: "image/png" })
 }
 
+/** A phone with a touch screen, where saving should go to the photo gallery via the share sheet. */
+const isTouchPhone = () => isMobileDevice() && window.matchMedia?.("(pointer: coarse)").matches === true
+
+/**
+ * Saves a result. On a phone the share sheet opens so "이미지 저장 / 동영상 저장" puts it in the photo
+ * gallery (a plain download lands in the Files app on iPhone). Elsewhere, or if sharing fails, it downloads.
+ */
 function triggerFileDownload(file: File) {
+  if (isTouchPhone() && navigator.canShare?.({ files: [file] })) {
+    navigator.share({ files: [file] }).catch((error: unknown) => {
+      if ((error as { name?: string })?.name !== "AbortError") downloadFile(file)
+    })
+    return
+  }
+  downloadFile(file)
+}
+
+function downloadFile(file: File) {
   const url = URL.createObjectURL(file)
 
   const anchor = document.createElement("a")
@@ -2584,7 +2601,7 @@ function CreateFlow({
                       : posterStatus === "failed"
                       ? "저장에 실패했어요. 다시 시도해 주세요."
                       : posterStatus === "ready"
-                        ? aiNote("PNG 저장을 요청했어요. 다운로드 목록을 확인하세요.")
+                        ? aiNote(isTouchPhone() ? "저장 창을 열었어요. ‘이미지 저장’을 누르면 사진에 들어가요. 없으면 사진을 길게 눌러 저장해 주세요." : "PNG 저장을 요청했어요. 다운로드 목록을 확인하세요.")
                         : posterExpanded
                           ? "이미지를 크게 키웠어요. 안에서 좌우·위아래로 움직여 보세요."
                           : ""
