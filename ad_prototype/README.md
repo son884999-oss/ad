@@ -29,6 +29,22 @@ pnpm build        # dist/
 | `HF_CREDENTIALS` | Higgsfield 실제 영상 생성 (`KEY_ID:KEY_SECRET`) | 브라우저에서 만든 예시 영상 |
 | `HF_VIDEO_MODEL`, `HF_VIDEO_DURATION`, `HF_VIDEO_RESOLUTION` | 영상 모델·길이·해상도 (선택) | MVP 기본값 사용 |
 
+### 처음 시험하기
+
+1. `ad_prototype/.env.local` 파일을 엽니다. 없으면 `.env.example`을 복사해 만듭니다.
+2. 글·사진 분석만 시험할 때는 `GEMINI_API_KEY`만 넣습니다. [Google AI Studio](https://aistudio.google.com/apikey)에서 무료로 발급받습니다.
+3. 실제 영상까지 시험할 때는 `HF_CREDENTIALS=키ID:시크릿`을 넣습니다. [Higgsfield 콘솔](https://console.higgsfield.ai)에서 키를 만들 때 시크릿은 한 번만 보이니 바로 복사합니다. 나머지 `HF_*`는 비워 두면 기본값(Kling 5초 720p 소리 없음, 약 $0.21)을 씁니다.
+4. 개발 서버를 다시 시작합니다(`pnpm dev`). 키는 서버를 켤 때 한 번만 읽습니다.
+5. 영상 1편만 시험하려면 `node scripts/live-video-test.mjs --yes-spend`를 실행합니다. 브라우저에서 "홍보물 만들기"를 누를 때도 1편씩 청구됩니다.
+
+480p로 시험하려면 Wan 3.0을 씁니다. Kling은 720p 고정이라 해상도를 고를 수 없습니다. Wan 480p 5초는 가격이 Kling 720p 5초와 비슷할 것으로 추정되고, 실제 생성은 아직 해 보지 않았습니다.
+
+```
+HF_VIDEO_MODEL=alibaba/wan-3.0/image-to-video
+HF_VIDEO_DURATION=5
+HF_VIDEO_RESOLUTION=480p
+```
+
 Vercel에서는 **Project → Settings → Environment Variables**에 같은 이름으로 넣습니다.
 **주의:** 아래 [공개 배포 전 필수](#공개-배포-전-필수)를 끝내기 전에는 공개 주소에 키를 넣지 마세요.
 
@@ -50,12 +66,14 @@ Vercel에서는 **Project → Settings → Environment Variables**에 같은 이
 
 | 팀 폴더 | 내용 | 프로토타입 위치 |
 |---|---|---|
-| A_손용범 | Higgsfield 영상 생성 | `api/_lib/higgsfield.js`, `api/video-*.js` |
-| B_이창훈 | 홍보 글 규칙(Claude → Gemini로 이식) | `api/_lib/promo-prompt.js`, `api/_lib/promo.js` |
-| C_김만복 | 제품 정보 입력 항목 | 정보 입력 화면(`src/App.tsx`) |
-| D_고혜숙 | 포스터 렌더러 | `src/poster/` |
+| A_손용범 | Higgsfield 영상 생성, 영상 문구 띠(compose-push 배치: 짧은 제목 → 가게·제품 → 행동 유도) | `api/_lib/higgsfield.js`, `api/video-*.js`, 결과 화면 `.video-caption` |
+| B_이창훈 | 홍보 글 규칙(Claude → Gemini로 이식), 한 줄 문구 후보 3개, 영상용 짧은 제목·CTA, 가게 정보(위치·가격·연락처), AI 없을 때의 대체 글도 같은 금지어 규칙 | `api/_lib/promo-prompt.js`, `api/_lib/promo.js`, `src/App.tsx` |
+| C_김만복 | 제품 정보 입력 항목과 글자 수 제한(서버와 동일) | 정보 입력 화면(`src/App.tsx`) |
+| D_고혜숙 | 포스터 렌더러, 결과 화면에서 크기(4:5·1:1·9:16)·배치·색 고르기, "제품명_포스터_날짜.png" 파일 이름 | `src/poster/`, 결과 화면 `.poster-style` |
 | E_이채원 | 영상 연출 규칙·프롬프트 | `api/_lib/video-prompt.js` |
-| F_육성준 | (작업물 없음) | — |
+| F_육성준 | QA 피드백(`F_QA` 브랜치 병합), 대체 결과가 빈약하다는 지적 반영 | `F_육성준/` |
+
+통합하지 않은 것과 이유(데모 전용 스크립트, 쵸이셀 전용 문구 등)는 [docs/진척사항_2026-10-16.md](docs/진척사항_2026-10-16.md)에 있습니다.
 
 팀 폴더의 원본은 수정하지 않았습니다. 옮겨 온 파일에는 원본 경로를 주석으로 남겼습니다.
 

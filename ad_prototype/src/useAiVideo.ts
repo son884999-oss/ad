@@ -94,7 +94,16 @@ export function useAiVideo(onJobUpdate?: (jobId: string, saved: SavedAiVideo) =>
     }, delay)
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
+  /** Refund the job that is still starting/generating; used before it is replaced or abandoned. */
+  const dropRunningJob = useCallback(() => {
+    const current = stateRef.current
+    if (current.jobId && current.phase === "starting") cancelledJobsRef.current.add(current.jobId)
+    if (current.requestId && (current.phase === "starting" || current.phase === "generating")) cancelAiVideo(current.requestId)
+  }, [])
+
   const begin = useCallback((input: AiVideoInput, signature: string) => {
+    // A new paid job replaces the running one (e.g. the details were edited): cancel the old one first.
+    dropRunningJob()
     stopPolling()
     const generation = generationRef.current
     const jobId = newVideoJobId()
@@ -118,7 +127,7 @@ export function useAiVideo(onJobUpdate?: (jobId: string, saved: SavedAiVideo) =>
         poll(generation, result.requestId, startedAt, POLL_MS)
       }
     })
-  }, [poll, stopPolling])
+  }, [dropRunningJob, poll, stopPolling])
 
   /** Starts the video for this creation, unless the same photo + details already has one. */
   const start = useCallback((input: AiVideoInput) => {
@@ -151,13 +160,11 @@ export function useAiVideo(onJobUpdate?: (jobId: string, saved: SavedAiVideo) =>
 
   /** The user cancelled while making: stop and refund the job if it has not started yet. */
   const cancel = useCallback(() => {
-    const current = stateRef.current
     stopPolling()
-    if (current.jobId && current.phase === "starting") cancelledJobsRef.current.add(current.jobId)
-    if (current.requestId && (current.phase === "starting" || current.phase === "generating")) cancelAiVideo(current.requestId)
+    dropRunningJob()
     inputRef.current = null
     setState(idleState())
-  }, [stopPolling])
+  }, [dropRunningJob, stopPolling])
 
   /** New creation: stop watching. A job already saved in a record can be resumed from 내 홍보물. */
   const reset = useCallback(() => {

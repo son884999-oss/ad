@@ -23,24 +23,28 @@ const same = (a: string, b: string) => a.replace(/\s+/g, "") === b.replace(/\s+/
 /**
  * Chooses the poster text from the form. Every line is optional except the title, and a line that
  * repeats the title is dropped, so a poster with only the product name shows it once.
- * `headline` is the one-line 홍보 문구 (B_이창훈's AI copy, or the local fallback sentence): it fills the
- * body when the form has none, otherwise the highlight line.
+ * `headline` is the one-line 홍보 문구. With `headlineFirst` (an AI line the user can pick on the 홍보 글
+ * tab) it is the body, so the choice shows on the poster too; the form's own text moves to the highlight
+ * line when that is free. Otherwise (the local fallback sentence) it only fills empty slots.
  */
-export function buildPosterContent(details: Details, headline = ""): PosterContent {
+export function buildPosterContent(details: Details, headline = "", headlineFirst = false): PosterContent {
   const title = details.name?.trim() || details.shopName?.trim() || details.description.trim() || details.features.trim()
   const shopName = details.shopName?.trim() ?? ""
   const description = details.description.trim()
   const features = details.features.trim()
   const keywords = (details.keywords ?? "").split(",").map((item) => item.trim()).filter(Boolean)
-  const line = headline.replace(/s+/g, " ").trim()
-  const body = [description, features, line].find((value) => value && !same(value, title)) ?? ""
+  const line = headline.replace(/\s+/g, " ").trim()
+  const formBody = [description, features].find((value) => value && !same(value, title)) ?? ""
+  const body = (headlineFirst && line && !same(line, title) ? line : "") || formBody || (line && !same(line, title) ? line : "")
   const price = details.priceInfo?.trim() ?? ""
   // A price is the most useful short line on a poster, so it leads the highlight line.
   const point = keywords.length || price
     ? [price, ...keywords].filter(Boolean).slice(0, 3).join("  ·  ")
-    : description && features && body === description && !same(features, title)
-      ? features
-      : line && body !== line && !same(line, title) ? line : ""
+    : formBody && body !== formBody
+      ? formBody
+      : description && features && body === description && !same(features, title)
+        ? features
+        : line && body !== line && !same(line, title) ? line : ""
   return {
     eyebrow: [shopName && !same(shopName, title) ? shopName : "", details.location?.trim() ?? ""].filter(Boolean).join("  ·  "),
     productName: title,

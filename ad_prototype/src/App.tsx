@@ -101,7 +101,7 @@ type GeneratedRecord = {
 }
 
 /** AI 홍보 글 for one set of inputs; `signature` ties it to the details and channel it was made for. */
-type AiPromo = PromoTextResult & { signature: string }
+type AiPromo = PromoTextResult & { signature: string; /** Index of the first line chosen on the 홍보 글 tab. */ chosen?: number }
 
 
 type Tone = "natural" | "premium" | "friendly" | "trendy"
@@ -535,7 +535,8 @@ function drawWrappedText(
 
 /** "바닐라_라떼_포스터_20261016.png" — product name and date, like D_고혜숙's generatePosterFilename. */
 function outputFileName(title: string, kind: string, extension: string) {
-  const safe = title.replace(/[\\/:*?"<>|\s]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 30) || "홍보잇다"
+  // Array.from keeps emoji (surrogate pairs) whole when cutting.
+  const safe = Array.from(title.replace(/[\\/:*?"<>|\s]+/g, "_").replace(/^_+|_+$/g, "")).slice(0, 30).join("") || "홍보잇다"
   const now = new Date()
   const date = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(now.getDate()).padStart(2, "0")}`
   return `${safe}_${kind}_${date}.${extension}`
@@ -1302,10 +1303,10 @@ function CreateFlow({
   const headlineOptions = activePromo
     ? [...new Set([activePromo.copy, ...(activePromo.copyCandidates ?? [])].filter(Boolean))].slice(0, 4)
     : []
-  const [headlineChoice, setHeadlineChoice] = useState({ signature: "", index: 0 })
-  const headlineIndex = headlineChoice.signature === activePromo?.signature ? headlineChoice.index : 0
+  // Stored on the AI answer itself: a fresh answer starts at its own first line, and the record keeps the choice.
+  const headlineIndex = Math.min(activePromo?.chosen ?? 0, Math.max(headlineOptions.length - 1, 0))
   const chosenHeadline = headlineOptions[headlineIndex] ?? activePromo?.copy ?? ""
-  const pickHeadline = (index: number) => setHeadlineChoice({ signature: activePromo?.signature ?? "", index })
+  const pickHeadline = (index: number) => { if (activePromo) setAiPromo({ ...activePromo, chosen: index }) }
   const copyText = activePromo ? composePromoText({ ...activePromo, copy: chosenHeadline }, details) : resultCopy[channel]
 
   const hashtags = activePromo
@@ -1345,12 +1346,6 @@ function CreateFlow({
   }
 
   const finalText = `${copyText.trim()}\n\n${hashtags.join(" ")}`.trim()
-  const mediaText =
-    details.name?.trim() &&
-    resultCopy[channel].startsWith(details.name.trim() + "\n")
-      ? resultCopy[channel].slice(details.name.trim().length).trimStart()
-      : resultCopy[channel]
-
   const updateDetails = (nextDetails: GeneratedRecord["details"]) => {
     for (const key of Object.keys(nextDetails) as (keyof GeneratedRecord["details"])[]) {
       if (nextDetails[key] !== details[key]) userEditedRef.current.add(key === "tone" ? "tones" : key)
@@ -1408,7 +1403,7 @@ function CreateFlow({
     }
   }
 
-  const posterContent = buildPosterContent(details, chosenHeadline || body)
+  const posterContent = buildPosterContent(details, chosenHeadline || body, Boolean(chosenHeadline))
   const videoCaption = (() => {
     const name = details.name?.trim() ?? ""
     const shop = details.shopName?.trim() ?? ""
@@ -1458,7 +1453,7 @@ function CreateFlow({
       })
 
       if (!drawnText) throw new Error("canvas-unavailable")
-      posterDrawnTextRef.current = drawnText.join(". ")
+      posterDrawnTextRef.current = drawnText.map((line) => line.replace(/[.!?。]+$/, "")).join(". ")
 
       const blob = await new Promise<Blob | null>((resolve) =>
         canvas.toBlob(resolve, "image/png"),
@@ -1493,6 +1488,8 @@ function CreateFlow({
     setPosterPreviewUrl("")
     setPosterVisibleText("")
     setPosterPreviewStatus("preparing")
+    // A redrawn poster has not been saved yet, so the earlier "저장했어요" status no longer applies.
+    setPosterStatus("idle")
     // The preview and download use the same Canvas renderer and copy.
     void createPosterFile(false).then((file) => {
       if (cancelled) return
@@ -1695,21 +1692,23 @@ function CreateFlow({
 
           context.fillStyle = "#ffffff"
 
-          context.font = '700 44px "Noto Sans KR", sans-serif'
-
-          drawWrappedText(
-            context,
-            details.shopName?.trim() || details.name?.trim() || details.description.trim() || details.features,
-            48,
-            900,
-            624,
-            60,
-            3,
-          )
-
-          context.font = '400 26px "Noto Sans KR", sans-serif'
-
-          drawWrappedText(context, mediaText, 48, 1110, 624, 38, 3)
+          // Same three lines as the preview caption band (A_손용범 compose-push): headline, shop · product, call to action.
+          context.font = '700 52px "Pretendard Variable", "Noto Sans KR", sans-serif'
+          drawWrappedText(context, videoCaption.headline, 48, 900, 624, 66, 2)
+          if (videoCaption.brand) {
+            context.font = '500 30px "Pretendard Variable", "Noto Sans KR", sans-serif'
+            drawWrappedText(context, videoCaption.brand, 48, 1060, 624, 40, 1)
+          }
+          if (videoCaption.cta) {
+            context.font = '700 30px "Pretendard Variable", "Noto Sans KR", sans-serif'
+            const width = Math.min(context.measureText(videoCaption.cta).width + 56, 624)
+            context.fillStyle = "#ffffff"
+            context.beginPath()
+            context.roundRect(48, 1110, width, 60, 30)
+            context.fill()
+            context.fillStyle = `rgb(${channelTheme.rgb})`
+            context.fillText(videoCaption.cta, 76, 1150, 624 - 56)
+          }
 
           if (progress < 1) {
             videoFrameRef.current = window.requestAnimationFrame(drawFrame)
@@ -2840,6 +2839,8 @@ export default function App() {
   const [continuationNotice, setContinuationNotice] = useState(false)
 
   const [records, setRecords] = useState<GeneratedRecord[]>([])
+  /** The record shown on the result screen; poster shape and first-line choices made there are saved into it. */
+  const [currentRecordId, setCurrentRecordId] = useState("")
 
   const [easyMode, setEasyModeState] = useState(false)
   const [generatingView, setGeneratingView] = useState(false)
@@ -3240,7 +3241,36 @@ export default function App() {
     }
   }
 
+  // 내 홍보물 lives in memory only, so warn before a reload or tab close would throw results or a draft away.
+  const hasWorkToLose = records.length > 0 || Boolean(imageUrl)
+  useEffect(() => {
+    if (!hasWorkToLose) return
+    const warn = (event: BeforeUnloadEvent) => {
+      event.preventDefault()
+      event.returnValue = ""
+    }
+    window.addEventListener("beforeunload", warn)
+    return () => window.removeEventListener("beforeunload", warn)
+  }, [hasWorkToLose])
+
+  // Changes made on the result screen (poster shape, chosen first line) are saved into the record shown.
+  // Not while 만드는 중: a new AI answer then belongs to the record about to be created, not the old one.
+  useEffect(() => {
+    if (!currentRecordId || page !== "create" || step !== 3 || generatingView) return
+    // Only what can be changed on the result screen, so other edits never leak into an older record.
+    const { posterRatio, posterLayout, posterTheme } = details
+    setRecords((current) => current.map((record) => record.id === currentRecordId
+      ? {
+          ...record,
+          details: { ...record.details, posterRatio, posterLayout, posterTheme },
+          ...(record.promo && aiPromo && record.promo.signature === aiPromo.signature ? { promo: { ...record.promo, chosen: aiPromo.chosen } } : {}),
+        }
+      : record))
+  }, [details, aiPromo]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const navigate = (nextPage: Page, type?: CreationType) => {
+    // Leaving the 만드는 중 screen: no record holds the paid video job yet, so refund it instead of orphaning it.
+    if (generatingView) aiVideo.cancel()
     if (nextPage === "create" && type) {
       setCreationType(type)
       setAllOutputFormat("both")
@@ -3318,6 +3348,7 @@ export default function App() {
     }
 
     setRecords((current) => [record, ...current])
+    setCurrentRecordId(record.id)
   }
 
 
@@ -3340,6 +3371,7 @@ export default function App() {
     setDetails({ ...recordDetails, tones: normalizeTones(record.details) })
 
     setAiPromo(record.promo ?? null)
+    setCurrentRecordId(record.id)
 
     aiVideo.restore(record.video)
 
