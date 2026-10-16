@@ -45,6 +45,8 @@ async function createRecord(page) {
   await page.locator("#result-poster-preview img").waitFor({ timeout: 20000 })
 }
 const toRecords = (page) => page.locator(".studio-bottom-nav").getByRole("button", { name: "내 홍보물", exact: true }).click()
+// Wait two frames so the layout after a click has been committed before measuring it.
+const settle = (page) => page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))))
 const box = (locator) => locator.evaluate((e) => { const r = e.getBoundingClientRect(); return { w: r.width, h: r.height, x: r.left, y: r.top } })
 const pressed = (page, name) => page.locator(".records-view-toggle").getByRole("button", { name, exact: true }).getAttribute("aria-pressed")
 
@@ -84,6 +86,7 @@ try {
     assert.equal(await page.locator(".records-list").count(), 0)
     const cards = page.locator(".records-grid .record-card")
     assert.equal(await cards.count(), 3)
+    await settle(page)
     const gridThumb = await box(page.locator(".records-grid .record-thumbnail").first())
     assert.ok(gridThumb.w >= listThumb.w * 1.5 && gridThumb.h >= listThumb.h * 1.5, `grid thumb ${gridThumb.w}x${gridThumb.h} vs list ${listThumb.w}x${listThumb.h}`)
     const columns = new Set(await cards.evaluateAll((els) => els.map((e) => Math.round(e.getBoundingClientRect().left)))).size
@@ -132,6 +135,7 @@ try {
       if (!easy) await page.locator(".records-view-toggle").getByRole("button", { name: "격자 보기", exact: true }).click()
       const cols = await page.locator(".records-grid").evaluate((e) => getComputedStyle(e).gridTemplateColumns.split(" ").length)
       assert.ok(cols >= 3 && cols <= 4, `PC grid columns ${cols}`)
+      await settle(page)
       const thumb = await box(page.locator(".records-grid .record-thumbnail").first())
       assert.ok(thumb.w >= 200, `PC grid thumbnail ${thumb.w}px`)
       assert.deepEqual(page.errors, [])

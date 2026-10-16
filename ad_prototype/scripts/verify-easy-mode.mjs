@@ -148,7 +148,9 @@ try {
     assert.equal(await nameField(page).inputValue(), "AI가 붙인 이름", "되돌리기 restores the previous text exactly")
     // Speak again; the AI never overwrites a spoken (user) value — it went through the typed-edit path.
     await page.getByRole("button", { name: "제품 이름 말로 하기", exact: true }).click()
+    await panel(page).getByText("듣고 있어요. 말씀하세요").waitFor()
     await page.evaluate(() => window.__voice.last.emit("x".repeat(70), true))
+    await panel(page).waitFor({ state: "detached" })
     assert.equal((await nameField(page).inputValue()).length, 50, "max length respected")
     assert.deepEqual(page.errors, [])
     await page.close()
