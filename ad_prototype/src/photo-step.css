@@ -14,10 +14,6 @@
 .photo-guide span { font-size:max(14px,calc(15px * var(--s)));line-height:1.45;color:var(--color-muted,#6e625a);text-wrap:balance;word-break:keep-all; }
 .easy-mode .photo-guide strong { font-size:calc(23px * var(--s));font-weight:800; }
 .easy-mode .photo-guide span { font-size:calc(19px * var(--s));font-weight:800;color:var(--color-ink,#2b2420); }
-html[data-layout=pc] .photo-guide strong { font-size:22px; }
-html[data-layout=pc] .photo-guide span { font-size:17px; }
-html[data-layout=pc] .easy-mode .photo-guide strong { font-size:26px; }
-html[data-layout=pc] .easy-mode .photo-guide span { font-size:21px; }
 
 /* Easy mode: the photo guide text is bold (user request). */
 .easy-mode .reference-upload-box p,.easy-mode .reference-upload-box .upload-hint,.easy-mode .photo-examples-note { font-weight:800;color:var(--color-ink,#2b2420); }
@@ -61,17 +57,3 @@ html[data-layout=pc] .easy-mode .photo-guide span { font-size:21px; }
 .has-photo-warning .reference-selected-photo { padding-bottom:0; }
 
 /* PC: no camera button; examples always shown in their side card. */
-html[data-layout=pc] .photo-examples-slot { display:contents; }
-html[data-layout=pc] .photo-examples-disclosure { display:none; }
-html[data-layout=pc] .photo-pickers { max-width:280px; }
-html[data-layout=pc] .easy-mode .photo-pickers { max-width:320px; }
-html[data-layout=pc] .photo-pickers > button { min-height:56px;font-size:20px; }
-html[data-layout=pc] .easy-mode .photo-pickers > button { min-height:64px;font-size:23px; }
-html[data-layout=pc] .photo-check-warning { margin-top:20px;padding:20px 24px; }
-html[data-layout=pc] .photo-check-warning > p { font-size:20px; }
-html[data-layout=pc] .easy-mode .photo-check-warning > p { font-size:23px; }
-html[data-layout=pc] .photo-check-actions { flex-direction:row; }
-html[data-layout=pc] .photo-check-actions > button { flex:1;min-height:56px;font-size:19px; }
-html[data-layout=pc] .easy-mode .photo-check-actions > button { min-height:64px;font-size:22px; }
-html[data-layout=pc] .has-photo-warning .reference-selected-photo img { height:320px; }
-html[data-layout=pc] .has-photo-warning .reference-selected-photo { padding-bottom:0; }

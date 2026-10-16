@@ -90,7 +90,6 @@ async function open({ width = 390, height = 844, view = "auto", easy = false, to
   page.errors = []
   page.analyzeCalls = 0
   page.on("pageerror", (e) => page.errors.push(e.message))
-  await page.addInitScript((v) => { try { localStorage.setItem("hongboitda-dev-view-v2", v) } catch {} }, view)
   await page.route("**/api/**", async (route) => {
     if (route.request().url().includes("analyze-photo")) {
       page.analyzeCalls += 1

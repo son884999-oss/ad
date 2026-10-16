@@ -55,7 +55,6 @@ async function open({ easy, speech = true, width = 390, height = 844, analyze = 
   page.errors = []
   page.on("pageerror", (e) => page.errors.push(e.message))
   await page.addInitScript(fakeSpeech, speech)
-  await page.addInitScript(() => { try { localStorage.setItem("hongboitda-dev-view-v2", "auto") } catch {} })
   await page.route("**/api/**", (route) =>
     analyze && route.request().url().includes("analyze-photo")
       ? route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(analyze) })

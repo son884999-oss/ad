@@ -25,7 +25,6 @@ const viewports = {
 // One browser context per scenario, so localStorage starts empty and survives reloads inside it.
 async function open(vp, { easy = false } = {}) {
   const context = await browser.newContext({ viewport: { width: vp.width, height: vp.height }, reducedMotion: "reduce" })
-  await context.addInitScript((view) => { try { localStorage.setItem("hongboitda-dev-view-v2", view) } catch {} }, vp.view)
   await context.route("**/api/**", (route) => route.fulfill({ status: 503, contentType: "application/json", body: '{"error":"AI_NOT_CONFIGURED"}' }))
   const page = await context.newPage()
   page.errors = []
