@@ -772,3 +772,10 @@ html[data-layout=mobile] .compact-information .details-actions { position:sticky
 :is(.poster-style-group,.headline-choice) button[aria-checked=true]::after { content:"✓";position:absolute;top:4px;right:8px;font-size:14px;font-weight:800;color:var(--color-brand-hover); }
 @media (min-height:681px) { html[data-layout=mobile] .results-step:not(.is-single) .result-card:has(.result-preview-controls) .result-preview { height:calc(306px * var(--s)); } }
 @media (max-height:680px) { html[data-layout=mobile] .results-step:not(.is-single) .result-card:has(.result-preview-controls) .result-preview { height:calc(100dvh - 520px);min-height:120px; } }
+/* First-visit bubble under the 기본/쉬운 switch (does not move the home layout) */
+.easy-offer { position:absolute;top:calc(64px * var(--s));right:12px;z-index:6;width:min(300px,calc(100% - 24px));padding:14px;border:1px solid #c9b3a2;border-radius:14px;background:#fff;box-shadow:0 12px 30px #2b242033; }
+.easy-offer::before { content:"";position:absolute;top:-8px;right:44px;width:14px;height:14px;border-left:1px solid #c9b3a2;border-top:1px solid #c9b3a2;background:#fff;transform:rotate(45deg); }
+.easy-offer p { margin:0 0 10px;font-size:17px;font-weight:700;line-height:1.4;color:var(--color-ink); }
+.easy-offer > div { display:grid;grid-template-columns:1fr 1fr;gap:8px; }
+.easy-offer button { min-height:48px;padding:0 8px;font-size:16px; }
+html[data-view=mobile] .easy-offer { top:calc(64px * var(--s) + 34px); }
