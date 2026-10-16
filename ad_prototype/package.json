@@ -32,7 +32,8 @@
     "verify:promo": "node scripts/verify-promo-rules.mjs",
     "verify:guard": "node scripts/verify-api-guard.mjs",
     "eval:promo": "node scripts/eval-promo.mjs",
-    "audit:screens": "node scripts/audit-mobile-screens.mjs"
+    "audit:screens": "node scripts/audit-mobile-screens.mjs",
+    "eval:poster": "node scripts/eval-poster.mjs"
   },
   "dependencies": {
     "react": "^19.0.0",

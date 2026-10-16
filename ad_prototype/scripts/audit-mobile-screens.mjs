@@ -159,7 +159,17 @@ async function keyboard(page) {
     stops.push(info.key)
     if (!info.size) problems.push(`보이지 않는 곳에 초점 ${info.label}`)
     else if (!info.ring) problems.push(`초점 테두리 없음 ${info.label}`)
-    else if (info.covered) problems.push(`초점이 가려짐 ${info.label} (← ${info.covered})`)
+    else if (info.covered) {
+      // Measured in the same task as the key press, the previous focus target can still be on top for a frame
+      // (seen once in a while with the skip link). Count it only if it is still covered two frames later.
+      const still = await page.evaluate(() => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(() => {
+        const el = document.activeElement
+        const r = el.getBoundingClientRect()
+        const t = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2)
+        done(Boolean(t && !el.contains(t) && !t.contains(el) && !(t.closest("label") && t.closest("label").contains(el))))
+      }))))
+      if (still) problems.push(`초점이 가려짐 ${info.label} (← ${info.covered})`)
+    }
   }
   return problems
 }

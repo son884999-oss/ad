@@ -170,6 +170,24 @@ function getContainedImageRect(size: { width: number; height: number }, x: numbe
   return { x: x + (width - drawWidth) / 2, y: y + (height - drawHeight) / 2, width: drawWidth, height: drawHeight }
 }
 
+/**
+ * Between "contain" and "cover": the photo grows until it fills the area or until `maxCrop` of one side would
+ * be cut off, whichever comes first. The crop is centred on the source (which may already be the product box).
+ */
+function fitWithCrop(source: { x: number; y: number; width: number; height: number }, x: number, y: number, width: number, height: number, maxCrop = 0.25) {
+  const contain = Math.min(width / source.width, height / source.height)
+  const cover = Math.max(width / source.width, height / source.height)
+  const scale = Math.min(cover, contain / (1 - maxCrop))
+  const shownWidth = Math.min(width, source.width * scale)
+  const shownHeight = Math.min(height, source.height * scale)
+  const cropWidth = shownWidth / scale
+  const cropHeight = shownHeight / scale
+  return {
+    source: { x: source.x + (source.width - cropWidth) / 2, y: source.y + (source.height - cropHeight) / 2, width: cropWidth, height: cropHeight },
+    photo: { x: x + (width - shownWidth) / 2, y: y + (height - shownHeight) / 2, width: shownWidth, height: shownHeight },
+  }
+}
+
 function drawCoverImage(ctx: Ctx, image: Img, x: number, y: number, width: number, height: number) {
   const size = imageSize(image)
   if (!image || !size) return
@@ -215,9 +233,9 @@ function drawPortraitBackdrop(ctx: Ctx, image: Img, background: Img, width: numb
   ctx.fillRect(0, 0, width, height)
   ctx.restore()
 
-  // The photo fills the area under the text panel so the title never covers the product.
-  const source = sourceRect(size, currentFocus)
-  const photo = getContainedImageRect(source, 0, photoTop, width, height - photoTop)
+  // The photo fills the area under the text panel so the title never covers the product. When its shape
+  // differs from that area, up to a quarter of its edges is cropped so no wide empty band is left.
+  const { source, photo } = fitWithCrop(sourceRect(size, currentFocus), 0, photoTop, width, height - photoTop)
   ctx.save()
   ctx.shadowColor = "rgba(18,35,24,.24)"
   ctx.shadowBlur = 34
