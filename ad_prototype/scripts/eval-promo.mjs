@@ -3,6 +3,8 @@
 // With --live it calls Gemini through api/_lib/promo.js — each product is 1–2 calls on the free key.
 //   node scripts/eval-promo.mjs                 # offline self-check
 //   node scripts/eval-promo.mjs --live --count 3 # first 3 products, real Gemini (reads GEMINI_* from .env.local)
+//   node scripts/eval-promo.mjs --live --names 아메리카노,가죽 지갑   # only products whose name contains one of these
+// A product the app would replace with its own text (AI_BAD_RESPONSE) scores 0; a rate-limited one is skipped.
 // Scores are machine checks only (no 1–5 human rubric): banned words, repetition, lengths, call to action, hashtags.
 import { readFile } from "node:fs/promises"
 import { generatePromo, normalizePromoInput, reviewPromo } from "../api/_lib/promo.js"
@@ -12,6 +14,7 @@ import { CLICHE_WORDS, MEDICAL_WORDS, HEALTH_CLAIM_WORDS, AI_STYLE_WORDS } from 
 const args = process.argv.slice(2)
 const live = args.includes("--live")
 const count = Number(args[args.indexOf("--count") + 1]) || 10
+const names = args.includes("--names") ? args[args.indexOf("--names") + 1].split(",").map((name) => name.trim()).filter(Boolean) : []
 
 const fromB = JSON.parse(await readFile(new URL("../../B_이창훈/examples/products.json", import.meta.url), "utf8"))
   .map(({ brandTone: _tone, ...product }) => product)
@@ -24,7 +27,7 @@ const own = [
   { productName: "수학 과외", productDescription: "중학생 대상 1:1 수업", location: "동네 공부방", contact: "문자 상담" },
   { productName: "가죽 키링", productDescription: "손바느질로 만든 가죽 키링", keyFeatures: ["이니셜 각인"], priceInfo: "15,000원" },
 ]
-const products = [...fromB, ...own].slice(0, count)
+const products = [...fromB, ...own].filter((product) => !names.length || names.some((name) => product.productName.includes(name))).slice(0, count)
 
 /** Machine score 0–100 for one result. */
 function score(result, product) {
@@ -57,14 +60,18 @@ if (live) {
   }
   const config = getGeminiConfig()
   const rows = []
-  for (const product of products) {
+  for (const [index, product] of products.entries()) {
+    // The free key allows only a few requests a minute; space the products out so none is skipped.
+    if (index) await new Promise((done) => setTimeout(done, 10_000))
     try {
       const result = await generatePromo(normalizePromoInput(product), config)
       const { score: points, issues } = score(result, product)
       rows.push(points)
       console.log(`\n[${points}점] ${product.productName}\n  첫 줄: ${result.copy}\n  SNS: ${result.sns.replace(/\n/g, " ")}\n  태그: ${result.hashtags.join(" ")}${issues.length ? `\n  문제: ${issues.join(" / ")}` : ""}`)
     } catch (error) {
-      console.log(`\n[실패] ${product.productName}: ${error?.code ?? error?.name ?? "error"}`)
+      const code = error?.code ?? error?.name ?? "error"
+      if (code === "AI_BAD_RESPONSE") rows.push(0) // the app shows its own text instead: counts as a miss
+      console.log(`\n[${code === "AI_BAD_RESPONSE" ? "0점" : "건너뜀"}] ${product.productName}: ${code}`)
     }
   }
   if (rows.length) console.log(`\n평균 ${Math.round(rows.reduce((a, b) => a + b, 0) / rows.length)}점 (${rows.length}개)`)

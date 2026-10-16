@@ -6,7 +6,7 @@ import assert from "node:assert/strict"
 import { readFileSync } from "node:fs"
 import { fileURLToPath } from "node:url"
 import { ApiError } from "../api/_lib/http.js"
-import { generatePromo, headlineFromCopy, normalizePromoInput, parsePromoResponse, reviewPromo } from "../api/_lib/promo.js"
+import { generatePromo, headlineFromCopy, normalizePromoInput, parsePromoResponse, reviewPromo, trimCliches } from "../api/_lib/promo.js"
 import { buildPromoUserPrompt } from "../api/_lib/promo-prompt.js"
 
 const fixtures = JSON.parse(readFileSync(fileURLToPath(new URL("../../B_이창훈/examples/products.json", import.meta.url)), "utf8"))
@@ -188,19 +188,28 @@ try {
   await check("rewrite: problems left in both → the result with the fewest problems (either order)", async () => {
     let r = await run(product, [bad, bad])
     assert.equal(sentBodies.length, 2)
-    assert.equal(r.copy, badData.copy, "service does not stop")
+    assert.equal(r.copy, "참기름", "service does not stop; droppable cliché modifiers are trimmed")
     r = await run(product, [bad, okish])
     assert.equal(r.copy, "정성으로 짠 우리동네 참기름", "second has 1 problem vs 2")
     r = await run(product, [okish, bad])
     assert.equal(r.copy, "정성으로 짠 우리동네 참기름", "first has fewer problems")
   })
 
+  await check("cliché modifiers left after the rewrite are trimmed, unless the owner wrote them", async () => {
+    assert.equal(trimCliches("매일 아침 정성껏 내린 아메리카노"), "매일 아침 내린 아메리카노")
+    assert.equal(trimCliches("최고의 원두로\n엄선된 맛"), "원두로\n맛")
+    assert.equal(trimCliches("특별한 날 선물"), "특별한 날 선물", "not droppable: the sentence would break")
+    assert.equal(trimCliches("정성껏 구운 빵", "정성껏 구워요"), "정성껏 구운 빵", "owner's own word")
+    const r = await run(product, [JSON.stringify({ ...goodData, sns: "정성껏 짠 참기름이에요. 들러 주세요." }), JSON.stringify({ ...goodData, sns: "정성껏 짠 참기름이에요. 들러 주세요." })])
+    assert.equal(r.sns, "짠 참기름이에요. 들러 주세요.")
+  })
+
   await check("rewrite: a format error on the rewrite returns the first result", async () => {
     const r = await run(product, [bad, "형식 안 맞는 답"])
     assert.equal(sentBodies.length, 2)
-    assert.equal(r.copy, badData.copy)
+    assert.equal(r.copy, trimCliches(badData.copy))
     const r2 = await run(product, [bad, JSON.stringify({ copy: "x" })])
-    assert.equal(r2.copy, badData.copy)
+    assert.equal(r2.copy, trimCliches(badData.copy))
   })
 
   await check("format error first → one retry with the format note; two format errors → AI_BAD_RESPONSE", async () => {
@@ -222,7 +231,7 @@ try {
     sentBodies.length = 0
     const r = await generatePromo(normalizePromoInput(product), config, { now: () => (t += 3_500) })
     assert.equal(sentBodies.length, 1)
-    assert.equal(r.copy, badData.copy)
+    assert.equal(r.copy, trimCliches(badData.copy))
   })
 
   await check("copyCandidates: cleaned, deduped, ≤60 chars, max 3; clichés not in input and medical words dropped", async () => {
@@ -266,7 +275,7 @@ try {
   await check("videoHeadline: derived headline with a banned word → \"\"", async () => {
     // A cliché left in the chosen copy (fewest problems) must not reach the video caption.
     const r = await run(product, [JSON.stringify({ ...badData, videoHeadline: undefined }), bad])
-    assert.equal(r.copy, badData.copy)
+    assert.equal(r.copy, trimCliches(badData.copy))
     assert.equal(r.videoHeadline, "")
   })
 

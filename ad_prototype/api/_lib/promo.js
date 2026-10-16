@@ -202,10 +202,30 @@ export function headlineFromCopy(copy) {
 function finishPromo(result, product) {
   const input = ownerInput(product)
   const allowed = (text) => (text && !hasBannedWord(text, input) ? text : "")
+  const trim = (text) => trimCliches(text, input)
+  // Short lines (candidates, video headline) are dropped rather than trimmed: what is left is often too bare.
   const copyCandidates = result.copyCandidates.filter((line) => allowed(line)).slice(0, CANDIDATE_MAX)
   const videoHeadline = allowed(result.videoHeadline) || allowed(headlineFromCopy(result.copy))
-  const { copy, sns, intro, hashtags } = result
-  return { copy, sns, intro, hashtags, copyCandidates, videoHeadline, cta: allowed(result.cta) }
+  const { hashtags } = result
+  return { copy: trim(result.copy), sns: trim(result.sns), intro: trim(result.intro), hashtags, copyCandidates, videoHeadline, cta: allowed(result.cta) }
+}
+
+// Cliché modifiers that read fine when simply dropped ("정성껏 내린 커피" → "내린 커피"). Words whose removal
+// breaks the sentence ("특별한 날", "정성으로 짠") are left for the retry and the score to catch.
+const DROPPABLE_CLICHES = [
+  "정성껏", "정성스럽게", "정성스레", "정성 가득한", "정성 가득", "정성을 담은", "정성 담은", "정성 들여",
+  "최고의", "엄선한", "엄선된", "남다른", "완벽한", "프리미엄", "품격 있는", "차원이 다른",
+]
+
+/** Drops cliché modifiers the model kept after the retry, unless the owner wrote that word. */
+export function trimCliches(text, input = "") {
+  if (!text) return text
+  let out = text
+  for (const phrase of DROPPABLE_CLICHES) {
+    if (input.includes(phrase.split(" ")[0])) continue
+    out = out.split(`${phrase} `).join("")
+  }
+  return out.replace(/ {2,}/g, " ").trim()
 }
 
 /** 띄어쓰기·문장부호를 빼고 비교용 문자열로 만든다 */
