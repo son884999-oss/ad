@@ -299,7 +299,7 @@ function renderVerticalPoster({ ctx, image, background, content, theme, width, h
     ctx.textAlign = "left"
     ctx.textBaseline = "middle"
     ctx.fillStyle = colors.sub
-    ctx.font = font(700, 27)
+    ctx.font = font(700, 32)
     const [line] = wrapText(ctx, eyebrow, textWidth - 20, 1)
     ctx.fillText(line, textX + 20, panelY + 45)
     drawn.push(line)
@@ -426,9 +426,9 @@ export function renderPosterToCanvas({
   }
 
   if (eyebrow) {
-    ctx.font = font(700, 28)
+    ctx.font = font(700, 36)
     const [line] = wrapText(ctx, eyebrow, width - pad * 2, 1)
-    drawLines(ctx, [line], { x: pad, y: 82 + top, font: font(700, 28), color: theme.ink, lineHeight: 34 })
+    drawLines(ctx, [line], { x: pad, y: 82 + top, font: font(700, 36), color: theme.ink, lineHeight: 44 })
     drawn.push(line)
   }
 
@@ -488,20 +488,20 @@ export function renderPosterToCanvas({
   }
 
   if (keySellingPoint) {
-    ctx.font = font(700, 29)
+    ctx.font = font(700, 34)
     const [line] = wrapText(ctx, keySellingPoint, Math.min(copyWidth, 640), 1)
     ctx.fillStyle = theme.accent
     roundedRect(ctx, titleX, metaY - 34, Math.min(copyWidth, ctx.measureText(line).width + 52), 66, 33)
     ctx.fill()
-    drawLines(ctx, [line], { x: titleX + 26, y: metaY + 10, font: font(700, 29), color: colors.badge, lineHeight: 34 })
+    drawLines(ctx, [line], { x: titleX + 26, y: metaY + 10, font: font(700, 34), color: colors.badge, lineHeight: 40 })
     drawn.push(line)
     metaY += 86
   }
 
   if (targetAudience) {
-    ctx.font = font(600, 26)
+    ctx.font = font(600, 32)
     const [line] = wrapText(ctx, `추천 대상  ·  ${targetAudience}`, copyWidth, 1)
-    drawLines(ctx, [line], { x: titleX, y: Math.min(metaY + 14, height - (isStory ? 340 : 104)), font: font(600, 26), color: theme.ink, lineHeight: 32 })
+    drawLines(ctx, [line], { x: titleX, y: Math.min(metaY + 14, height - (isStory ? 340 : 104)), font: font(600, 32), color: theme.ink, lineHeight: 38 })
     drawn.push(line)
   }
   return drawn

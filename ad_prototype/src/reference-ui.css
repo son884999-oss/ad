@@ -450,14 +450,14 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,summary:focus-vi
 .reference-upload-icon:disabled { opacity:.6; }
 /* Inputs: clear hover / focus state */
 :is(.compact-information,.reference-login-form) :is(input,textarea):hover { border-color:#6e625a; }
-:is(.compact-information,.reference-login-form) :is(input,textarea):focus-visible { border-color:var(--color-focus);outline:3px solid #225e9a40;outline-offset:0; }
+:is(.compact-information,.reference-login-form) :is(input,textarea):focus-visible { border-color:var(--color-focus);outline:3px solid var(--color-focus);outline-offset:2px; }
 :where(html[data-layout=mobile]) .creation-header { margin:calc(8px * var(--s)) 0 calc(18px * var(--s)); }
 /* Home: show cards larger, anchor the empty band with a warm glow, steps as a card */
 :where(html[data-layout=mobile]) .reference-home { justify-content:space-between; }
 :where(html[data-layout=mobile]) .home-samples { flex:1 1 0;max-height:calc(236px * var(--s));margin:calc(12px * var(--s)) calc(-20px * var(--s));background:radial-gradient(ellipse 50% 46% at 50% 52%,#fde7d6 0,#fdf0e6 40%,#fff0 70%); }
 :where(html[data-layout=mobile]) .reference-home-steps { margin-bottom:calc(6px * var(--s));padding:calc(14px * var(--s)) calc(8px * var(--s)) calc(14px * var(--s));border:1px solid var(--color-line);border-radius:var(--radius-card);background:var(--color-card); }
 :where(html[data-layout=mobile]) .reference-home-steps h2 { margin-bottom:calc(12px * var(--s)); }
-:where(html[data-layout=mobile]) .reference-home-steps i { color:#a5653f; }
+:where(html[data-layout=mobile]) .reference-home-steps i { color:var(--color-brand-hover); }
 :where(html[data-layout=mobile]) .easy-mode .home-samples { flex:none;height:calc(210px * var(--s));max-height:none;margin-block:calc(14px * var(--s)); }
 /* Menu: brand icon tiles, light card edge */
 .studio-menu-row { border:1px solid #efe6dd;color:var(--color-ink); }
@@ -704,7 +704,7 @@ html[data-layout=mobile] .easy-mode .results-step:not(.is-single) .result-card:h
 /* 홍보 글 box on phones follows short text */
 html[data-layout=mobile] .results-step .result-card > .result-preview.result-preview--copy { height:auto;min-height:clamp(160px,25dvh,280px);max-height:calc(440px * var(--s)); }
 /* developer toolbar stays out of the way: faint until hovered/focused, hidden while the menu is open */
-@media (min-width:768px) { .dev-toolbar { opacity:.45;transition:opacity .15s; } .dev-toolbar:is(:hover,:focus-within) { opacity:1; } body:has(.reference-menu) .dev-toolbar { display:none; } }
+@media (min-width:768px) { .dev-toolbar { opacity:.85;transition:opacity .15s; } .dev-toolbar:is(:hover,:focus-within) { opacity:1; } body:has(.reference-menu) .dev-toolbar { display:none; } }
 /* low-vision: secondary button edges 3.26:1 on white (PC has its own tokens) */
 html[data-layout=mobile] .studio-shell :is(.studio-secondary,.result-share-action,.result-preview-action) { border-color:#9a8c81; }
 /* very short screens (e.g. 200% zoom): fixed bars give way so the form stays usable */
@@ -720,7 +720,7 @@ html[data-layout=mobile] .studio-shell :is(.studio-secondary,.result-share-actio
 .poster-style-body { display:grid;gap:12px;padding:2px 12px 14px; }
 .poster-style-group { min-width:0;margin:0;padding:0;border:0; }
 .poster-style-group legend { margin-bottom:6px;padding:0;font-size:max(14px,calc(14px * var(--s)));font-weight:700;color:var(--color-muted); }
-.poster-style-group [role=radiogroup] { display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px; }
+.poster-style-group > div { display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px; }
 .poster-style-group button { display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:48px;padding:6px 4px;border:1px solid #9a8c81;border-radius:var(--radius-control,10px);background:#fff;color:var(--color-ink);font-size:max(15px,calc(15px * var(--s)));font-weight:700;line-height:1.25; }
 .poster-style-group button small { font-size:max(14px,calc(13px * var(--s)));font-weight:500;color:var(--color-muted); }
 .poster-style-group button[aria-checked=true] { border-color:var(--color-brand);background:var(--color-brand-soft);color:var(--color-brand-hover);box-shadow:inset 0 0 0 1px var(--color-brand); }
@@ -747,7 +747,7 @@ html[data-layout=mobile] .studio-shell :is(.studio-secondary,.result-share-actio
 /* 홍보 글: choose the first line among B_이창훈's three angles */
 .headline-choice { flex:1 1 100%;min-width:0;margin:0;padding:0;border:0; }
 .headline-choice legend { margin-bottom:6px;padding:0;font-size:max(14px,calc(15px * var(--s)));font-weight:700;color:var(--color-muted); }
-.headline-choice [role=radiogroup] { display:grid;gap:6px; }
+.headline-choice > div { display:grid;gap:6px; }
 .headline-choice button { min-height:44px;padding:8px 12px;border:1px solid #9a8c81;border-radius:var(--radius-control,10px);background:#fff;color:var(--color-ink);font-size:max(15px,calc(15px * var(--s)));font-weight:600;line-height:1.4;text-align:left; }
 .headline-choice button[aria-checked=true] { border-color:var(--color-brand);background:var(--color-brand-soft);color:var(--color-brand-hover);box-shadow:inset 0 0 0 1px var(--color-brand); }
 /* 로그인: 회원가입 entry under the login button */
@@ -769,3 +769,16 @@ html[data-layout=mobile] .studio-shell :is(.studio-secondary,.result-share-actio
 .result-motion-preview .ai-badge { position:absolute;right:12px;bottom:58px;z-index:2;padding:4px 10px;border-radius:999px;background:#2b2420cc;color:#fff;font-size:14px;font-weight:700;pointer-events:none; }
 .generation-eta { margin:0 0 calc(14px * var(--s));font-size:max(14px,calc(15px * var(--s)));color:var(--color-muted);text-align:center; }
 .easy-mode .generation-eta { font-size:calc(18px * var(--s)); }
+/* Re-audit 2026-10-16: AI notice readable, phone primary bar stays reachable, small labels up a step */
+.ai-notice { padding:8px 12px;font-size:16px;font-weight:600;line-height:1.45; }
+html[data-layout=mobile] .compact-information .details-actions { position:sticky;bottom:0;z-index:3;padding:10px 0 12px;background:linear-gradient(#fff0,#fff 28%); }
+.studio-bottom-nav button { font-size:max(15px,calc(13px * var(--s))); }
+.poster-style-group legend,.poster-style-group button small { font-size:max(15px,calc(15px * var(--s))); }
+.headline-choice legend { font-size:16px;color:var(--color-ink); }
+.headline-choice button { font-size:16px;min-height:48px; }
+.plan-note { font-size:16px;color:#5e534c; }
+.copy-result-text .hashtag { white-space:nowrap; }
+:is(.poster-style-group,.headline-choice) button[aria-checked=true] { position:relative; }
+:is(.poster-style-group,.headline-choice) button[aria-checked=true]::after { content:"✓";position:absolute;top:4px;right:8px;font-size:14px;font-weight:800;color:var(--color-brand-hover); }
+@media (min-height:681px) { html[data-layout=mobile] .results-step:not(.is-single) .result-card:has(.result-preview-controls) .result-preview { height:calc(306px * var(--s)); } }
+@media (max-height:680px) { html[data-layout=mobile] .results-step:not(.is-single) .result-card:has(.result-preview-controls) .result-preview { height:calc(100dvh - 520px);min-height:120px; } }

@@ -70,7 +70,7 @@ html[data-layout=pc] .studio-secondary { min-height:var(--pc-control-h);padding:
 html[data-layout=pc] :is(.studio-primary,.result-primary-action) { border-radius:var(--radius-control,10px); }
 html[data-layout=pc] .compact-information :is(input,textarea),html[data-layout=pc] .easy-mode .compact-information .details-fields :is(input,textarea) { border:1.5px solid var(--pc-field-line);font-size:var(--pc-fs-input); }
 html[data-layout=pc] .compact-information :is(input,textarea):hover { border-color:#6e625a; }
-html[data-layout=pc] .compact-information :is(input,textarea):focus-visible { border-color:var(--color-focus);outline:3px solid #225e9a40;outline-offset:0; }
+html[data-layout=pc] .compact-information :is(input,textarea):focus-visible { border-color:var(--color-focus);outline:3px solid var(--color-focus);outline-offset:2px; }
 
 /* legible text floor on a desktop canvas (inline --s is 1 on PC) */
 html[data-layout=pc] :is(.field-hint,.field-count,.upload-hint,.details-more > summary small,.information-photo > div span,.reference-photo-examples p,.record-item-copy small,.records-retention-note,.records-count,.missing-details-note,.plan-note,.plan-option-note,.plan-status,.result-inline-status,.result-share-status,.studio-status,.generation-percent,.reference-home-copy > small,.studio-menu-copy small,.reference-toggle-row small,.empty-results p,.result-card-title small,.upload-feedback,.field-validation,.reference-login-lead,.reference-login-note,.reference-login-notice,.reference-login-divider) { font-size:var(--pc-fs-help);line-height:1.55; }
@@ -100,7 +100,7 @@ html[data-layout=pc] .reference-home-steps h2 { margin:0;text-align:left;font-si
 html[data-layout=pc] .reference-home-steps li { flex-direction:row;justify-content:center;gap:14px;text-align:left; }
 html[data-layout=pc] .reference-home-steps li > span { width:44px;height:44px;font-size:19px; }
 html[data-layout=pc] .reference-home-steps strong { font-size:18px; }
-html[data-layout=pc] .reference-home-steps i { top:50%;right:-4%;transform:translateY(-50%);font-size:22px;color:#a9714f; }
+html[data-layout=pc] .reference-home-steps i { top:50%;right:-4%;transform:translateY(-50%);font-size:22px;color:var(--color-brand-hover); }
 html[data-layout=pc] .easy-mode .reference-home h1 { font-size:clamp(46px,calc(2.6vw + 22px),70px); }
 html[data-layout=pc] .easy-mode .reference-home-copy > p { font-size:24px; }
 html[data-layout=pc] .easy-mode .reference-home-create { min-height:72px;font-size:25px; }
@@ -350,3 +350,7 @@ html[data-layout=pc] .poster-style { flex:none;order:2;border:1.5px solid var(--
 html[data-layout=pc] .poster-style > summary { min-height:var(--pc-control-h);font-size:var(--pc-fs-body); }
 html[data-layout=pc] .poster-style-group button { font-size:16px; }
 html[data-layout=pc] .easy-mode .poster-style-group button { font-size:19px; }
+/* Re-audit 2026-10-16 */
+html[data-layout=pc] .ai-notice { justify-self:start;max-width:640px;font-size:17px; }
+html[data-layout=pc] .results-step .result-card > .result-preview { height:min(600px,calc(100dvh - 330px)); }
+html[data-layout=pc] .easy-mode .results-step .result-card > .result-preview { height:min(620px,calc(100dvh - 420px)); }

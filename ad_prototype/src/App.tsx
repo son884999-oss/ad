@@ -1,7 +1,9 @@
 import {
   ChangeEvent,
+  Fragment,
   type ComponentPropsWithoutRef,
   FormEvent,
+  type KeyboardEvent as ReactKeyboardEvent,
   ReactNode,
   useEffect,
   useId,
@@ -649,11 +651,26 @@ function ResultCardHeading({
       <span aria-hidden="true"><Icon name={icon} size={22} /></span>
       <div className="result-card-title">
         <h3>{easyMode ? title : `${title} 결과`}</h3>
-        <small>{uiText("확인용 예시", easyMode)}</small>
+        <small>{uiText("바로 쓸 수 있어요", easyMode)}</small>
       </div>
       {control && <div className="result-preview-controls">{control}{extra}</div>}
     </div>
   )
+}
+
+/** Radio group keyboard behaviour: one Tab stop (the checked option), arrow keys move and select. */
+function radioNav(index: number, count: number, selected: number, pick: (index: number) => void) {
+  return {
+    tabIndex: index === (selected < 0 ? 0 : selected) ? 0 : -1,
+    onKeyDown: (event: ReactKeyboardEvent<HTMLButtonElement>) => {
+      const step = event.key === "ArrowRight" || event.key === "ArrowDown" ? 1 : event.key === "ArrowLeft" || event.key === "ArrowUp" ? -1 : 0
+      if (!step) return
+      event.preventDefault()
+      const next = (index + step + count) % count
+      pick(next)
+      event.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>('[role="radio"]')[next]?.focus()
+    },
+  }
 }
 
 /** Poster shape (D_고혜숙): ratio, layout and colour, folded away until asked for. */
@@ -672,11 +689,18 @@ function PosterStyleControls({
 }) {
   const t = (text: string) => uiText(text, easyMode)
   const group = <T extends string>(legend: string, options: [T, string, string?][], value: T, pick: (value: T) => void, swatch?: (value: T) => ReactNode) => (
-    <fieldset className="poster-style-group">
+    <fieldset className="poster-style-group" role="radiogroup">
       <legend>{t(legend)}</legend>
-      <div role="radiogroup" aria-label={t(legend)}>
-        {options.map(([id, label, note]) => (
-          <button key={id} type="button" role="radio" aria-checked={value === id} onClick={() => pick(id)}>
+      <div>
+        {options.map(([id, label, note], index) => (
+          <button
+            key={id}
+            type="button"
+            role="radio"
+            aria-checked={value === id}
+            onClick={() => pick(id)}
+            {...radioNav(index, options.length, options.findIndex(([option]) => option === value), (next) => pick(options[next][0]))}
+          >
             {swatch?.(id)}
             <span>{t(label)}</span>
             {note && !easyMode && <small>{note}</small>}
@@ -2477,7 +2501,6 @@ function CreateFlow({
                         type="button"
                         className="result-preview-action"
                         aria-controls="result-poster-preview"
-                        aria-pressed={posterExpanded}
                         disabled={!posterPreviewUrl}
                         onClick={() => {
                           const expanded = !posterExpanded
@@ -2506,6 +2529,11 @@ function CreateFlow({
                   <div
                     ref={posterPreviewRef}
                     id="result-poster-preview"
+                    onKeyDown={(event) => {
+                      if (event.key !== "Escape" || !posterExpanded) return
+                      setPosterExpanded(false)
+                      document.querySelector<HTMLElement>('[aria-controls="result-poster-preview"]')?.focus()
+                    }}
                     className={`result-main-preview ${posterExpanded ? "is-expanded" : ""}`}
                     role="group"
                     aria-label={t(posterExpanded ? "이미지 확대 미리보기" : "이미지 미리보기")}
@@ -2660,15 +2688,25 @@ function CreateFlow({
                   title="홍보 글"
                   control={headlineOptions.length > 1 ? (
                     easyMode ? (
-                      <button type="button" className="result-preview-action" onClick={() => pickHeadline((headlineIndex + 1) % headlineOptions.length)}>
-                        <span>{t("다른 말로 바꾸기")}</span>
-                      </button>
+                      <>
+                        <button type="button" className="result-preview-action" onClick={() => pickHeadline((headlineIndex + 1) % headlineOptions.length)}>
+                          <span>{t("다른 말로 바꾸기")}</span>
+                        </button>
+                        <span className="sr-only" role="status">{chosenHeadline}</span>
+                      </>
                     ) : (
-                      <fieldset className="headline-choice">
+                      <fieldset className="headline-choice" role="radiogroup">
                         <legend>{t("첫 줄 고르기")}</legend>
-                        <div role="radiogroup" aria-label={t("첫 줄 고르기")}>
+                        <div>
                           {headlineOptions.map((option, index) => (
-                            <button key={option} type="button" role="radio" aria-checked={index === headlineIndex} onClick={() => pickHeadline(index)}>
+                            <button
+                              key={option}
+                              type="button"
+                              role="radio"
+                              aria-checked={index === headlineIndex}
+                              onClick={() => pickHeadline(index)}
+                              {...radioNav(index, headlineOptions.length, headlineIndex, pickHeadline)}
+                            >
                               {option}
                             </button>
                           ))}
@@ -2686,7 +2724,12 @@ function CreateFlow({
                       
                       tabIndex={0}
                     >
-                      {finalText}
+                      {/* Same text as finalText; each hashtag is kept whole when the line wraps. */}
+                      {copyText.trim()}
+                      {hashtags.length > 0 && (copyText.trim() ? "\n\n" : "")}
+                      {hashtags.map((tag, index) => (
+                        <Fragment key={tag + index}>{index ? " " : ""}<span className="hashtag">{tag}</span></Fragment>
+                      ))}
                     </div>
                   </div>
                 </ResultPreview>
@@ -2887,7 +2930,7 @@ function Plan({ easyMode }: { easyMode: boolean }) {
       </h2>
       <p className="plan-note">
         {uiText(
-          "현재는 구조를 확인하는 프로토타입이며, 가격과 제공 수량은 아직 정해지지 않았습니다.",
+          "가격은 아직 정하는 중이에요. 지금은 무료로 쓸 수 있어요.",
 
           easyMode,
         )}
@@ -3379,6 +3422,15 @@ export default function App() {
       )
     }
   }
+
+  // The tab title follows the screen heading, so screen-reader and tab users know where they are.
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => {
+      const heading = document.querySelector("[data-screen-heading]")?.textContent?.trim()
+      document.title = heading && page !== "home" ? `${heading} — 홍보잇다` : "홍보잇다 — 사진 한 장으로 시작하는 우리 가게 홍보"
+    })
+    return () => window.cancelAnimationFrame(frame)
+  }, [page, step, generatingView, easyMode])
 
   // 내 홍보물 lives in memory only, so warn before a reload or tab close would throw results or a draft away.
   const hasWorkToLose = records.length > 0 || Boolean(imageUrl)
