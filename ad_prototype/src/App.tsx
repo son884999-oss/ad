@@ -820,7 +820,7 @@ function ResultActionBar({
       <div className="result-action-buttons">
       <button
         type="button"
-        className="result-primary-action"
+        className={`result-primary-action${busy ? " is-cancel" : ""}`}
         aria-label={accessibleLabel}
         aria-describedby={message ? statusId : undefined}
         disabled={disabled}
