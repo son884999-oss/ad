@@ -15,12 +15,35 @@ export function getGeminiConfig() {
 }
 
 /**
+ * `temperature` is only sent to gemini-2.x models. Gemini 3.6+ ignores it ("no longer supported"),
+ * and newer models may reject it, so for those the model's own default is used.
+ */
+export function supportsTemperature(model) {
+  return String(model).startsWith("gemini-2")
+}
+
+/**
+ * Builds generationConfig. `responseJsonSchema` is the REST field GenerationConfig.responseJsonSchema
+ * (https://ai.google.dev/api/generate-content#GenerationConfig; responseMimeType is required with it).
+ * Only its supported JSON Schema subset is used: type, properties, required, items, minItems/maxItems,
+ * enum, description — no maxLength, so lengths stay checked in code.
+ */
+export function buildGenerationConfig({ model, temperature, maxOutputTokens, responseJsonSchema }) {
+  const generationConfig = { responseMimeType: "application/json", maxOutputTokens }
+  if (responseJsonSchema) generationConfig.responseJsonSchema = responseJsonSchema
+  if (typeof temperature === "number" && supportsTemperature(model)) generationConfig.temperature = temperature
+  return generationConfig
+}
+
+/**
  * Calls generateContent and returns the parsed JSON object the model wrote.
  * @param {{ config: {apiKey: string, model: string}, systemInstruction: string,
- *   parts: object[], timeoutMs?: number, temperature?: number, maxOutputTokens?: number }} options
+ *   parts: object[], timeoutMs?: number, temperature?: number, maxOutputTokens?: number,
+ *   responseJsonSchema?: object }} options
  * maxOutputTokens caps cost; a cut-off answer (finishReason MAX_TOKENS) is rejected as AI_BAD_RESPONSE.
+ * The schema only shapes the answer: callers still validate every field.
  */
-export async function generateJson({ config, systemInstruction, parts, timeoutMs = 15_000, temperature = 0.7, maxOutputTokens = 1024 }) {
+export async function generateJson({ config, systemInstruction, parts, timeoutMs = 15_000, temperature = 0.7, maxOutputTokens = 1024, responseJsonSchema }) {
   let response
   try {
     response = await fetch(`${ENDPOINT}/${config.model}:generateContent`, {
@@ -30,7 +53,7 @@ export async function generateJson({ config, systemInstruction, parts, timeoutMs
       body: JSON.stringify({
         systemInstruction: { parts: [{ text: systemInstruction }] },
         contents: [{ role: "user", parts }],
-        generationConfig: { responseMimeType: "application/json", temperature, maxOutputTokens },
+        generationConfig: buildGenerationConfig({ model: config.model, temperature, maxOutputTokens, responseJsonSchema }),
       }),
     })
   } catch (error) {

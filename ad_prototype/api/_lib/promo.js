@@ -1,13 +1,17 @@
 // Ported from B_이창훈/promo.mjs — input normalisation, response parsing, the automatic quality
-// review (상투어·의학 표현·설명 되풀이·해시태그 길이) and the one-time rewrite. Uses Gemini
-// (./gemini.js) instead of the Claude SDK and works within a time budget so the UI never waits long.
+// review (상투어·의학·건강 효능 표현·확인할 수 없는 주장·AI 말투·설명 되풀이·해시태그 길이) and the
+// one-time rewrite. Uses Gemini (./gemini.js) instead of the Claude SDK and works within a time budget
+// so the UI never waits long.
 import { ApiError, cleanText } from "./http.js"
 import { generateJson } from "./gemini.js"
-import { CHANNEL_STYLES, CLICHE_WORDS, MEDICAL_WORDS, PROMO_SYSTEM_PROMPT, buildPromoUserPrompt, buildRetryNote } from "./promo-prompt.js"
+import {
+  AI_STYLE_WORDS, CHANNEL_STYLES, CLICHE_WORDS, HEALTH_CLAIM_WORDS, MEDICAL_WORDS, PROMO_SYSTEM_PROMPT, UNVERIFIED_CLAIM_WORDS,
+  buildPromoUserPrompt, buildRetryNote,
+} from "./promo-prompt.js"
 import { TONE_NAMES, cleanTones } from "./tones.js"
 
-const HASHTAG_MIN = 4
-const HASHTAG_MAX = 6
+const HASHTAG_MIN = 3
+const HASHTAG_MAX = 5
 const HASHTAG_MAX_LENGTH = 10
 /** 제품 설명과 이 글자 수 이상 똑같이 이어지면 "되풀이"로 본다 (띄어쓰기·문장부호 제외) */
 const REPEAT_LIMIT = 12
@@ -27,6 +31,40 @@ const CANDIDATE_MAX_LENGTH = 60
 /** Video caption (A_손용범 sample-push.json "headline") and call to action ("cta"). */
 const HEADLINE_MAX_LENGTH = 16
 const CTA_MAX_LENGTH = 14
+/** visualDetails: short phrases about what the photo shows (from api/analyze-photo.js) */
+const VISUAL_DETAILS_MAX = 5
+const VISUAL_DETAIL_MAX_LENGTH = 30
+/** "AI 말투" words: this many hits (or more) in copy/sns/intro is a review problem, never a hard reject */
+const AI_STYLE_LIMIT = 2
+
+/** Never said, even when the owner wrote it (의학 표현 + 건강·효능 주장) */
+const ALWAYS_FORBIDDEN = [...MEDICAL_WORDS, ...HEALTH_CLAIM_WORDS]
+
+/**
+ * Gemini structured output (generationConfig.responseJsonSchema). It shapes the answer only:
+ * lengths, banned words and repeats are still checked in parsePromoResponse / reviewPromo.
+ */
+export const PROMO_RESPONSE_SCHEMA = {
+  type: "object",
+  properties: {
+    copyCandidates: { type: "array", description: "광고 카피 후보 3개, 각 25자 안팎", items: { type: "string" }, minItems: 3, maxItems: 3 },
+    copy: { type: "string", description: "후보 중 고른 광고 카피 한 줄" },
+    sns: { type: "string", description: "SNS 홍보문구, 마지막 문장은 행동 유도" },
+    intro: { type: "string", description: "제품 소개 1~2문장" },
+    hashtags: { type: "array", description: "# 없이, 띄어쓰기 없이, 10자 이내", items: { type: "string" }, minItems: HASHTAG_MIN, maxItems: HASHTAG_MAX },
+    videoHeadline: { type: "string", description: "영상 자막, 띄어쓰기 포함 16자 이내" },
+    cta: { type: "string", description: "행동 유도, 띄어쓰기 포함 14자 이내" },
+  },
+  required: ["copyCandidates", "copy", "sns", "intro", "hashtags", "videoHeadline", "cta"],
+  propertyOrdering: ["copyCandidates", "copy", "sns", "intro", "hashtags", "videoHeadline", "cta"],
+}
+
+const charCount = (text) => Array.from(text).length
+
+/** 사장님이 직접 쓴 입력 (상투어·확인할 수 없는 주장의 예외 판단용). 사진 분석 결과(visualDetails)는 넣지 않는다. */
+function ownerInput(product) {
+  return Object.entries(product).filter(([key]) => key !== "visualDetails").map(([, value]) => value).join(" ")
+}
 
 function optionalText(body, field) {
   const value = body[field]
@@ -47,11 +85,22 @@ function featureText(value) {
   return text
 }
 
+/** 사진에서 본 모습(visualDetails): 문자열 배열, 최대 5개, 각 30자 이내. 넘으면 자르지 않고 400. */
+function visualDetailList(value) {
+  if (value === undefined || value === null) return []
+  if (!Array.isArray(value) || value.length > VISUAL_DETAILS_MAX || !value.every((item) => typeof item === "string")) {
+    throw new ApiError(400, "INVALID_INPUT")
+  }
+  const list = value.map((item) => cleanText(item, Infinity)).filter(Boolean)
+  if (list.some((item) => charCount(item) > VISUAL_DETAIL_MAX_LENGTH)) throw new ApiError(400, "INVALID_INPUT")
+  return [...new Set(list)]
+}
+
 /**
  * 입력값 확인·정리. 제품명만 필수. 형식이 틀리면 400 INVALID_INPUT.
  * Request JSON: { productName, productDescription?, highlights?, keyFeatures?, targetAudience?,
  *                 tones?: ("natural"|"premium"|"friendly"|"trendy")[], shopName?, location?, priceInfo?,
- *                 contact?, channel? }
+ *                 contact?, channel?, visualDetails?: string[] (≤5 items, ≤30 chars each) }
  */
 export function normalizePromoInput(body) {
   const productName = optionalText(body, "productName")
@@ -68,6 +117,7 @@ export function normalizePromoInput(body) {
     contact: optionalText(body, "contact"),
     brandTone: "",
     channel: "",
+    visualDetails: visualDetailList(body.visualDetails),
   }
   if (body.tones !== undefined && !Array.isArray(body.tones)) throw new ApiError(400, "INVALID_INPUT")
   const tones = cleanTones(body.tones)
@@ -79,7 +129,7 @@ export function normalizePromoInput(body) {
   return product
 }
 
-/** 해시태그 정리: '#'·공백 제거, 중복 제거, 최대 6개 */
+/** 해시태그 정리: '#'·공백 제거, 중복 제거, 최대 5개 */
 function normalizeHashtags(raw) {
   const tags = raw
     .filter((tag) => typeof tag === "string")
@@ -88,7 +138,6 @@ function normalizeHashtags(raw) {
   return [...new Set(tags)].slice(0, HASHTAG_MAX)
 }
 
-const charCount = (text) => Array.from(text).length
 const TRAILING_PUNCTUATION = /[\s.,!?·~…:;'"“”‘’\-]+$/u
 
 /** 짧은 한 줄 정리: 공백 정리 후 max자를 넘으면 버린다 (자르지 않음). 문자열이 아니면 "". */
@@ -99,7 +148,7 @@ function shortLine(value, max) {
 
 /**
  * 모델 JSON을 { copy, sns, intro, hashtags, copyCandidates, videoHeadline, cta }로 정리한다.
- * 필수 항목(copy·sns·intro·해시태그 4개 이상)이 빠지면 null. 선택 항목은 없거나 틀리면 비워 둔다
+ * 필수 항목(copy·sns·intro·해시태그 3개 이상)이 빠지면 null. 선택 항목은 없거나 틀리면 비워 둔다
  * (금지어 거르기와 videoHeadline 대체는 finishPromo에서 입력과 함께 한다).
  */
 export function parsePromoResponse(data) {
@@ -121,9 +170,18 @@ export function parsePromoResponse(data) {
   }
 }
 
-/** 상투어(입력에 없을 때)나 의학 표현(언제나)이 든 한 줄인지 */
+/** 입력에 없는데 결과에 나온 말 */
+const notInInput = (words, text, input) => words.filter((word) => text.includes(word) && !input.includes(word))
+
+/** 상투어·확인할 수 없는 주장(입력에 없을 때)이나 의학·건강 효능 표현(언제나)이 든 한 줄인지 */
 function hasBannedWord(text, input) {
-  return CLICHE_WORDS.some((word) => text.includes(word) && !input.includes(word)) || MEDICAL_WORDS.some((word) => text.includes(word))
+  return notInInput(CLICHE_WORDS, text, input).length > 0 || notInInput(UNVERIFIED_CLAIM_WORDS, text, input).length > 0 ||
+    ALWAYS_FORBIDDEN.some((word) => text.includes(word))
+}
+
+/** "AI 말투" 낱말이 나온 자리 (입력에 있는 말은 세지 않는다). 같은 말이 두 번이면 두 번 센다. */
+function aiStyleHits(text, input) {
+  return AI_STYLE_WORDS.filter((word) => !input.includes(word)).flatMap((word) => text.split(word).slice(1).map(() => word))
 }
 
 /** copy에서 영상 자막을 만든다: 16자 이내에서 낱말 단위로 자르고, 끝의 문장부호는 뺀다. */
@@ -142,7 +200,7 @@ export function headlineFromCopy(copy) {
 
 /** 응답으로 보낼 모양: 선택 항목에서 금지어가 든 줄을 거르고, 자막이 없으면 copy로 만든다. */
 function finishPromo(result, product) {
-  const input = Object.values(product).join(" ")
+  const input = ownerInput(product)
   const allowed = (text) => (text && !hasBannedWord(text, input) ? text : "")
   const copyCandidates = result.copyCandidates.filter((line) => allowed(line)).slice(0, CANDIDATE_MAX)
   const videoHeadline = allowed(result.videoHeadline) || allowed(headlineFromCopy(result.copy))
@@ -176,13 +234,21 @@ function longestCommonRun(a, b) {
 export function reviewPromo(result, product) {
   const problems = []
   const output = [result.copy, result.sns, result.intro, ...result.hashtags].join(" ")
-  const input = Object.values(product).join(" ")
+  const input = ownerInput(product)
 
-  const cliches = CLICHE_WORDS.filter((word) => output.includes(word) && !input.includes(word))
+  const cliches = notInInput(CLICHE_WORDS, output, input)
   if (cliches.length) problems.push(`뻔한 상투어 사용: ${cliches.join(", ")} — 구체적인 사실이나 감각 표현으로 바꿀 것`)
 
-  const medical = MEDICAL_WORDS.filter((word) => output.includes(word))
-  if (medical.length) problems.push(`의학적 효능 표현 사용: ${medical.join(", ")} — 효능을 말하지 말고 사용감·경험으로 바꿀 것`)
+  const medical = ALWAYS_FORBIDDEN.filter((word) => output.includes(word))
+  if (medical.length) problems.push(`의학적·건강 효능 표현 사용: ${medical.join(", ")} — 효능을 말하지 말고 사용감·경험으로 바꿀 것`)
+
+  const unverified = notInInput(UNVERIFIED_CLAIM_WORDS, output, input)
+  if (unverified.length) problems.push(`확인할 수 없는 주장 사용: ${unverified.join(", ")} — 입력에 없는 순위·인증·최저가는 빼고 사실만 쓸 것`)
+
+  const aiStyle = aiStyleHits([result.copy, result.sns, result.intro].join(" "), input)
+  if (aiStyle.length >= AI_STYLE_LIMIT) {
+    problems.push(`AI 말투(번역투) 사용: ${[...new Set(aiStyle)].join(", ")} — 사장님 말투로 짧게, 해요체로 바꿀 것`)
+  }
 
   const name = squeeze(product.productName)
   const description = squeeze(`${product.productDescription} ${product.highlights}`).replaceAll(name, "")
@@ -204,10 +270,13 @@ export function reviewPromo(result, product) {
   return problems
 }
 
-/** 의학 표현이 남은 결과는 쓰지 않는다 (B의 규칙: 입력에 있어도 금지) */
-function hasMedicalClaim(result) {
+/**
+ * 의학·건강 효능 표현(B의 규칙: 입력에 있어도 금지)이나 입력에 없는 확인할 수 없는 주장(100%·1위 등)이
+ * 남은 결과는 쓰지 않는다. 상투어·AI 말투는 남아도 쓴다.
+ */
+function hasForbiddenClaim(result, product) {
   const output = [result.copy, result.sns, result.intro, ...result.hashtags].join(" ")
-  return MEDICAL_WORDS.some((word) => output.includes(word))
+  return ALWAYS_FORBIDDEN.some((word) => output.includes(word)) || notInInput(UNVERIFIED_CLAIM_WORDS, output, ownerInput(product)).length > 0
 }
 
 /**
@@ -232,6 +301,7 @@ export async function generatePromo(product, config, { now = Date.now } = {}) {
         parts: [{ text: buildPromoUserPrompt(product) + (retryNote ? `\n\n${retryNote}` : "") }],
         timeoutMs: Math.min(10_000, remaining()),
         maxOutputTokens: 1536, // copyCandidates·videoHeadline·cta도 함께 쓰므로 잘리지 않게 여유를 둔다
+        responseJsonSchema: PROMO_RESPONSE_SCHEMA,
       })
     } catch (error) {
       if (best) break // 첫 결과가 있으면 그것을 쓴다
@@ -244,7 +314,7 @@ export async function generatePromo(product, config, { now = Date.now } = {}) {
     const result = parsePromoResponse(data)
     if (!result) {
       if (best) break
-      retryNote = buildRetryNote(["응답 형식 오류: copy, sns, intro와 해시태그 4개 이상이 필요함"])
+      retryNote = buildRetryNote(["응답 형식 오류: copy, sns, intro와 해시태그 3개 이상이 필요함"])
       continue
     }
     const problems = reviewPromo(result, product)
@@ -254,7 +324,8 @@ export async function generatePromo(product, config, { now = Date.now } = {}) {
   }
 
   if (!best) throw lastError
-  // 품질 문제가 조금 남아도 문제가 가장 적은 결과를 쓴다. 단, 의학 표현은 쓰지 않고 화면의 기본 글로 대신한다.
-  if (hasMedicalClaim(best.result)) throw new ApiError(502, "AI_BAD_RESPONSE")
+  // 품질 문제가 조금 남아도 문제가 가장 적은 결과를 쓴다. 단, 의학·건강 효능 표현이나 지어낸 주장은 쓰지 않고
+  // 화면의 기본 글로 대신한다.
+  if (hasForbiddenClaim(best.result, product)) throw new ApiError(502, "AI_BAD_RESPONSE")
   return finishPromo(best.result, product)
 }

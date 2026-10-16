@@ -37,6 +37,9 @@ export const isWanModel = (model) => /^alibaba\/wan-/i.test(model)
  * Missing or malformed → 503 VIDEO_NOT_CONFIGURED, before any network call.
  */
 export function getHiggsfieldConfig() {
+  // Paid jobs need an explicit switch as well as the key, so a key copied into .env.local (or a public
+  // deployment) never starts paid videos by accident — e.g. from a test that forgot to stub /api/video-*.
+  if (process.env.VIDEO_ENABLED?.trim() !== "1") throw new ApiError(503, "VIDEO_NOT_CONFIGURED")
   const credentials = process.env.HF_CREDENTIALS?.trim()
   const model = process.env.HF_VIDEO_MODEL?.trim() || DEFAULT_VIDEO_MODEL
   const wan = isWanModel(model)

@@ -16,6 +16,9 @@ export type PhotoSuggestion = {
   keyFeatures: string[]
   targetAudience: string
   tones: AiTone[]
+  /** What the photo visibly shows (color, texture, plating, setting): 0–5 short phrases, ≤30 chars, no claims.
+   *  Pass it on as PromoTextRequest.visualDetails. */
+  visualDetails: string[]
   photoCheck: PhotoCheck
 }
 
@@ -32,12 +35,16 @@ export type PromoTextRequest = {
   priceInfo?: string
   contact?: string
   channel?: string
+  /** PhotoSuggestion.visualDetails (server limit: ≤5 items, ≤30 characters each; more is 400). Used only as
+   *  sensory/scene material, never copied verbatim. */
+  visualDetails?: string[]
 }
 
 export type PromoTextResult = {
   copy: string
   sns: string
   intro: string
+  /** 1–5 tags without "#" (the server sends 3–5). */
   hashtags: string[]
   /** B_이창훈's one-line copy angles (0–3). `copy` is the chosen one. */
   copyCandidates: string[]
@@ -146,6 +153,7 @@ export async function analyzePhoto(source: Blob | string, options: RequestOption
     keyFeatures: textList(value.keyFeatures, 5, 20).map((item) => item.replace(/,/g, " ")),
     targetAudience: text(value.targetAudience, 100),
     tones: textList(value.tones, 4, 20).filter((tone): tone is AiTone => AI_TONES.includes(tone as AiTone)),
+    visualDetails: textList(value.visualDetails, 5, 30),
     photoCheck: photoCheck(value.photoCheck),
   }
 }
@@ -169,14 +177,16 @@ export function analyzePhotoOnce(source: string) {
 
 /** 홍보 글 (B_이창훈 rules on the server). Resolves to null when the AI result is not available. */
 export async function generatePromoText(details: PromoTextRequest, options: RequestOptions = {}): Promise<PromoTextResult | null> {
-  const data = await postJson("/api/promo-text", details, options)
+  // Keep visualDetails within the server limits so an odd value never turns the whole request into a 400.
+  const body = details.visualDetails === undefined ? details : { ...details, visualDetails: textList(details.visualDetails, 5, 30) }
+  const data = await postJson("/api/promo-text", body, options)
   if (!data || typeof data !== "object") return null
   const value = data as Record<string, unknown>
   const result: PromoTextResult = {
     copy: text(value.copy, 200),
     sns: text(value.sns, 800),
     intro: text(value.intro, 500),
-    hashtags: textList(value.hashtags, 6, 30).map((tag) => tag.replace(/^#+/, "")).filter(Boolean),
+    hashtags: textList(value.hashtags, 5, 30).map((tag) => tag.replace(/^#+/, "")).filter(Boolean),
     // Optional extras: a missing or malformed value becomes empty, never failing the whole result.
     copyCandidates: textList(value.copyCandidates, 3, 60),
     videoHeadline: text(value.videoHeadline, 16),

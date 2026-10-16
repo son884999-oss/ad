@@ -97,12 +97,15 @@ try {
     reply = () => geminiReply(JSON.stringify({
       productName: "  딸기 생크림 케이크 ", description: "생크림 위에 딸기를 올린 케이크예요.", highlights: "딸기, 생크림",
       keyFeatures: ["딸기 듬뿍", "딸기 듬뿍", "생크림, 수제"], targetAudience: "디저트를 좋아하는 손님", tones: ["friendly", "bogus", "premium", "natural"],
+      visualDetails: [" 윤기 나는 딸기 ", "윤기 나는 딸기", "흰 생크림 층", "가".repeat(31), "프리미엄 케이크", "미백 크림 같은 색", 7, "나무 쟁반 위", "창가 햇빛", "분홍 접시"],
     }))
     const r = await call(analyzePhoto, request("POST", photoBody))
     assert.equal(r.status, 200)
     assert.equal(r.json.productName, "딸기 생크림 케이크")
     assert.deepEqual(r.json.keyFeatures, ["딸기 듬뿍", "생크림 수제"])
     assert.deepEqual(r.json.tones, ["friendly", "premium"])
+    assert.deepEqual(r.json.visualDetails, ["윤기 나는 딸기", "흰 생크림 층", "나무 쟁반 위", "창가 햇빛", "분홍 접시"],
+      "trimmed, deduped, >30 chars / clichés / claims / non-strings dropped, max 5")
     const last = sent.at(-1)
     assert.match(last.url, /models\/gemini-test-model:generateContent$/)
     assert.equal(last.init.headers["x-goog-api-key"], "test-key")
@@ -111,6 +114,27 @@ try {
     assert.equal(body.generationConfig.responseMimeType, "application/json")
     assert.ok(body.generationConfig.maxOutputTokens > 0)
     assert.equal(body.contents[0].parts[1].inlineData.mimeType, "image/jpeg")
+    const schema = body.generationConfig.responseJsonSchema
+    assert.ok(schema.required.includes("visualDetails") && schema.properties.visualDetails.maxItems === 5)
+    assert.deepEqual(schema.properties.tones.items.enum, ["natural", "premium", "friendly", "trendy"])
+    assert.equal(body.generationConfig.temperature, undefined, "not a gemini-2 model")
+    assert.match(body.systemInstruction.parts[0].text, /visualDetails[\s\S]*색, 질감/)
+  })
+
+  await check("analyze-photo: health / unverified claims are dropped from description text and visualDetails", async () => {
+    reply = () => geminiReply(JSON.stringify({
+      productName: "녹즙", description: "디톡스에 좋은 녹즙이에요.", highlights: "100% 국산 채소", keyFeatures: ["면역 강화", "초록색"],
+      targetAudience: "숙취가 있는 손님", tones: [], visualDetails: ["진한 초록색", "무첨가 라벨"],
+    }))
+    const r = await call(analyzePhoto, request("POST", photoBody))
+    assert.equal(r.status, 200)
+    assert.equal(r.json.description, "")
+    assert.equal(r.json.highlights, "")
+    assert.equal(r.json.targetAudience, "")
+    assert.deepEqual(r.json.keyFeatures, ["초록색"])
+    assert.deepEqual(r.json.visualDetails, ["진한 초록색"])
+    reply = () => geminiReply(JSON.stringify({ productName: "케이크" }))
+    assert.deepEqual((await call(analyzePhoto, request("POST", photoBody))).json.visualDetails, [], "missing → []")
   })
 
   await check("promo-text success → copy/sns/intro/hashtags without #, candidates/videoHeadline/cta, B prompt rules sent", async () => {
@@ -128,6 +152,15 @@ try {
     assert.match(body.systemInstruction.parts[0].text, /의학적 효능/)
     assert.match(body.contents[0].parts[0].text, /<product>[\s\S]*브랜드 분위기: 자연스럽고 건강한, 친근하고 따뜻한/)
     assert.match(body.contents[0].parts[0].text, /인스타그램/)
+    assert.doesNotMatch(body.contents[0].parts[0].text, /<photo>/)
+    assert.deepEqual(body.generationConfig.responseJsonSchema.properties.hashtags.maxItems, 5)
+  })
+
+  await check("promo-text: visualDetails from the photo go into a <photo> block", async () => {
+    reply = () => geminiReply(goodPromo)
+    const r = await call(promoText, request("POST", { ...promoBody, visualDetails: ["유리병 속 빨간 잼", "굵은 딸기 알갱이"] }))
+    assert.equal(r.status, 200)
+    assert.match(JSON.parse(sent.at(-1).init.body).contents[0].parts[0].text, /<photo>\n- 유리병 속 빨간 잼\n- 굵은 딸기 알갱이\n<\/photo>/)
   })
 
   await check("promo-text quality review triggers one rewrite", async () => {
@@ -166,7 +199,8 @@ try {
 
   await check("promo-text input validation → 400 INVALID_INPUT", async () => {
     for (const body of [{}, { productName: "" }, { productName: "a".repeat(51) }, { ...promoBody, channel: "facebook" }, { ...promoBody, tones: "natural" },
-      { ...promoBody, location: "가".repeat(61) }, { ...promoBody, priceInfo: "1".repeat(61) }, { ...promoBody, contact: 1234 }]) {
+      { ...promoBody, location: "가".repeat(61) }, { ...promoBody, priceInfo: "1".repeat(61) }, { ...promoBody, contact: 1234 },
+      { ...promoBody, visualDetails: ["a", "b", "c", "d", "e", "f"] }, { ...promoBody, visualDetails: ["가".repeat(31)] }, { ...promoBody, visualDetails: "잼" }]) {
       const r = await call(promoText, request("POST", body))
       assert.equal(r.status, 400, JSON.stringify(body).slice(0, 60))
       assert.equal(r.json.error, "INVALID_INPUT")
@@ -188,6 +222,13 @@ const cannedPromo = { copy: "AI 카피 한 줄", sns: "AI SNS 문구예요. 들�
 const toneNames = { auto: "AI 자동 추천", natural: "자연스럽고 건강한", premium: "고급스럽고 전문적인", friendly: "친근하고 따뜻한", trendy: "트렌디하고 활기찬" }
 
 const browser = await chromium.launch({ channel: "msedge", headless: true })
+// The dev server may hold real keys: every /api/* call is stubbed (503) unless a test routes it itself
+// (routes added later take precedence), so no request ever reaches a real AI or video API.
+async function newPage(options) {
+  const page = await browser.newPage(options)
+  await page.route("**/api/**", (route) => route.fulfill({ status: 503, contentType: "application/json", body: '{"error":"AI_NOT_CONFIGURED"}' }))
+  return page
+}
 async function openInfoStep(page) {
   await page.goto(base)
   await page.getByRole("button", { name: "홍보물 만들기", exact: true }).first().click()
@@ -199,7 +240,7 @@ const pressed = (page, name) => page.getByRole("button", { name, exact: true }).
 
 try {
   await check("browser: photo fills empty fields, keeps typed name, presses returned tones, uses AI 홍보 글", async () => {
-    const page = await browser.newPage({ viewport: { width: 390, height: 844 }, reducedMotion: "reduce", permissions: ["clipboard-read", "clipboard-write"] })
+    const page = await newPage({ viewport: { width: 390, height: 844 }, reducedMotion: "reduce", permissions: ["clipboard-read", "clipboard-write"] })
     const errors = []
     page.on("pageerror", (e) => errors.push(e.message))
     let release
@@ -257,7 +298,7 @@ try {
   })
 
   await check("browser: with 503 the info step shows nothing extra and keeps the local result", async () => {
-    const page = await browser.newPage({ viewport: { width: 390, height: 844 }, reducedMotion: "reduce" })
+    const page = await newPage({ viewport: { width: 390, height: 844 }, reducedMotion: "reduce" })
     const errors = []
     page.on("pageerror", (e) => errors.push(e.message))
     let calls = 0
@@ -281,7 +322,7 @@ try {
   })
 
   await check("browser: a hanging promo-text request is capped and the local 홍보 글 is used", async () => {
-    const page = await browser.newPage({ viewport: { width: 390, height: 844 }, reducedMotion: "reduce" })
+    const page = await newPage({ viewport: { width: 390, height: 844 }, reducedMotion: "reduce" })
     await page.route("**/api/analyze-photo", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ ...suggestion, productName: "" }) }))
     await page.route("**/api/promo-text", () => {}) // never answers
     await openInfoStep(page)

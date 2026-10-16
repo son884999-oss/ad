@@ -10,12 +10,16 @@ export const PRESERVATION =
 
 /** E's CAMERA sentence, with the clip length filled in (E fixed it at 10 seconds). */
 export function cameraFor(duration = 5) {
-  return `Use one continuous ${duration}-second shot with a slow, subtle camera push-in, keeping the entire product and label readable.`
+  // One camera move for a short clip; orbiting or rotating the product is what usually warps its shape.
+  return `Use one continuous ${duration}-second shot with a slow, subtle camera push-in, keeping the entire product and label readable. No orbit, no rotation of the product.`
 }
 
-/** Negative prompt from A_손용범/kling-ad.mjs, generalised from "bottle" to any product. */
+/**
+ * Negative prompt from A_손용범/kling-ad.mjs, generalised from "bottle" to any product, plus the failure
+ * modes image-to-video guides list for product shots (warped labels, melting, flicker, colour shift).
+ */
 export const NEGATIVE_PROMPT =
-  "deformed product, duplicated product, new text, captions, titles, watermark, people, hands, shaky camera, fast motion, morphing"
+  "deformed product, duplicated product, new text, captions, titles, watermark, people, hands, shaky camera, fast motion, morphing, warped label, distorted logo, garbled text, extra product, melting, flicker, color shift, rotating product"
 
 // Ported from E_이채원/src/rules.js; a few Korean shop words (케이크, 떡, 디저트 …) added for local shops,
 // and food is checked before beauty so "생크림 케이크" is food, not a cream cosmetic.
@@ -23,17 +27,17 @@ const categories = [
   {
     pattern: /쿠키|과자|식품|음료|커피|초콜릿|빵|케이크|떡|디저트|잼|녹차|홍차|김치|반찬|도시락|과일|\b(cookie|cookies|food|snack|coffee|chocolate|bread|drink|cake|dessert|jam|tea)\b/i,
     concept: "Create an inviting food product portrait.",
-    emphasis: "Keep the reference setting and emphasize only the visible surface texture and packaging details.",
+    emphasis: "Keep the reference setting and emphasize only the visible surface texture and packaging details. Only gentle steam or a soft sheen on the surface may move.",
   },
   {
     pattern: /화장품|세럼|로션|크림|스킨케어|립스틱|향수|\b(cosmetic|cosmetics|serum|lotion|skincare|lipstick|moisturizer|perfume)\b/i,
     concept: "Create a restrained beauty product portrait.",
-    emphasis: "Keep the reference setting and emphasize only the visible container finish and label details.",
+    emphasis: "Keep the reference setting and emphasize only the visible container finish and label details. Only a soft light reflection may glide across the surface.",
   },
   {
     pattern: /머그|컵|생활용품|텀블러|수건|주방|그릇|\b(mug|cup|tumbler|towel|household|kitchen|bowl)\b/i,
     concept: "Create a calm everyday product portrait.",
-    emphasis: "Keep the reference setting and emphasize only the visible silhouette and surface finish.",
+    emphasis: "Keep the reference setting and emphasize only the visible silhouette and surface finish. Only light and shadow may shift slightly.",
   },
 ]
 const general = {

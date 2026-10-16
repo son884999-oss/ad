@@ -1013,8 +1013,11 @@ function CreateFlow({
   const [aiPhotoCheck, setAiPhotoCheck] = useState<{ image: string; check: PhotoCheck } | null>(null)
   const stepRef = useRef(step)
   stepRef.current = step
+  // What the photo shows (colour, texture, plating…) for the 홍보 글 prompt; kept per photo, never waited for.
+  const photoDetailsRef = useRef<{ image: string; details: string[] }>({ image: "", details: [] })
   const startPhotoAnalysis = (image: string) => {
     void analyzePhotoOnce(image).then((result) => {
+      if (result?.visualDetails?.length) photoDetailsRef.current = { image, details: result.visualDetails }
       const check = result?.photoCheck
       if (check && (!check.isRealPhoto || check.isBlurry) && stepRef.current === 1) setAiPhotoCheck({ image, check })
     })
@@ -1108,6 +1111,7 @@ function CreateFlow({
         location: details.location?.trim() || undefined,
         priceInfo: details.priceInfo?.trim() || undefined,
         contact: details.contact?.trim() || undefined,
+        visualDetails: photoDetailsRef.current.image === imageUrl ? photoDetailsRef.current.details : undefined,
         channel,
       },
       { signal: controller.signal, timeoutMs: PROMO_WAIT_MS },
@@ -1565,7 +1569,12 @@ function CreateFlow({
       return null
     }
 
+    // H.264 + AAC first: Instagram/Kakao want MP4, and Chrome only offers it for an exact codec string.
     const mimeCandidates = [
+      "video/mp4;codecs=avc1.42E01E,mp4a.40.2",
+
+      "video/mp4;codecs=avc1.640028",
+
       "video/mp4;codecs=avc1",
 
       "video/mp4",
@@ -1612,15 +1621,43 @@ function CreateFlow({
         return null
       }
 
-      canvas.width = 720
+      // 9:16 at 1080×1920, the size Reels/Shorts/Stories expect.
+      canvas.width = 1080
 
-      canvas.height = 1280
+      canvas.height = 1920
 
       const context = canvas.getContext("2d")
 
       if (!context) throw new Error("canvas-unavailable")
 
       const stream = canvas.captureStream(30)
+
+      // Two short synthesized cues (no music licence needed), mixed into the recording when the browser allows it.
+      let audio: AudioContext | null = null
+      try {
+        audio = new AudioContext()
+        const destination = audio.createMediaStreamDestination()
+        const chime = (at: number, frequencies: number[], length: number, level: number) => {
+          for (const [index, frequency] of frequencies.entries()) {
+            const oscillator = audio!.createOscillator()
+            const gain = audio!.createGain()
+            const startAt = audio!.currentTime + at + index * 0.09
+            oscillator.type = "sine"
+            oscillator.frequency.value = frequency
+            gain.gain.setValueAtTime(0.0001, startAt)
+            gain.gain.exponentialRampToValueAtTime(level, startAt + 0.02)
+            gain.gain.exponentialRampToValueAtTime(0.0001, startAt + length)
+            oscillator.connect(gain).connect(destination)
+            oscillator.start(startAt)
+            oscillator.stop(startAt + length + 0.05)
+          }
+        }
+        chime(0.3, [523.25, 659.25, 783.99], 1.2, 0.18)
+        chime(3.5, [783.99, 1046.5], 1.0, 0.14)
+        destination.stream.getAudioTracks().forEach((track) => stream.addTrack(track))
+      } catch {
+        audio = null
+      }
 
       const chunks: BlobPart[] = []
 
@@ -1639,6 +1676,7 @@ function CreateFlow({
           videoFrameRef.current = null
 
           stream.getTracks().forEach((track) => track.stop())
+          void audio?.close().catch(() => undefined)
 
           videoRecorderRef.current = null
 
@@ -1675,22 +1713,43 @@ function CreateFlow({
 
         const startedAt = performance.now()
 
-        const duration = 3000
+        // Same length as the real clip (5 s).
+        const duration = 5000
+
+        // Ken Burns with three keyframes (whole photo → push in → slight drift), eased so it never jerks.
+        const keyframes = [
+          { at: 0, zoom: 1, x: 0, y: 0 },
+          { at: 0.55, zoom: 1.08, x: 0, y: -0.02 },
+          { at: 1, zoom: 1.12, x: 0.02, y: -0.03 },
+        ]
+        const ease = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2)
+        const camera = (progress: number) => {
+          const next = keyframes.findIndex((frame) => frame.at >= progress)
+          const b = keyframes[Math.max(next, 1)]
+          const a = keyframes[Math.max(next, 1) - 1]
+          const t = ease(Math.min(Math.max((progress - a.at) / (b.at - a.at), 0), 1))
+          return { zoom: a.zoom + (b.zoom - a.zoom) * t, x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t }
+        }
+        // Each caption line rises in at its own time (A_손용범 compose-push order).
+        const appear = (seconds: number, from: number) => Math.min(Math.max((seconds - from) / 0.45, 0), 1)
+        const font = (weight: number, size: number) => `${weight} ${size}px "Pretendard Variable", "Noto Sans KR", sans-serif`
 
         const drawFrame = (now: number) => {
           if (videoCancelledRef.current) return
 
           const progress = Math.min((now - startedAt) / duration, 1)
+          const seconds = progress * (duration / 1000)
+          const view = camera(progress)
 
           context.save()
 
           context.clearRect(0, 0, canvas.width, canvas.height)
 
-          const zoom = 1 + progress * 0.06
+          context.imageSmoothingQuality = "high"
 
-          context.translate(canvas.width / 2, canvas.height / 2)
+          context.translate(canvas.width / 2 + view.x * canvas.width, canvas.height / 2 + view.y * canvas.height)
 
-          context.scale(zoom, zoom)
+          context.scale(view.zoom, view.zoom)
 
           context.translate(-canvas.width / 2, -canvas.height / 2)
 
@@ -1698,28 +1757,47 @@ function CreateFlow({
 
           context.restore()
 
-          context.fillStyle = `rgba(${channelTheme.rgb},0.68)`
+          // Soft scrim behind the caption; text stays inside the Reels/Shorts safe area (about 52–66% height).
+          const scrim = context.createLinearGradient(0, 860, 0, 1620)
+          scrim.addColorStop(0, `rgba(${channelTheme.rgb},0)`)
+          scrim.addColorStop(0.25, `rgba(${channelTheme.rgb},0.72)`)
+          scrim.addColorStop(0.65, `rgba(${channelTheme.rgb},0.72)`)
+          scrim.addColorStop(1, `rgba(${channelTheme.rgb},0)`)
+          context.fillStyle = scrim
+          context.fillRect(0, 860, canvas.width, 760)
 
-          context.fillRect(0, 780, canvas.width, 500)
+          const line = (value: number, draw: () => void) => {
+            if (value <= 0) return
+            context.save()
+            context.globalAlpha = value
+            context.translate(0, (1 - value) * 24)
+            draw()
+            context.restore()
+          }
 
-          context.fillStyle = "#ffffff"
-
-          // Same three lines as the preview caption band (A_손용범 compose-push): headline, shop · product, call to action.
-          context.font = '700 52px "Pretendard Variable", "Noto Sans KR", sans-serif'
-          drawWrappedText(context, videoCaption.headline, 48, 900, 624, 66, 2)
+          line(appear(seconds, 0.3), () => {
+            context.fillStyle = "#ffffff"
+            context.font = font(800, 72)
+            drawWrappedText(context, videoCaption.headline, 72, 1040, 936, 88, 2)
+          })
           if (videoCaption.brand) {
-            context.font = '500 30px "Pretendard Variable", "Noto Sans KR", sans-serif'
-            drawWrappedText(context, videoCaption.brand, 48, 1060, 624, 40, 1)
+            line(appear(seconds, 1.2), () => {
+              context.fillStyle = "#ffffff"
+              context.font = font(600, 42)
+              drawWrappedText(context, videoCaption.brand, 72, 1206, 936, 54, 1)
+            })
           }
           if (videoCaption.cta) {
-            context.font = '700 30px "Pretendard Variable", "Noto Sans KR", sans-serif'
-            const width = Math.min(context.measureText(videoCaption.cta).width + 56, 624)
-            context.fillStyle = "#ffffff"
-            context.beginPath()
-            context.roundRect(48, 1110, width, 60, 30)
-            context.fill()
-            context.fillStyle = `rgb(${channelTheme.rgb})`
-            context.fillText(videoCaption.cta, 76, 1150, 624 - 56)
+            line(appear(seconds, 3.5), () => {
+              context.font = font(700, 42)
+              const width = Math.min(context.measureText(videoCaption.cta).width + 80, 936)
+              context.fillStyle = "#ffffff"
+              context.beginPath()
+              context.roundRect(72, 1240, width, 84, 42)
+              context.fill()
+              context.fillStyle = `rgb(${channelTheme.rgb})`
+              context.fillText(videoCaption.cta, 112, 1296, 936 - 80)
+            })
           }
 
           if (progress < 1) {

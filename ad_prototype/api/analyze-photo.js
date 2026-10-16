@@ -2,6 +2,7 @@
 // Request:  { "image": { "mimeType": "image/jpeg" | "image/png" | "image/webp", "data": "<base64>" } }
 // Response: 200 { productName, description, highlights, keyFeatures: string[], targetAudience,
 //                 tones: ("natural"|"premium"|"friendly"|"trendy")[],
+//                 visualDetails: string[] (0–5 short phrases, ≤30 chars: color, texture, plating, setting),
 //                 photoCheck: { isRealPhoto: boolean, isBlurry: boolean, reason: string } }
 //           4xx/5xx { error: "AI_NOT_CONFIGURED" | "METHOD_NOT_ALLOWED" | "IMAGE_TOO_LARGE" | ... }
 import { createJsonHandler } from "./_lib/http.js"
