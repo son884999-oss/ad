@@ -122,6 +122,14 @@ const posterLayoutOptions: [PosterLayoutKey, string][] = [
   ["split", "나란히"],
   ["editorial", "사진 먼저"],
 ]
+// 홍보 글 channels shown as chips; labels are the names shop owners use.
+const copyChannelOptions: [Channel, string][] = [
+  ["download", "어디에나"],
+  ["instagram", "인스타그램"],
+  ["naver_place", "네이버 플레이스"],
+  ["daangn", "당근"],
+  ["kakao", "카카오톡 채널"],
+]
 const posterThemeOptions: [PosterThemeKey | "", string][] = [
   ["", "분위기대로"],
   ["warm", "따뜻한"],
@@ -671,7 +679,7 @@ function ResultCardHeading({
         <h3>{easyMode ? title : `${title} 결과`}</h3>
         <small>{uiText("바로 쓸 수 있어요", easyMode)}</small>
       </div>
-      {control && <div className="result-preview-controls">{control}{extra}</div>}
+      {(control || extra) && <div className="result-preview-controls">{control}{extra}</div>}
     </div>
   )
 }
@@ -914,6 +922,7 @@ function CreateFlow({
   setStep,
 
   channel,
+  setChannel,
 
 
   imageUrl,
@@ -961,6 +970,7 @@ function CreateFlow({
   setStep: (step: Step) => void
 
   channel: Channel
+  setChannel: (channel: Channel) => void
 
 
   imageUrl: string
@@ -1156,10 +1166,17 @@ function CreateFlow({
     promoControllerRef.current = null
     setPromoPending(false)
   }
-  const requestPromoText = () => {
+  // One AI answer per channel and inputs, so going back to a channel shows its text without a new request.
+  const promoCacheRef = useRef(new Map<string, AiPromo>())
+  const requestPromoText = (forChannel: Channel = channel) => {
     cancelPromoRequest()
-    const signature = promoSignature(details, channel)
+    const signature = promoSignature(details, forChannel)
     if (aiPromo?.signature === signature) return
+    const cached = promoCacheRef.current.get(signature)
+    if (cached) {
+      setAiPromo(cached)
+      return
+    }
     setAiPromo(null)
     const controller = new AbortController()
     promoControllerRef.current = controller
@@ -1178,13 +1195,17 @@ function CreateFlow({
         priceInfo: details.priceInfo?.trim() || undefined,
         contact: details.contact?.trim() || undefined,
         visualDetails: photoDetailsRef.current.image === imageUrl ? photoDetailsRef.current.details : undefined,
-        channel,
+        channel: forChannel,
       },
       { signal: controller.signal, timeoutMs: PROMO_WAIT_MS },
     ).then((result) => {
       if (promoControllerRef.current !== controller) return
       promoControllerRef.current = null
-      if (result) setAiPromo({ ...result, signature })
+      if (result) {
+        const promo = { ...result, signature }
+        promoCacheRef.current.set(signature, promo)
+        setAiPromo(promo)
+      }
       setPromoPending(false)
     })
   }
@@ -1391,6 +1412,12 @@ function CreateFlow({
   // AI 표시 at the moment a result leaves the app (save, share, copy), when an AI wrote part of it.
   const aiNote = (message: string) =>
     activePromo && message && !/못|실패|않/.test(message) ? `${message} ${t("AI가 쓴 글이 들어 있어요.")}` : message
+  // Where the 홍보 글 will be posted (B_이창훈 channel styles). Picking one asks the AI once for that channel.
+  const pickChannel = (next: Channel) => {
+    if (next === channel) return
+    setChannel(next)
+    if (showCopy) requestPromoText(next)
+  }
   const pickHeadline = (index: number) => { if (activePromo) setAiPromo({ ...activePromo, chosen: index }) }
   const copyText = activePromo ? composePromoText({ ...activePromo, copy: chosenHeadline }, details) : resultCopy[channel]
 
@@ -2717,6 +2744,25 @@ function CreateFlow({
                   easyMode={easyMode}
                   icon="copy"
                   title="홍보 글"
+                  extra={
+                    <fieldset className="channel-choice" role="radiogroup">
+                      <legend>{t("어디에 올릴까요?")}{promoPending ? <span className="channel-pending"> · {t("글을 맞추는 중")}</span> : null}</legend>
+                      <div>
+                        {copyChannelOptions.map(([id, label], index) => (
+                          <button
+                            key={id}
+                            type="button"
+                            role="radio"
+                            aria-checked={channel === id}
+                            onClick={() => pickChannel(id)}
+                            {...radioNav(index, copyChannelOptions.length, copyChannelOptions.findIndex(([option]) => option === channel), (next) => pickChannel(copyChannelOptions[next][0]))}
+                          >
+                            {t(label)}
+                          </button>
+                        ))}
+                      </div>
+                    </fieldset>
+                  }
                   control={headlineOptions.length > 1 ? (
                     easyMode ? (
                       <>
@@ -3691,6 +3737,7 @@ export default function App() {
           initialResultTab={preferredResultTab}
           type={creationType}
           channel={channel}
+          setChannel={setChannel}
           step={step}
           setStep={setStep}
           imageUrl={imageUrl}
