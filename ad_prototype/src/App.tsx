@@ -1936,6 +1936,16 @@ function CreateFlow({
     }
   }
 
+  // Opening the 영상 tab prepares the sample video file once, so 공유하기 works on the first tap
+  // (a share sheet must open right after the tap, before a 5 s recording could finish).
+  const videoPreparedForRef = useRef(-1)
+  useEffect(() => {
+    if (step !== 3 || generating || activeResultTab !== "video" || showsRealVideo(aiVideo.state)) return
+    if (videoShareFileRef.current || videoPreparedForRef.current === videoContextRef.current) return
+    videoPreparedForRef.current = videoContextRef.current
+    void prepareVideoDownload(false)
+  }, [step, generating, activeResultTab, aiVideo.state]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const shareResult = async (kind: "poster" | "video" | "copy") => {
     const update = (message: string) => setShareMessages(current => ({...current, [kind]: message}))
     if (typeof navigator.share !== "function") {
