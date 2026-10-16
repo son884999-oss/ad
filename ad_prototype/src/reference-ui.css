@@ -804,3 +804,6 @@ html[data-view=mobile] .easy-offer { top:calc(64px * var(--s) + 34px); }
 .reference-app .result-preview--copy .result-main-preview { height:auto; }
 /* While the video file is being prepared, the button cancels: it should not look like the main action */
 .result-primary-action.is-cancel { border-color:#9a8c81;background:#fff;color:var(--color-brand-hover);box-shadow:none; }
+/* Short notices break into even lines (no lone "주세요." on the last line); words are not split */
+:is(.ai-notice,.ai-fill-live) { text-wrap:balance;word-break:keep-all; }
+.result-card-actions p { text-wrap:pretty;word-break:keep-all; }
