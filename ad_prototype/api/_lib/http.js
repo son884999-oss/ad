@@ -77,18 +77,64 @@ export async function readJsonBody(req, limit = MAX_BODY_BYTES) {
   return parseObject(Buffer.concat(chunks).toString("utf8"))
 }
 
+/** Client address: the first X-Forwarded-For entry (Vercel sets it), else the socket. "" when unknown. */
+export function clientAddress(req) {
+  const forwarded = String(headerValue(req, "x-forwarded-for") ?? "").split(",")[0].trim()
+  return forwarded || req.socket?.remoteAddress || ""
+}
+
+/**
+ * Browsers send Origin on POST. A request from another site's page is refused, so other sites cannot
+ * spend our AI quota through visitors' browsers. Requests without Origin (scripts) are left to the rate limit.
+ * ALLOWED_ORIGINS (comma separated) adds origins such as a custom domain.
+ */
+export function checkOrigin(req) {
+  const origin = String(headerValue(req, "origin") ?? "")
+  if (!origin) return
+  const allowed = String(process.env.ALLOWED_ORIGINS ?? "").split(",").map((value) => value.trim()).filter(Boolean)
+  let host = ""
+  try {
+    host = new URL(origin).host
+  } catch {
+    throw new ApiError(403, "FORBIDDEN_ORIGIN")
+  }
+  if (host === headerValue(req, "host") || allowed.includes(origin)) return
+  throw new ApiError(403, "FORBIDDEN_ORIGIN")
+}
+
+// Per-address sliding window, per function instance (memory only). It stops casual loops; a determined
+// attacker spreads over instances, so production should also add a Vercel Firewall rate-limit rule.
+const recentCalls = new Map()
+export function checkRateLimit(req, bucket, perMinute) {
+  const address = clientAddress(req)
+  if (!address || !perMinute) return
+  const key = `${bucket}:${address}`
+  const now = Date.now()
+  const calls = (recentCalls.get(key) ?? []).filter((time) => now - time < 60_000)
+  if (calls.length >= perMinute) {
+    recentCalls.set(key, calls)
+    throw new ApiError(429, "RATE_LIMITED")
+  }
+  calls.push(now)
+  recentCalls.set(key, calls)
+  if (recentCalls.size > 5_000) recentCalls.delete(recentCalls.keys().next().value)
+}
+
 /**
  * Wraps a POST-only JSON endpoint. `prepare` runs before the body is read (config checks),
  * `run` receives the parsed body and returns the JSON to send with 200.
- * @param {{ prepare?: () => any, run: (body: any, context: any) => Promise<unknown> }} options
+ * `perMinute` caps calls per client address and minute (0 = no cap).
+ * @param {{ prepare?: () => any, run: (body: any, context: any) => Promise<unknown>, bucket?: string, perMinute?: number }} options
  */
-export function createJsonHandler({ prepare, run }) {
+export function createJsonHandler({ prepare, run, bucket = "api", perMinute = 20 }) {
   return async function handler(req, res) {
     try {
       if (req.method !== "POST") {
         res.setHeader("Allow", "POST")
         throw new ApiError(405, "METHOD_NOT_ALLOWED")
       }
+      checkOrigin(req)
+      checkRateLimit(req, bucket, perMinute)
       const context = prepare ? prepare() : undefined
       const body = await readJsonBody(req)
       sendJson(res, 200, await run(body, context))

@@ -13,6 +13,8 @@ import { getGeminiConfig } from "./_lib/gemini.js"
 import { generatePromo, normalizePromoInput } from "./_lib/promo.js"
 
 export default createJsonHandler({
+  bucket: "promo-text",
+  perMinute: 20,
   prepare: getGeminiConfig,
   run: (body, config) => generatePromo(normalizePromoInput(body), config),
 })

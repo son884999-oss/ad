@@ -11,6 +11,9 @@ import { getHiggsfieldConfig } from "./_lib/higgsfield.js"
 import { normalizeVideoInput, startVideo } from "./_lib/video.js"
 
 export default createJsonHandler({
+  // Each call is one paid clip: at most 3 per minute per address.
+  bucket: "video-start",
+  perMinute: 3,
   prepare: getHiggsfieldConfig,
   run: (body, config) => startVideo(normalizeVideoInput(body), config),
 })
