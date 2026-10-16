@@ -19,6 +19,7 @@ const viewports = {
   phone: { width: 390, height: 844, view: "auto" },
   small: { width: 360, height: 740, view: "auto" },
   frame: { width: 1024, height: 844, view: "mobile" },
+  // Mobile web app only (2026-10-17): a computer shows the same app inside the phone frame.
   pc: { width: 1440, height: 900, view: "pc" },
 }
 // One browser context per scenario, so localStorage starts empty and survives reloads inside it.
@@ -127,23 +128,23 @@ try {
     await page.context().close()
   })
 
-  await check("records: PC grid shows 3+ columns with large thumbnails", async () => {
+  await check("records: on a computer (phone frame) the grid keeps 2 columns with large thumbnails", async () => {
     for (const easy of [false, true]) {
       const page = await open(viewports.pc, { easy })
       await createRecord(page)
       await toRecords(page)
       if (!easy) await page.locator(".records-view-toggle").getByRole("button", { name: "격자 보기", exact: true }).click()
       const cols = await page.locator(".records-grid").evaluate((e) => getComputedStyle(e).gridTemplateColumns.split(" ").length)
-      assert.ok(cols >= 3 && cols <= 4, `PC grid columns ${cols}`)
+      assert.equal(cols, 2, `framed grid columns ${cols}`)
       await settle(page)
       const thumb = await box(page.locator(".records-grid .record-thumbnail").first())
-      assert.ok(thumb.w >= 200, `PC grid thumbnail ${thumb.w}px`)
+      assert.ok(thumb.w >= 150, `framed grid thumbnail ${thumb.w}px`)
       assert.deepEqual(page.errors, [])
       await page.context().close()
     }
   })
 
-  await check("menu (쉬운 화면): 내 홍보물 보기 … 개발자 옵션 rows match the 만들기 card height (±4px) on phone, framed phone and PC", async () => {
+  await check("menu (쉬운 화면): 내 홍보물 보기 … 쉬운 화면 rows match the 만들기 card height (±4px) on phone, framed phone and PC", async () => {
     for (const [name, vp] of Object.entries(viewports)) {
       const page = await open(vp, { easy: true })
       await page.getByRole("button", { name: "전체 메뉴 열기", exact: true }).click()
@@ -155,7 +156,8 @@ try {
           rows: [...document.querySelectorAll(".reference-menu-links button, .reference-toggle-row")].map((e) => ({ text: e.innerText.split("\n")[0], h: h(e), font: fs(e), radius: parseFloat(getComputedStyle(e).borderTopLeftRadius) })),
         }
       })
-      assert.equal(m.rows.length, 5)
+      // 내 홍보물 · 이용 요금 · 로그인 · 쉬운 화면 (the developer switch was removed on 2026-10-17)
+      assert.equal(m.rows.length, 4)
       for (const row of m.rows) {
         assert.ok(Math.abs(row.h - m.card) <= 4, `${name}: ${row.text} ${row.h}px vs card ${m.card}px`)
         assert.ok(row.font >= m.cardFont - 0.5, `${name}: ${row.text} font ${row.font} < card ${m.cardFont}`)

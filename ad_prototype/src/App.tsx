@@ -15,7 +15,7 @@ import { wrapCanvasText } from "./canvasText"
 import { uiText } from "./easyText"
 import { recognitionConstructor, useVoiceInput } from "./useVoiceInput"
 import VoiceField from "./VoiceField"
-import { useLayout } from "./DesktopStage"
+import { isMobileDevice } from "./DesktopStage"
 import { analyzePhotoOnce, generatePromoText, type PhotoCheck, type PhotoSuggestion, type PromoTextResult } from "./ai"
 import { useAiVideo, type AiVideoController, type SavedAiVideo } from "./useAiVideo"
 import { AiVideoPlayer, AiVideoStatus, saveRealVideo, shareRealVideo, showsRealVideo } from "./AiVideoPanel"
@@ -983,8 +983,7 @@ function CreateFlow({
 }) {
   const { notify } = useFeedback()
   const t = (text: string) => uiText(text, easyMode)
-  const isPc = useLayout() === "pc"
-  const saveLabel = isPc ? "컴퓨터에 저장" : "폰에 저장"
+  const saveLabel = isMobileDevice() ? "폰에 저장" : "컴퓨터에 저장"
   // 말로 쓰기 (쉬운 화면): one session for the info step; stops 화면 설명 듣기 before listening.
   const voice = useVoiceInput(onStopSpeech)
   useEffect(() => {
@@ -3031,7 +3030,6 @@ export default function App() {
   const [speechMessage, setSpeechMessage] = useState("")
 
   const speechRequestRef = useRef(0)
-  const isPcLayout = useLayout() === "pc"
 
   const outputFormat: OutputFormat =
     creationType === "all"
@@ -3148,7 +3146,7 @@ export default function App() {
     }
   }
 
-  const saveLabel = isPcLayout ? "컴퓨터에 저장" : "폰에 저장"
+  const saveLabel = isMobileDevice() ? "폰에 저장" : "컴퓨터에 저장"
   const easySpeechText = (() => {
     const shopOrName = details.shopName?.trim() || details.name?.trim() || details.description.trim()
     const createLabel = uiText({ all: "홍보물 만들기", poster: "이미지 만들기", video: "영상 만들기", copy: "홍보 글 만들기" }[creationType], true)

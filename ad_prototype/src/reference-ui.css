@@ -384,23 +384,14 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,summary:focus-vi
 .skip-link { position:absolute;left:12px;top:-60px;z-index:30;padding:10px 14px;border-radius:8px;background:#2b2420;color:#fff;font-weight:700;text-decoration:none; }
 .skip-link:focus { top:12px; }
 #app-main:focus { outline:none; }
-.dev-toolbar { display:none; }
 @media (min-width:768px) {
  html[data-layout=mobile] body { background:radial-gradient(circle at 12% 18%,#fde3cf 0,transparent 38%),radial-gradient(circle at 88% 82%,#fbe6d6 0,transparent 42%),radial-gradient(circle at 70% 10%,#fff4ea 0,transparent 30%),#fbf6f1; }
  html[data-layout=mobile] #root { min-height:100dvh;display:flex;align-items:center;justify-content:center;gap:clamp(40px,6vw,96px);padding:24px; }
  html[data-layout=mobile] :is(.reference-app,.reference-login) { width:min(432px,calc((100dvh - 48px) * 9 / 16));height:min(768px,calc(100dvh - 48px));min-height:0;margin:0;flex:none;border:1px solid #e5dcd3;border-radius:26px;box-shadow:0 24px 60px #5a2a1222,0 2px 6px #5a2a1210;background:#fff; }
  html[data-layout=mobile] .reference-login { overflow-y:auto; }
- html[data-view=mobile] :is(.reference-app,.reference-login) { position:relative;width:calc(var(--preview-w,390px) + 20px);height:min(864px,calc(100dvh - 76px));margin-top:28px;padding-top:34px;border:10px solid #231c18;border-radius:48px;box-shadow:0 30px 70px #2b16084d; }
+ html[data-view=mobile] :is(.reference-app,.reference-login) { position:relative;width:calc(var(--preview-w,390px) + 20px);height:min(864px,calc(100dvh - 48px));margin-top:0;padding-top:34px;border:10px solid #231c18;border-radius:48px;box-shadow:0 30px 70px #2b16084d; }
  html[data-view=mobile] :is(.reference-app,.reference-login)::before { content:"";position:absolute;top:7px;left:50%;z-index:20;width:92px;height:22px;margin-left:-46px;border-radius:12px;background:#231c18; }
  html[data-view=mobile] .reference-menu { top:34px; }
- html[data-view=mobile] #root::after { content:"휴대폰 화면 미리보기";position:fixed;top:14px;left:50%;transform:translateX(-50%);padding:5px 14px;border-radius:999px;background:#2b2420;color:#fff;font-size:13px;font-weight:700; }
- .dev-toolbar { position:fixed;right:16px;bottom:16px;z-index:40;display:flex;align-items:center;gap:4px;padding:4px;border-radius:12px;background:#2b2420e6;box-shadow:0 10px 30px #0003;font-size:14px;backdrop-filter:blur(6px); }
- .dev-toolbar .dev-toolbar-title { padding:0 6px 0 8px; }
- .dev-toolbar button,.dev-toolbar select { min-height:40px;padding:0 10px;border:0;border-radius:9px;background:transparent;color:#f3e9e1;font-weight:600; }
- .dev-toolbar button[aria-pressed=true] { background:#fff;color:#93390f; }
- .dev-toolbar .dev-toolbar-title { color:#f2b691;font-weight:800; }
- .dev-toolbar select { background:#463a33;color:#fff; }
- .dev-toolbar :is(button,select):focus-visible { outline:3px solid #f2b691;outline-offset:2px; }
 }
 @media (prefers-reduced-motion:reduce) { *,*::before,*::after { animation:none!important;transition-duration:.01ms!important;scroll-behavior:auto!important; } .generation-checklist li.is-current .generation-check { border-color:#b44d1d; } }
 .reference-login { max-width:440px;min-height:100dvh;margin:0 auto;padding:16px 20px 28px;display:flex;flex-direction:column;background:#fff; }
@@ -704,7 +695,6 @@ html[data-layout=mobile] .easy-mode .results-step:not(.is-single) .result-card:h
 /* 홍보 글 box on phones follows short text */
 html[data-layout=mobile] .results-step .result-card > .result-preview.result-preview--copy { height:auto;min-height:clamp(160px,25dvh,280px);max-height:calc(440px * var(--s)); }
 /* developer toolbar stays out of the way: faint until hovered/focused, hidden while the menu is open */
-@media (min-width:768px) { .dev-toolbar { opacity:.85;transition:opacity .15s; } .dev-toolbar:is(:hover,:focus-within) { opacity:1; } body:has(.reference-menu) .dev-toolbar { display:none; } }
 /* low-vision: secondary button edges 3.26:1 on white (PC has its own tokens) */
 html[data-layout=mobile] .studio-shell :is(.studio-secondary,.result-share-action,.result-preview-action) { border-color:#9a8c81; }
 /* very short screens (e.g. 200% zoom): fixed bars give way so the form stays usable */

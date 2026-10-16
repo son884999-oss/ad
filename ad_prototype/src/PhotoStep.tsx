@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ChangeEvent, type DragEvent, type ReactNode } from "react"
 import Icon from "./Icon"
 import { uiText } from "./easyText"
-import { useLayout } from "./DesktopStage"
+import { isMobileDevice } from "./DesktopStage"
 import type { PhotoCheck } from "./ai"
 import { checkPhotoQuality, type PhotoIssue } from "./photoQuality"
 
@@ -37,7 +37,7 @@ function useCameraChoice(isPc: boolean) {
 
 export default function PhotoStep({imageUrl,pending,message,onUpload,onDropFile,onNext,aiCheck=null,easyMode=false}:{easyMode?:boolean;imageUrl:string;onDropFile?:(file:File)=>void;outputFormat?:"both"|"poster"|"video";onOutputFormatChange?:(format:"both"|"poster"|"video")=>void;pending:boolean;message:string;onUpload:(event:ChangeEvent<HTMLInputElement>)=>void;onNext:()=>void;aiCheck?:PhotoCheck|null}) {
  const t=(text:string)=>uiText(text,easyMode)
- const isPc=useLayout()==="pc"
+ const isPc=!isMobileDevice()
  const camera=useCameraChoice(isPc)
  const inputRef=useRef<HTMLInputElement>(null),cameraRef=useRef<HTMLInputElement>(null),nextRef=useRef<HTMLButtonElement>(null),choiceRef=useRef<HTMLDivElement>(null)
  const [dragging,setDragging]=useState(false)
