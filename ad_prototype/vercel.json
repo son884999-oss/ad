@@ -1,0 +1,8 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "functions": {
+    "api/video-start.js": {
+      "maxDuration": 60
+    }
+  }
+}

@@ -23,7 +23,9 @@ export type StatusResult =
   | { status: "completed"; videoUrl: string }
   | { status: "failed"; error: string }
 
-const START_TIMEOUT_MS = 30_000
+// Longer than the server's worst case (Gemini 6 s ∥ upload 8 + 15 s, then submit 15 s ≈ 38 s; vercel.json allows 60 s),
+// so the app does not give up on a job the server is still starting — and paying for.
+const START_TIMEOUT_MS = 55_000
 const STATUS_TIMEOUT_MS = 15_000
 /** Larger than the 1024 px used for analysis: the photo is the first frame of the clip. */
 const VIDEO_IMAGE_SIZE = 1280

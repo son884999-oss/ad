@@ -598,6 +598,31 @@ try {
     await page.close()
   })
 
+  await check("browser: 다시 만들기 after a network error resends the same idempotency key (no second charge)", async () => {
+    const { page, counts } = await newPage()
+    await page.addInitScript(fastTimers)
+    await stubVideoFlow(page, counts, [{ status: "queued" }])
+    const keys = []
+    await page.route("**/api/video-start", (route) => {
+      counts.start += 1
+      keys.push(route.request().postDataJSON().idempotencyKey)
+      // First try: the connection drops (the server may still have started the job). Second try answers.
+      return counts.start === 1
+        ? route.abort("failed")
+        : route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ requestId: REQ_ID, videoPrompt: "p", duration: 5 }) })
+    })
+    page.on("dialog", (dialog) => void dialog.accept())
+    await createAll(page, "끊긴 연결")
+    await openVideoTab(page)
+    const retry = page.getByRole("button", { name: "다시 만들기", exact: true })
+    await retry.waitFor({ timeout: 10000 })
+    await retry.click()
+    for (let i = 0; i < 50 && counts.start < 2; i += 1) await page.waitForTimeout(100)
+    assert.equal(counts.start, 2)
+    assert.ok(keys[0] && keys[0] === keys[1], `same key: ${keys[0]} / ${keys[1]}`)
+    await page.close()
+  })
+
   await check("browser: cancel on the progress screen stops polling and cancels the queued job", async () => {
     const { page, counts } = await newPage()
     await page.addInitScript(fastTimers)

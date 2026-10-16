@@ -101,12 +101,12 @@ export function useAiVideo(onJobUpdate?: (jobId: string, saved: SavedAiVideo) =>
     if (current.requestId && (current.phase === "starting" || current.phase === "generating")) cancelAiVideo(current.requestId)
   }, [])
 
-  const begin = useCallback((input: AiVideoInput, signature: string) => {
+  const begin = useCallback((input: AiVideoInput, signature: string, reuseJobId?: string) => {
     // A new paid job replaces the running one (e.g. the details were edited): cancel the old one first.
     dropRunningJob()
     stopPolling()
     const generation = generationRef.current
-    const jobId = newVideoJobId()
+    const jobId = reuseJobId ?? newVideoJobId()
     const startedAt = Date.now()
     inputRef.current = input
     setState({ phase: "starting", jobId, signature, startedAt })
@@ -141,10 +141,17 @@ export function useAiVideo(onJobUpdate?: (jobId: string, saved: SavedAiVideo) =>
     begin(input, signature)
   }, [begin]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  /** Manual 다시 만들기: one click = one new paid request. */
+  /**
+   * Manual 다시 만들기: one click = one new paid request. After a network error or timeout the server may
+   * already have started (and charged) the job, so the same idempotency key is sent again and the provider
+   * returns that job instead of charging a second one.
+   */
   const retry = useCallback(() => {
     const input = inputRef.current
-    if (input && !isVideoUnavailable()) begin(input, videoSignature(input.imageUrl, input.details))
+    if (!input || isVideoUnavailable()) return
+    const current = stateRef.current
+    const maybeStarted = current.phase === "failed" && ["NETWORK", "VIDEO_TIMEOUT", "HTTP_502", "HTTP_504"].includes(current.error ?? "")
+    begin(input, videoSignature(input.imageUrl, input.details), maybeStarted ? current.jobId : undefined)
   }, [begin])
 
   /** After the 10-minute window: check the same job again (free, no new request). */
