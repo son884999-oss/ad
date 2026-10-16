@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type PointerEvent, type ReactNode } from "react"
 import { flushSync } from "react-dom"
 import Icon from "./Icon"
-import type { VoiceInput } from "./useVoiceInput"
+import { recognitionConstructor, type VoiceInput } from "./useVoiceInput"
 
 export type VoiceBind = {
   id: string
@@ -36,6 +36,7 @@ export default function VoiceField({
   onVoiceText: (text: string) => void
   children: (bind: VoiceBind) => ReactNode
 }) {
+  const hasRecognition = recognitionConstructor() !== null
   const [undo, setUndo] = useState<{ previous: string; applied: string } | null>(null)
   const [keyboardChosen, setKeyboardChosen] = useState(false)
   const [announcement, setAnnouncement] = useState("")
@@ -125,7 +126,8 @@ export default function VoiceField({
     <span className={`voice-field${listening ? " is-listening" : ""}`}>
       <span className="voice-field-row">
         {children(bind)}
-        <button
+        {/* No Web Speech here (some Safari / Samsung Internet builds): no button that can only fail. */}
+        {hasRecognition && <button
           ref={micRef}
           type="button"
           className="voice-mic-button"
@@ -135,7 +137,7 @@ export default function VoiceField({
         >
           <Icon name="mic" size={26} />
           <span>말로 하기</span>
-        </button>
+        </button>}
       </span>
       {listening && (
         <span ref={panelRef} className="voice-panel" role="group" aria-label={`${label} 말로 쓰는 중`}>

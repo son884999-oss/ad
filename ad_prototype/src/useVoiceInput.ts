@@ -28,7 +28,7 @@ export function recognitionConstructor(): RecognitionConstructor | null {
 }
 
 export const voiceMessages = {
-  unsupported: "이 브라우저는 말로 쓰기가 안 돼요. 글자로 써 주세요.",
+  unsupported: "이 브라우저는 말로 쓰기가 안 돼요. 키보드의 마이크 버튼으로 말하거나 글자로 써 주세요.",
   denied: "마이크를 허용해 주세요. 아니면 글자로 써 주세요.",
   noSpeech: "소리가 안 들렸어요. 다시 눌러 주세요.",
   noMic: "마이크를 찾지 못했어요. 글자로 써 주세요.",
