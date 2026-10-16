@@ -193,9 +193,21 @@ function promoSignature(details: GeneratedRecord["details"], channel: Channel) {
 }
 
 /** Joins the AI copy into the 홍보 글 text; makes sure the product name appears. */
+/** True when two paragraphs share a run of `limit` characters (spaces/punctuation ignored), like B's REPEAT_LIMIT. */
+function repeatsText(a: string, b: string, limit = 12) {
+  const squeeze = (value: string) => value.replace(/[\s.,!?·~"'“”‘’()[\]…-]/g, "")
+  const x = squeeze(a)
+  const y = squeeze(b)
+  for (let i = 0; i + limit <= x.length; i += 1) if (y.includes(x.slice(i, i + limit))) return true
+  return false
+}
+
 function composePromoText(promo: PromoTextResult, details: GeneratedRecord["details"]) {
   const name = details.name?.trim() ?? ""
-  const text = [promo.copy, promo.sns, promo.intro].filter(Boolean).join("\n\n")
+  // The model sometimes writes the intro as a copy of the SNS text; showing both reads as a mistake.
+  const withoutName = (value: string) => (name ? value.split(name).join("") : value)
+  const intro = promo.intro && promo.sns && repeatsText(withoutName(promo.sns), withoutName(promo.intro)) ? "" : promo.intro
+  const text = [promo.copy, promo.sns, intro].filter(Boolean).join("\n\n")
   return name && !text.includes(name) ? `${name}\n\n${text}` : text
 }
 

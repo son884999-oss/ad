@@ -193,6 +193,12 @@ export function reviewPromo(result, product) {
     }
   }
 
+  // SNS 글과 소개 글은 같이 보여 주므로, 같은 문장을 두 번 쓰면 안 된다.
+  const plainName = squeeze(product.productName)
+  if (longestCommonRun(squeeze(result.sns).replaceAll(plainName, ""), squeeze(result.intro).replaceAll(plainName, "")) >= REPEAT_LIMIT) {
+    problems.push("SNS 문구(sns)와 제품 소개(intro)가 같은 문장을 되풀이함 — 소개는 다른 사실이나 정보로 쓸 것")
+  }
+
   const longTags = result.hashtags.filter((tag) => tag.length > HASHTAG_MAX_LENGTH)
   if (longTags.length) problems.push(`해시태그가 너무 김(${HASHTAG_MAX_LENGTH}자 초과): ${longTags.join(", ")}`)
   return problems

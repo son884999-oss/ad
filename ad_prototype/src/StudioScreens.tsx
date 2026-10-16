@@ -45,7 +45,7 @@ export function StudioLogin({onEnter,speaking,speechPreparing,onSpeak,easyMode}:
  const [notice,setNotice]=useState('')
  const t=(text:string)=>uiText(text,easyMode)
  const pending=(name:string)=>setNotice(easyMode?'아직 준비 중이에요. 아래 ‘바로 시작하기’를 눌러 주세요.':name+' 로그인은 준비 중이에요. 아래 바로 시작하기로 먼저 체험해 보세요.')
- return <main className="reference-login">
+ return <main className={`reference-login${easyMode?" easy-mode":""}`}>
   <div className="reference-login-top"><Logo/><ReadButton easy={easyMode} {...{speaking,speechPreparing,onSpeak}}/></div>
   <h1 data-screen-heading tabIndex={-1}>로그인</h1>
   <p className="reference-login-lead">{t("홍보잇다에 오신 것을 환영해요.")}</p>
@@ -54,6 +54,7 @@ export function StudioLogin({onEnter,speaking,speechPreparing,onSpeak,easyMode}:
    <label>비밀번호<input type="password" name="password" autoComplete="current-password" placeholder="비밀번호"/></label>
    <button type="submit" className="studio-primary">로그인</button>
   </form>
+  <p className="reference-login-signup">{t("아직 계정이 없나요?")}<button type="button" onClick={()=>setNotice(easyMode?'가입은 아직 준비 중이에요. 아래 ‘바로 시작하기’를 눌러 주세요.':'회원가입은 준비 중이에요. 아래 바로 시작하기로 먼저 체험해 보세요.')}>{t("회원가입")}</button></p>
   <p className="reference-login-divider"><span>{t("간편 로그인")}</span></p>
   <div className="reference-social">
    <button type="button" className="social-kakao" onClick={()=>pending('카카오')}><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 4C7 4 3 7.1 3 11c0 2.5 1.7 4.7 4.2 6l-1 3.7c-.1.3.3.6.6.4l4.4-2.9h.8c5 0 9-3.1 9-7s-4-7.2-9-7.2"/></svg>카카오로 시작하기</button>
