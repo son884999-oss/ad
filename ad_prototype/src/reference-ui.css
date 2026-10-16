@@ -26,7 +26,7 @@
 .reference-back { width:44px;height:44px;margin-left:-10px;display:grid;place-items:center;background:none;border:0;padding:0;color:#2b2420; }
 .reference-back svg { width:calc(26px * var(--s));height:calc(26px * var(--s)); }
 .reference-speaker { background:none;border:0;padding:6px;color:#2b2420; }
-.reference-app .studio-main { flex:1;min-height:0;overflow-y:auto;padding:0 calc(20px * var(--s)) calc(14px * var(--s));scrollbar-width:thin;scroll-padding:12px; }
+.reference-app .studio-main { flex:1;min-height:0;overflow-y:auto;padding:0 calc(20px * var(--s)) calc(14px * var(--s));scrollbar-width:thin;scroll-padding:12px 12px calc(100px * var(--s,1)); }
 .studio-bottom-nav { height:calc(66px * var(--s) + env(safe-area-inset-bottom));min-height:calc(66px * var(--s) + env(safe-area-inset-bottom));padding:4px 5px calc(4px + env(safe-area-inset-bottom));display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid #ede6df;background:#fff;z-index:10;position:relative; }
 .studio-bottom-nav button { display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;border:0;background:none;color:#2b2420;border-radius:12px;font-size:calc(12px * var(--s));line-height:1.4; }
 .studio-bottom-nav button svg { width:calc(23px * var(--s));height:calc(23px * var(--s)); }
