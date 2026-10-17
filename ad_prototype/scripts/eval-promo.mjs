@@ -38,7 +38,9 @@ function score(result, product) {
   for (const word of [...MEDICAL_WORDS, ...HEALTH_CLAIM_WORDS]) if (text.includes(word)) issues.push(`효능 표현 ${word}`)
   const aiStyle = AI_STYLE_WORDS.filter((word) => text.includes(word) && !input.includes(word))
   if (aiStyle.length >= 2) issues.push(`AI 말투 ${aiStyle.join(", ")}`)
-  issues.push(...reviewPromo(result, product).filter((problem) => !issues.some((issue) => problem.includes(issue))))
+  // reviewPromo reports the same banned word in its own words ("뻔한 상투어 사용: 정성 — ..."); count each word once.
+  const counted = issues.map((issue) => issue.split(" ").at(-1))
+  issues.push(...reviewPromo(result, product).filter((problem) => !counted.some((word) => problem.includes(word))))
   if (!/(오세요|들러|만나|주문|문의|확인|찾아|와 주세요|보러|해 보세요|해보세요|보세요|드셔|예약)/.test(text)) issues.push("행동 유도 없음")
   if (result.copy.length > 40) issues.push(`첫 줄이 김 (${result.copy.length}자)`)
   if (result.hashtags.length < 3 || result.hashtags.length > 5) issues.push(`해시태그 ${result.hashtags.length}개`)
