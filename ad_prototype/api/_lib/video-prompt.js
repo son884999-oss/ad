@@ -6,12 +6,14 @@ import { generateJson } from "./gemini.js"
 import { TONE_NAMES } from "./tones.js"
 
 export const PRESERVATION =
-  "Preserve the reference composition and background, product shape, proportions, colors, label text and logo. Keep the product stationary; avoid rapid motion, cuts, morphing, new objects, added text, invented effects and unsupported product benefits."
+  // "Keep the label readable" made Kling paint a made-up brand on a plain cup (2026-10-17 live test): the prompt now
+  // only keeps text that is already in the photo and forbids adding any.
+  "Preserve the reference composition and background, product shape, proportions and colors. Keep any text or logo exactly as it appears in the photo; where the photo has no text, add none: no letters, labels, logos or brand names on the product or anywhere else. Keep the product stationary; avoid rapid motion, cuts, morphing, new objects, invented effects and unsupported product benefits."
 
 /** E's CAMERA sentence, with the clip length filled in (E fixed it at 10 seconds). */
 export function cameraFor(duration = 5) {
   // One camera move for a short clip; orbiting or rotating the product is what usually warps its shape.
-  return `Use one continuous ${duration}-second shot with a slow, subtle camera push-in, keeping the entire product and label readable. No orbit, no rotation of the product.`
+  return `Use one continuous ${duration}-second shot with a slow, subtle camera push-in, keeping the entire product in view. No orbit, no rotation of the product.`
 }
 
 /**
@@ -19,7 +21,7 @@ export function cameraFor(duration = 5) {
  * modes image-to-video guides list for product shots (warped labels, melting, flicker, colour shift).
  */
 export const NEGATIVE_PROMPT =
-  "deformed product, duplicated product, new text, captions, titles, watermark, people, hands, shaky camera, fast motion, morphing, warped label, distorted logo, garbled text, extra product, melting, flicker, color shift, rotating product"
+  "deformed product, duplicated product, new text, letters, words, brand name, logo on the product, added label, captions, titles, watermark, people, hands, shaky camera, fast motion, morphing, warped label, distorted logo, garbled text, extra product, melting, flicker, color shift, rotating product"
 
 // Ported from E_이채원/src/rules.js; a few Korean shop words (케이크, 떡, 디저트 …) added for local shops,
 // and food is checked before beauty so "생크림 케이크" is food, not a cream cosmetic.
