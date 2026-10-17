@@ -1259,12 +1259,15 @@ function CreateFlow({
   const videoCancelledRef = useRef(false)
   const videoTaskRef = useRef<Promise<File | null> | null>(null)
   const videoShareFileRef = useRef<File | null>(null)
+  // The finished sample file, also played in the preview so what you see is exactly what is saved.
+  const [sampleVideoFile, setSampleVideoFile] = useState<File | null>(null)
   const [shareMessages, setShareMessages] = useState<Partial<Record<"poster" | "video" | "copy", string>>>({})
   const videoContextRef = useRef(0)
 
   useEffect(() => {
     videoContextRef.current += 1
     videoShareFileRef.current = null
+    setSampleVideoFile(null)
     setShareMessages({})
     setPlaying(false)
     setPosterExpanded(false)
@@ -1588,6 +1591,25 @@ function CreateFlow({
         ? "AI가 배경을 바꿨어요. 제품은 그대로예요."
         : "배경을 바꾸지 못해서 원래 사진으로 만들었어요."
     : ""
+  // Preview = the file that will be saved: the captioned AI clip (고급형) or the 6-second motion video (기본형).
+  const previewVideoFile = showsRealVideo(aiVideo.state) ? realVideoFile : sampleVideoFile
+  const [previewVideoUrl, setPreviewVideoUrl] = useState("")
+  useEffect(() => {
+    if (!previewVideoFile) {
+      setPreviewVideoUrl("")
+      return
+    }
+    const url = URL.createObjectURL(previewVideoFile)
+    setPreviewVideoUrl(url)
+    return () => URL.revokeObjectURL(url)
+  }, [previewVideoFile])
+  const previewVideoRef = useRef<HTMLVideoElement | null>(null)
+  useEffect(() => {
+    const video = previewVideoRef.current
+    if (!video) return
+    if (playing) void video.play().catch(() => setPlaying(false))
+    else video.pause()
+  }, [playing, previewVideoUrl])
   const posterRatio: PosterRatioKey = details.posterRatio ?? "4:5"
   // D's renderer has no side-by-side layout for a square; it would quietly fall back.
   const posterLayout: PosterLayoutKey = posterRatio === "1:1" && details.posterLayout === "split" ? "vertical" : details.posterLayout ?? "vertical"
@@ -1927,6 +1949,7 @@ function CreateFlow({
 
       setVideoStatus("ready")
       videoShareFileRef.current = result
+      setSampleVideoFile(result)
 
       const extension = result.name.endsWith(".mp4") ? "MP4" : "WebM"
 
@@ -2706,7 +2729,23 @@ function CreateFlow({
                     id="result-video-preview"
                     className="result-main-preview result-motion-preview"
                   >
-                    {showsRealVideo(aiVideo.state) ? (
+                    {previewVideoUrl ? (
+                      <>
+                        <video
+                          ref={previewVideoRef}
+                          className="motion-preview-video"
+                          src={previewVideoUrl}
+                          muted
+                          loop
+                          playsInline
+                          preload="auto"
+                          // Paused, it shows the moment the headline is up (0 s is the bare photo).
+                          onLoadedData={(event) => { if (!playing) event.currentTarget.currentTime = 1.6 }}
+                          aria-label={t("저장될 영상 미리보기")}
+                        />
+                        {showsRealVideo(aiVideo.state) && <span className="ai-badge">{t("AI 생성 영상")}</span>}
+                      </>
+                    ) : showsRealVideo(aiVideo.state) ? (
                       <>
                         <AiVideoPlayer state={aiVideo.state} easyMode={easyMode} playing={playing} onPlayingChange={setPlaying} onBroken={aiVideo.markBroken} />
                         <span className="ai-badge">{t("AI 생성 영상")}</span>
@@ -2718,12 +2757,13 @@ function CreateFlow({
                       className={playing ? "is-playing" : ""}
                     />
                     )}
-                    {/* Caption band in A_손용범's compose-push layout: headline first, then shop · product and the call to action. */}
-                    <strong className={`video-caption${playing ? " is-playing" : ""}`}>
+                    {/* Caption band in A_손용범's compose-push layout: headline first, then shop · product and the call to action.
+                        Hidden once the real file plays: its own caption is drawn in. */}
+                    {!previewVideoUrl && <strong className={`video-caption${playing ? " is-playing" : ""}`}>
                       <span className="video-caption-headline">{videoCaption.headline}</span>
                       {videoCaption.brand && <span className="video-caption-brand">{videoCaption.brand}</span>}
                       {videoCaption.cta && <span className="video-caption-cta">{videoCaption.cta}</span>}
-                    </strong>
+                    </strong>}
                   </div>
                 </ResultPreview>
                 <AiVideoStatus state={aiVideo.state} easyMode={easyMode} onRetry={aiVideo.retry} onResume={aiVideo.resume} />

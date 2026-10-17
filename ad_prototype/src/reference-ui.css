@@ -880,3 +880,9 @@ html[data-view=mobile] .easy-offer { top:calc(64px * var(--s) + 34px); }
 .easy-mode .video-mode button { min-height:calc(76px * var(--s)); }
 .easy-mode .video-mode button strong { font-size:calc(21px * var(--s)); }
 .easy-mode .video-mode button small { font-size:calc(16px * var(--s)); }
+/* The preview plays the saved 9:16 file itself, whole, on a dark backdrop */
+.result-motion-preview .motion-preview-video { display:block;width:100%;height:100%;object-fit:contain;background:#1d1a17; }
+/* While the saved video plays in the preview, the box takes the video's own 9:16 shape (bigger, no side bands) */
+.reference-app .result-card .result-preview:has(.motion-preview-video) { height:auto!important;max-height:none;display:flex;justify-content:center;background:#1d1a17; }
+.reference-app .result-preview:has(.motion-preview-video) .result-motion-preview { width:auto;height:auto; }
+.reference-app .result-motion-preview .motion-preview-video { height:min(62dvh,560px);width:auto;aspect-ratio:9 / 16; }
