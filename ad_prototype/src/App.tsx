@@ -58,6 +58,8 @@ type FileStatus = "idle" | "preparing" | "ready" | "cancelled" | "failed" | "uns
 type GeneratedRecord = {
   editedHashtags?: Record<Channel, boolean>
   id: string
+  /** Results the owner deleted from 내 홍보물 (the record goes when all of them are gone). */
+  removed?: ("poster" | "video" | "copy")[]
 
   createdAt: string
 
@@ -2170,6 +2172,8 @@ function CreateFlow({
                 <span id="product-name-help" className={nameTouched && missingFields.length > 0 ? "field-validation is-error" : "sr-only"} role={nameTouched && missingFields.length > 0 ? "alert" : undefined}>
                   {t(nameTouched && missingFields.length > 0 ? "제품 이름을 적어 주세요." : "제품 이름을 적으면 홍보물을 만들 수 있어요.")}
                 </span>
+                {/* The poster title holds about two lines (≈ 26 characters); say so before it gets cut with … */}
+                {(details.name ?? "").trim().length > 26 && <span className="name-length-hint">{t("이름이 길면 포스터에는 앞부분만 들어가요.")}</span>}
                 {Boolean(details.name) && <span className="field-count" aria-hidden="true">{(details.name ?? "").length}/50</span>}
               </span>
             </label>
@@ -2878,6 +2882,7 @@ function Records({
   stored,
   records,
   onOpen,
+  onDelete,
   onCreate,
   onStartNew,
 }: {
@@ -2886,6 +2891,7 @@ function Records({
   stored: boolean
   records: GeneratedRecord[]
   onOpen: (record: GeneratedRecord, kind: "poster" | "video" | "copy") => void
+  onDelete: (record: GeneratedRecord, kind: "poster" | "video" | "copy") => void
   onCreate: () => void
   onStartNew: () => void
 }) {
@@ -2912,7 +2918,7 @@ function Records({
             "copy",
           ]
         : [record.type]
-    return kinds.map((kind) => ({ record, kind }))
+    return kinds.filter((kind) => !record.removed?.includes(kind)).map((kind) => ({ record, kind }))
   })
   const visible = entries.filter(
     (entry) => filter === "all" || entry.kind === filter,
@@ -2967,8 +2973,8 @@ function Records({
       {visible.length ? (
         <div className={view === "grid" ? "records-grid" : "records-list"}>
           {visible.map(({ record, kind }) => (
+            <div className="record-entry" key={`${record.id}-${kind}`}>
             <button
-              key={`${record.id}-${kind}`}
               className={view === "grid" ? "record-card" : "record-item"}
               onClick={() => onOpen(record, kind)}
             >
@@ -3000,6 +3006,17 @@ function Records({
               </span>
               {view === "list" && <Icon name="arrow" size={20} />}
             </button>
+            <button
+              type="button"
+              className="record-delete"
+              aria-label={`${record.details.name?.trim() || labels[kind]} ${labels[kind]} ${t("지우기")}`}
+              onClick={() => {
+                if (window.confirm(t("이 홍보물을 지울까요? 지우면 되돌릴 수 없어요."))) onDelete(record, kind)
+              }}
+            >
+              {t("지우기")}
+            </button>
+            </div>
           ))}
         </div>
       ) : (
@@ -3849,6 +3866,14 @@ export default function App() {
           stored={recordsStored}
           records={records}
           onOpen={openRecord}
+          onDelete={(record, kind) => setRecords((current) => current.flatMap((item) => {
+            if (item.id !== record.id) return [item]
+            const removed = [...(item.removed ?? []), kind]
+            const kinds = item.type === "all"
+              ? [...(item.outputFormat !== "video" ? ["poster"] : []), ...(item.outputFormat !== "poster" ? ["video"] : []), "copy"]
+              : [item.type]
+            return kinds.every((value) => removed.includes(value as "poster" | "video" | "copy")) ? [] : [{ ...item, removed }]
+          }))}
           onCreate={() => navigate("create", "all")}
           onStartNew={startNew}
         />

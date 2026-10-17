@@ -846,3 +846,16 @@ html[data-view=mobile] .easy-offer { top:calc(64px * var(--s) + 34px); }
 .easy-offer,html[data-view=mobile] .easy-offer { position:relative;top:auto;right:auto;flex:none;margin:2px 12px 6px auto; }
 /* One main (orange) button per screen: on home that is 홍보물 만들기, so the offer uses a softer emphasis */
 .easy-offer .easy-offer-yes { border:1.5px solid #b44d1d;background:#fdf0e6;color:#93390f;font-weight:800; }
+.name-length-hint { flex:1;font-size:max(14px,calc(14px * var(--s)));font-weight:600;line-height:1.4;color:#6e625a; }
+/* Video preview caption: a long name wraps inside the card (at most two lines) instead of spilling past it */
+.result-motion-preview .video-caption { max-width:calc(100% - 24px);box-sizing:border-box; }
+.result-motion-preview .video-caption > * { max-width:100%;overflow-wrap:anywhere;text-align:center;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden; }
+/* 내 홍보물: each result can be deleted (a separate button next to it, never inside the open button) */
+.record-entry { position:relative;min-width:0; }
+.records-list .record-entry { display:grid;grid-template-columns:1fr auto;align-items:center;gap:8px;border-bottom:1px solid var(--color-line); }
+.records-list .record-entry .record-item { border-bottom:0; }
+.records-grid .record-entry { display:flex;flex-direction:column; }
+.records-grid .record-entry .record-card { flex:1; }
+.record-delete { min-width:44px;min-height:44px;padding:0 12px;border:1px solid #c9b3a2;border-radius:10px;background:#fff;color:#93390f;font-size:max(14px,calc(14px * var(--s)));font-weight:700; }
+.records-grid .record-delete { width:100%;margin-top:6px; } /* below the card, never over it: no accidental delete */
+.easy-mode .record-delete { min-height:52px;font-size:calc(17px * var(--s)); }
