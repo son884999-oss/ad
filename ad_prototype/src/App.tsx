@@ -3071,6 +3071,8 @@ export default function App() {
   const [imageUrl, setImageUrl] = useState("")
 
   const [mobileOpen, setMobileOpen] = useState(false)
+  // A result opened from 내 홍보물 goes back to that list, not to the 정보 입력 step.
+  const [openedFromRecords, setOpenedFromRecords] = useState(false)
 
   const [details, setDetails] =
     useState<GeneratedRecord["details"]>(initialDetails)
@@ -3570,6 +3572,7 @@ export default function App() {
   }, [details, aiPromo]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const navigate = (nextPage: Page, type?: CreationType) => {
+    setOpenedFromRecords(false)
     // Leaving the 만드는 중 screen: no record holds the paid video job yet, so refund it instead of orphaning it.
     if (generatingView) aiVideo.cancel()
     if (nextPage === "create" && type) {
@@ -3590,6 +3593,35 @@ export default function App() {
     setPage(nextPage)
     setMobileOpen(false)
   }
+
+  /** ← in the header and the phone's back button. Returns false at home, where back should leave the app. */
+  const goBack = () => {
+    if (mobileOpen) {
+      setMobileOpen(false)
+      return true
+    }
+    if (page === "home" || page === "login") return false
+    // ← while 만드는 중 works like its 취소 button: the paid video job is refunded, not left without a record.
+    if (generatingView) aiVideo.cancel()
+    if (page === "create" && step === 3 && openedFromRecords && !generatingView) navigate("records")
+    else if (page === "create" && step > 1) setStep((step - 1) as Step)
+    else navigate("home")
+    return true
+  }
+  const goBackRef = useRef(goBack)
+  goBackRef.current = goBack
+  // The app changes screens without changing the address, so the phone's back button used to leave the app
+  // (older users press it most). One extra history entry catches it and runs goBack instead; at home it is
+  // let through, so back still leaves the app from there.
+  useEffect(() => {
+    window.history.pushState({ hongboitda: true }, "")
+    const onPop = () => {
+      if (goBackRef.current()) window.history.pushState({ hongboitda: true }, "")
+      else window.history.back()
+    }
+    window.addEventListener("popstate", onPop)
+    return () => window.removeEventListener("popstate", onPop)
+  }, [])
 
   const startNew = () => {
     setAllOutputFormat("both")
@@ -3657,6 +3689,7 @@ export default function App() {
     record: GeneratedRecord,
     resultType: "poster" | "video" | "copy",
   ) => {
+    setOpenedFromRecords(true)
     setPreferredResultTab(resultType)
     setEditedHashtags(mapChannels((id) => record.editedHashtags?.[id] ?? true))
     setCreationType(record.type)
@@ -3725,12 +3758,7 @@ export default function App() {
       generating={page === "create" && step === 3 && generatingView}
       creationView={page === "create"}
       navigate={navigate}
-      onBack={() => {
-        // ← while 만드는 중 works like its 취소 button: the paid video job is refunded, not left without a record.
-        if (generatingView) aiVideo.cancel()
-        if (page === "create" && step > 1) setStep((step - 1) as Step)
-        else navigate("home")
-      }}
+      onBack={goBack}
       easyMode={easyMode}
       setEasyMode={setEasyMode}
       speaking={speaking}
