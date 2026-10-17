@@ -19,12 +19,13 @@ import { loadRecords, saveRecords } from "./recordsStore"
 import { analyzePhotoOnce, generatePromoText, isAiUnavailable, type PhotoCheck, type PhotoSuggestion, type PromoTextResult } from "./ai"
 import { useAiVideo, type AiVideoController, type SavedAiVideo } from "./useAiVideo"
 import { AiVideoPlayer, AiVideoStatus, saveRealVideo, shareRealVideo, showsRealVideo } from "./AiVideoPanel"
-import { prepareAiVideoFile, toVideoDetails } from "./video"
+import { isVideoUnavailable, prepareAiVideoFile, toVideoDetails } from "./video"
 import { buildPosterContent, loadPosterFonts, POSTER_THEMES, posterThemeFor, renderPosterToCanvas } from "./poster"
 import { photoPalette } from "./poster/photoColor"
 import { localBody, localCopy } from "./localCopy"
-import { drawVideoCaption, type VideoCaption } from "./videoCaption"
+import { type VideoCaption } from "./videoCaption"
 import { drawStoryFrame } from "./videoFrame"
+import { drawMotionFrame, MOTION_SECONDS, type MotionScene } from "./motionVideo"
 import type { PosterThemeKey } from "./poster"
 import PhotoStep from "./PhotoStep"
 import GenerationProgress from "./GenerationProgress"
@@ -100,6 +101,8 @@ type GeneratedRecord = {
     posterLayout?: PosterLayoutKey
     /** Empty = follow the first 홍보 분위기. */
     posterTheme?: PosterThemeKey | ""
+    /** 기본형 = the free motion video made in the browser; 고급형 = the paid AI video (Higgsfield). */
+    videoMode?: "basic" | "premium"
   }
 
   userHashtags: Record<Channel, string>
@@ -130,6 +133,37 @@ const posterLayoutOptions: [PosterLayoutKey, string][] = [
   ["split", "나란히"],
   ["editorial", "사진 먼저"],
 ]
+/** 기본형 (free motion video) or 고급형 (paid AI video), chosen under the photo. */
+function VideoModeToggle({ value, premiumAvailable, easyMode, onChange }: { value: "basic" | "premium"; premiumAvailable: boolean; easyMode: boolean; onChange: (value: "basic" | "premium") => void }) {
+  const t = (text: string) => uiText(text, easyMode)
+  const options: ["basic" | "premium", string, string][] = [
+    ["basic", "기본형", "무료 · 바로 만들어요"],
+    ["premium", "고급형", premiumAvailable ? "AI 영상 · 유료 · 약 2분" : "지금은 쓸 수 없어요"],
+  ]
+  const current = premiumAvailable ? value : "basic"
+  return (
+    <fieldset className="video-mode" role="radiogroup">
+      <legend>{t("영상은 어떻게 만들까요?")}</legend>
+      <div>
+        {options.map(([id, label, note], index) => (
+          <button
+            key={id}
+            type="button"
+            role="radio"
+            aria-checked={current === id}
+            disabled={id === "premium" && !premiumAvailable}
+            onClick={() => onChange(id)}
+            {...radioNav(index, options.length, options.findIndex(([option]) => option === current), (next) => onChange(options[next][0]))}
+          >
+            <strong>{t(label)}</strong>
+            <small>{t(note)}</small>
+          </button>
+        ))}
+      </div>
+    </fieldset>
+  )
+}
+
 // 홍보 글 channels shown as chips; labels are the names shop owners use.
 const copyChannelOptions: [Channel, string][] = [
   ["download", "어디에나"],
@@ -1737,7 +1771,7 @@ function CreateFlow({
           }
         }
         chime(0.3, [523.25, 659.25, 783.99], 1.2, 0.18)
-        chime(3.5, [783.99, 1046.5], 1.0, 0.14)
+        chime(4.5, [783.99, 1046.5], 1.0, 0.14) // the end card
         destination.stream.getAudioTracks().forEach((track) => stream.addTrack(track))
       } catch {
         audio = null
@@ -1805,50 +1839,21 @@ function CreateFlow({
         const framedContext = framed.getContext("2d")
         if (!framedContext || !drawStoryFrame(framedContext, image, photoBox?.image === imageUrl ? photoBox.box : null)) framedContext?.drawImage(image, 0, 0, framed.width, framed.height)
 
-        // Same length as the real clip (5 s).
-        const duration = 5000
-
-        // Ken Burns with three keyframes (whole photo → push in → slight drift), eased so it never jerks.
-        const keyframes = [
-          { at: 0, zoom: 1, x: 0, y: 0 },
-          // Up to 1.2× (the usual short-video push-in); at 1.12× the movement was hard to notice in 5 s.
-          { at: 0.55, zoom: 1.13, x: 0, y: -0.02 },
-          { at: 1, zoom: 1.2, x: 0.03, y: -0.035 },
-        ]
-        const ease = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2)
-        const camera = (progress: number) => {
-          const next = keyframes.findIndex((frame) => frame.at >= progress)
-          const b = keyframes[Math.max(next, 1)]
-          const a = keyframes[Math.max(next, 1) - 1]
-          const t = ease(Math.min(Math.max((progress - a.at) / (b.at - a.at), 0), 1))
-          return { zoom: a.zoom + (b.zoom - a.zoom) * t, x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t }
+        // 6-second motion graphic (src/motionVideo.ts): push-in, close-up with a light sweep and the key points,
+        // end card with the price and the call to action.
+        const duration = MOTION_SECONDS * 1000
+        const motion: MotionScene = {
+          framed,
+          caption: sampleCaption,
+          points: (details.keywords ?? "").split(",").map((item) => item.trim()).filter(Boolean),
+          accent: channelTheme.rgb,
         }
 
         const drawFrame = (now: number) => {
           if (videoCancelledRef.current) return
 
           const progress = Math.min((now - startedAt) / duration, 1)
-          const seconds = progress * (duration / 1000)
-          const view = camera(progress)
-
-          context.save()
-
-          context.clearRect(0, 0, canvas.width, canvas.height)
-
-          context.imageSmoothingQuality = "high"
-
-          context.translate(canvas.width / 2 + view.x * canvas.width, canvas.height / 2 + view.y * canvas.height)
-
-          context.scale(view.zoom, view.zoom)
-
-          context.translate(-canvas.width / 2, -canvas.height / 2)
-
-          context.drawImage(framed, 0, 0, canvas.width, canvas.height)
-
-          context.restore()
-
-          // Poster-style caption (src/videoCaption.ts): dark fade, big white headline, price, call to action.
-          drawVideoCaption(context, seconds, sampleCaption, channelTheme.rgb)
+          drawMotionFrame(context, progress * MOTION_SECONDS, motion)
 
           if (progress < 1) {
             videoFrameRef.current = window.requestAnimationFrame(drawFrame)
@@ -2010,6 +2015,14 @@ function CreateFlow({
           aiCheck={aiPhotoCheck?.image === imageUrl ? aiPhotoCheck.check : null}
           onNext={() => setStep(2)}
           easyMode={easyMode}
+          extra={showVideo ? (
+            <VideoModeToggle
+              value={details.videoMode ?? "basic"}
+              premiumAvailable={!isVideoUnavailable()}
+              easyMode={easyMode}
+              onChange={(videoMode) => setDetails({ ...details, videoMode })}
+            />
+          ) : null}
         />
       )}
       {step === 2 && (
@@ -2431,7 +2444,8 @@ function CreateFlow({
                 onClick={() => {
                   setSelectedResultTab(resultTabs[0].id)
                   if (showCopy) requestPromoText()
-                  if (showVideo) aiVideo.start({ imageUrl, details: toVideoDetails(details), box: photoBox?.image === imageUrl ? photoBox.box : null })
+                  // Only 고급형 asks for the paid AI video; 기본형 is the motion video the app makes itself.
+                  if (showVideo && details.videoMode === "premium") aiVideo.start({ imageUrl, details: toVideoDetails(details), box: photoBox?.image === imageUrl ? photoBox.box : null })
                   setGenerating(true)
                   setStep(3)
                 }}

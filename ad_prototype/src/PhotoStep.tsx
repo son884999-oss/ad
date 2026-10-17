@@ -35,7 +35,7 @@ function useCameraChoice(isPc: boolean) {
   return !isPc && coarse
 }
 
-export default function PhotoStep({imageUrl,pending,message,onUpload,onDropFile,onNext,aiCheck=null,easyMode=false}:{easyMode?:boolean;imageUrl:string;onDropFile?:(file:File)=>void;outputFormat?:"both"|"poster"|"video";onOutputFormatChange?:(format:"both"|"poster"|"video")=>void;pending:boolean;message:string;onUpload:(event:ChangeEvent<HTMLInputElement>)=>void;onNext:()=>void;aiCheck?:PhotoCheck|null}) {
+export default function PhotoStep({imageUrl,pending,message,onUpload,onDropFile,onNext,aiCheck=null,easyMode=false,extra=null}:{extra?:ReactNode;easyMode?:boolean;imageUrl:string;onDropFile?:(file:File)=>void;outputFormat?:"both"|"poster"|"video";onOutputFormatChange?:(format:"both"|"poster"|"video")=>void;pending:boolean;message:string;onUpload:(event:ChangeEvent<HTMLInputElement>)=>void;onNext:()=>void;aiCheck?:PhotoCheck|null}) {
  const t=(text:string)=>uiText(text,easyMode)
  const isPc=!isMobileDevice()
  const camera=useCameraChoice(isPc)
@@ -114,6 +114,7 @@ export default function PhotoStep({imageUrl,pending,message,onUpload,onDropFile,
      </div>}
     </div>}
    </div>
+   {!issue&&extra}
    {!issue&&<button ref={nextRef} className="studio-primary photo-next-action" disabled={pending} onClick={onNext}>다음으로 <Icon name="arrow"/></button>}
   </>:<><div className={`reference-upload-box${dragging?" is-dragging":""}`} aria-busy={pending} {...dragProps}>
     <button className="reference-upload-icon" tabIndex={-1} aria-hidden="true" disabled={pending} onClick={camera?openCamera:openGallery}><span className="reference-upload-badge"><Icon name="camera" size={40}/></span></button>

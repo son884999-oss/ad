@@ -21,7 +21,7 @@ const TOP_SAFE = 240
 const BOTTOM_SAFE = 340
 
 /** Word wrap with a character fallback for long unspaced Korean words; the last line gets "…" when cut. */
-function wrap(ctx: CanvasRenderingContext2D, text: string, maxWidth: number, maxLines: number) {
+export function wrap(ctx: CanvasRenderingContext2D, text: string, maxWidth: number, maxLines: number) {
   const lines: string[] = []
   let line = ""
   for (const word of text.trim().split(/\s+/).filter(Boolean)) {

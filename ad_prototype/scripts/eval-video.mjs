@@ -42,7 +42,8 @@ await viewer.setContent(`<body style="margin:0;background:#000"><video id=v mute
 // HAVE_CURRENT_DATA, and one frame after each seek: at readyState 1 the 0 s frame was captured black
 await viewer.waitForFunction(() => document.getElementById("v").readyState >= 2)
 const duration = await viewer.evaluate(() => document.getElementById("v").duration)
-const times = [0, 1, 2.5, 4]
+// --times 0.5,2,3.5,5.5 to look at other moments (the contrast check always reads the last one)
+const times = args.includes("--times") ? args[args.indexOf("--times") + 1].split(",").map(Number) : [0, 1, 2.5, 4]
 const frames = []
 for (const time of times) {
   await viewer.evaluate((t) => new Promise((done) => { const el = document.getElementById("v"); el.onseeked = () => requestAnimationFrame(() => requestAnimationFrame(() => done())); el.currentTime = t }), time)
