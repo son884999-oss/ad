@@ -2,6 +2,7 @@
 // Higgsfield key stays on the server. Starting a job costs money, so nothing here ever retries a
 // start on its own: one call to startAiVideo() = at most one paid generation.
 import { downscalePhoto } from "./ai"
+import { storyFramePhoto } from "./videoFrame"
 
 export type AiVideoDetails = {
   productName: string
@@ -60,10 +61,14 @@ function isHttpsUrl(value: unknown): value is string {
 export async function startAiVideo(
   imageSource: Blob | string,
   details: AiVideoDetails,
-  { idempotencyKey, signal }: { idempotencyKey: string; signal?: AbortSignal },
+  { idempotencyKey, signal, box }: { idempotencyKey: string; signal?: AbortSignal; box?: [number, number, number, number] | null },
 ): Promise<StartResult> {
   if (videoUnavailable) return { kind: "off" }
-  const image = await downscalePhoto(imageSource, VIDEO_IMAGE_SIZE)
+  // A 9:16 frame so the clip comes back vertical for Reels / Shorts (see videoFrame.ts); the plain photo if that fails.
+  const objectUrl = typeof imageSource === "string" ? "" : URL.createObjectURL(imageSource)
+  const framed = await storyFramePhoto(objectUrl || (imageSource as string), box)
+  if (objectUrl) URL.revokeObjectURL(objectUrl)
+  const image = framed ?? (await downscalePhoto(imageSource, VIDEO_IMAGE_SIZE))
   if (!image) return { kind: "error", code: "IMAGE_FAILED" }
   if (signal?.aborted) return { kind: "error", code: "ABORTED" }
   const request = withTimeout(signal, START_TIMEOUT_MS)

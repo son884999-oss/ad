@@ -29,7 +29,8 @@ export type AiVideoState = {
 /** What a saved record keeps, enough to reopen or resume the video later. */
 export type SavedAiVideo = { jobId: string; signature: string; requestId?: string; videoUrl?: string }
 
-export type AiVideoInput = { imageUrl: string; details: AiVideoDetails }
+/** box: where the product is in the photo (photo analysis, 0–1000), used to frame the 9:16 video photo. */
+export type AiVideoInput = { imageUrl: string; details: AiVideoDetails; box?: [number, number, number, number] | null }
 
 const POLL_MS = 5_000
 const MAX_POLL_MS = 20_000
@@ -126,7 +127,7 @@ export function useAiVideo(onJobUpdate?: (jobId: string, saved: SavedAiVideo) =>
     const startedAt = Date.now()
     inputRef.current = input
     setState({ phase: "starting", jobId, signature, startedAt })
-    void startAiVideo(input.imageUrl, input.details, { idempotencyKey: jobId }).then((result) => {
+    void startAiVideo(input.imageUrl, input.details, { idempotencyKey: jobId, box: input.box }).then((result) => {
       if (result.kind === "started") {
         // Even for an older generation: tell the record, or refund it if the user cancelled it.
         if (cancelledJobsRef.current.has(jobId)) {

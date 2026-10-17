@@ -2487,7 +2487,7 @@ function CreateFlow({
                 onClick={() => {
                   setSelectedResultTab(resultTabs[0].id)
                   if (showCopy) requestPromoText()
-                  if (showVideo) aiVideo.start({ imageUrl, details: toVideoDetails(details) })
+                  if (showVideo) aiVideo.start({ imageUrl, details: toVideoDetails(details), box: photoBox?.image === imageUrl ? photoBox.box : null })
                   setGenerating(true)
                   setStep(3)
                 }}
