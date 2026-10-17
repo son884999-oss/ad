@@ -371,7 +371,10 @@ function renderPanelPoster({ ctx, image, content, theme, width, height }: Render
   const textWidth = width - side * 2
   // Measure the text first: the photo takes whatever the text does not need (within limits), so a poster
   // with little text is not left with a half-empty panel.
-  const left = keySellingPoint
+  // The price is shown large under the description (like 사진 크게); the other points and who it suits share the
+  // info row, so a second price or "당일 예약" is no longer cut off a single small line.
+  const { price, others } = splitPoint(keySellingPoint)
+  const left = others.join("  ·  ")
   const right = targetAudience ? `${targetAudience} 추천` : ""
   const hasRow = Boolean(left || right)
   const title = fitTitle(ctx, productName, textWidth, 2, isStory ? 112 : isSquare ? 84 : 100, 56)
@@ -380,11 +383,14 @@ function renderPanelPoster({ ctx, image, content, theme, width, height }: Render
   const eyebrowHeight = eyebrow ? (isSquare ? 24 : 34) + 38 : 0
   const titleHeight = title.size + (title.lines.length - 1) * title.size * 1.12
   const descriptionHeight = descriptionLines.length ? (isSquare ? 50 : 66) + (descriptionLines.length - 1) * 54 : 0
-  const blockHeight = eyebrowHeight + titleHeight + descriptionHeight
+  const priceSize = isSquare ? 60 : 72
+  const priceHeight = price ? priceSize + (isSquare ? 30 : 40) : 0
+  const blockHeight = eyebrowHeight + titleHeight + descriptionHeight + priceHeight
   const bottomSafe = isStory ? 340 : isSquare ? 40 : 60
   const rowHeight = hasRow ? 150 : 0
   const needed = blockHeight + rowHeight + (isSquare ? 70 : 120)
-  const [minShare, maxShare] = isStory ? [0.5, 0.68] : isSquare ? [0.5, 0.62] : [0.56, 0.68]
+  // A story with little text gives the photo up to 3/4 of the height, so no half-empty panel is left.
+  const [minShare, maxShare] = isStory ? [0.5, 0.75] : isSquare ? [0.5, 0.62] : [0.56, 0.68]
   const photoHeight = Math.round(Math.min(height * maxShare, Math.max(height * minShare, height - bottomSafe - needed)))
 
   ctx.fillStyle = paper
@@ -424,6 +430,15 @@ function renderPanelPoster({ ctx, image, content, theme, width, height }: Render
     ctx.fillStyle = sub
     descriptionLines.forEach((line, index) => ctx.fillText(line, center, y + index * 54))
     drawn.push(descriptionLines.join(" "))
+    y += (descriptionLines.length - 1) * 54
+  }
+  if (price) {
+    y += (descriptionLines.length ? (isSquare ? 30 : 40) : 0) + priceSize
+    ctx.font = font(800, priceSize)
+    ctx.fillStyle = accent
+    const [line] = wrapText(ctx, price, textWidth, 1)
+    ctx.fillText(line, center, y)
+    drawn.push(line)
   }
 
   // Info row at the bottom: the selling point on the left, who it is for on the right.
