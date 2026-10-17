@@ -287,7 +287,9 @@ function renderFullBleedPoster({ ctx, image, content, theme, width, height }: Re
 
   // Measure the text block first (bottom-up) so the dark fade sits exactly behind it.
   const { price, others } = splitPoint(keySellingPoint)
-  const badge = others[0] ?? ""
+  // Every other point goes in the badge (a second price, "당일 예약" …), cut to one line.
+  ctx.font = font(800, 34)
+  const badge = others.length ? wrapText(ctx, others.join("  ·  "), textWidth - 48, 1)[0] : ""
   const title = fitTitle(ctx, productName, textWidth, 2, isStory ? 124 : 112, 64)
   const titleLineHeight = title.size * 1.12
   ctx.font = font(500, 44)
@@ -367,7 +369,23 @@ function renderPanelPoster({ ctx, image, content, theme, width, height }: Render
   const accent = readableOn(paper, [theme.accent, theme.ink, ink])
   const side = 72
   const textWidth = width - side * 2
-  const photoHeight = Math.round(height * (isStory ? 0.56 : isSquare ? 0.56 : 0.62))
+  // Measure the text first: the photo takes whatever the text does not need (within limits), so a poster
+  // with little text is not left with a half-empty panel.
+  const left = keySellingPoint
+  const right = targetAudience ? `${targetAudience} 추천` : ""
+  const hasRow = Boolean(left || right)
+  const title = fitTitle(ctx, productName, textWidth, 2, isStory ? 112 : isSquare ? 84 : 100, 56)
+  ctx.font = font(500, isSquare ? 36 : 40)
+  const descriptionLines = productDescription ? wrapText(ctx, productDescription, textWidth, isSquare ? 1 : 2) : []
+  const eyebrowHeight = eyebrow ? (isSquare ? 24 : 34) + 38 : 0
+  const titleHeight = title.size + (title.lines.length - 1) * title.size * 1.12
+  const descriptionHeight = descriptionLines.length ? (isSquare ? 50 : 66) + (descriptionLines.length - 1) * 54 : 0
+  const blockHeight = eyebrowHeight + titleHeight + descriptionHeight
+  const bottomSafe = isStory ? 340 : isSquare ? 40 : 60
+  const rowHeight = hasRow ? 150 : 0
+  const needed = blockHeight + rowHeight + (isSquare ? 70 : 120)
+  const [minShare, maxShare] = isStory ? [0.5, 0.68] : isSquare ? [0.5, 0.62] : [0.56, 0.68]
+  const photoHeight = Math.round(Math.min(height * maxShare, Math.max(height * minShare, height - bottomSafe - needed)))
 
   ctx.fillStyle = paper
   ctx.fillRect(0, 0, width, height)
@@ -381,7 +399,11 @@ function renderPanelPoster({ ctx, image, content, theme, width, height }: Render
   const center = width / 2
   ctx.textAlign = "center"
   ctx.textBaseline = "alphabetic"
-  let y = photoHeight + (isSquare ? 34 : 56)
+  // The text block sits in the middle of the panel (above the info row when there is one).
+  const rowY = height - bottomSafe - (isStory ? 40 : isSquare ? 24 : 32)
+  const panelTop = photoHeight + 16
+  const panelBottom = hasRow ? rowY - 110 : height - bottomSafe
+  let y = Math.max(panelTop + (isSquare ? 30 : 44), panelTop + (panelBottom - panelTop - blockHeight) / 2 + (eyebrow ? 30 : 0))
   if (eyebrow) {
     ctx.font = font(800, 38)
     const [line] = wrapText(ctx, eyebrow, textWidth, 1)
@@ -390,7 +412,6 @@ function renderPanelPoster({ ctx, image, content, theme, width, height }: Render
     drawn.push(line)
     y += isSquare ? 24 : 34
   }
-  const title = fitTitle(ctx, productName, textWidth, 2, isStory ? 112 : isSquare ? 84 : 100, 56)
   setTitleTracking(ctx, title.size)
   ctx.font = font(800, title.size)
   ctx.fillStyle = ink
@@ -398,20 +419,15 @@ function renderPanelPoster({ ctx, image, content, theme, width, height }: Render
   resetTracking(ctx)
   drawn.push(title.lines.join(" "))
   y += title.size + (title.lines.length - 1) * title.size * 1.12 + (isSquare ? 50 : 66)
-  if (productDescription) {
+  if (descriptionLines.length) {
     ctx.font = font(500, isSquare ? 36 : 40)
-    const lines = wrapText(ctx, productDescription, textWidth, isSquare ? 1 : 2)
     ctx.fillStyle = sub
-    lines.forEach((line, index) => ctx.fillText(line, center, y + index * 54))
-    drawn.push(lines.join(" "))
-    y += (lines.length - 1) * 54
+    descriptionLines.forEach((line, index) => ctx.fillText(line, center, y + index * 54))
+    drawn.push(descriptionLines.join(" "))
   }
 
   // Info row at the bottom: the selling point on the left, who it is for on the right.
-  const left = keySellingPoint
-  const right = targetAudience ? `${targetAudience} 추천` : ""
-  if (left || right) {
-    const rowY = Math.max(y + 70, height - (isStory ? 380 : isSquare ? 64 : 92))
+  if (hasRow) {
     ctx.save()
     ctx.strokeStyle = `${sub}55`
     ctx.lineWidth = 2
