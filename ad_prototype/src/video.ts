@@ -3,6 +3,8 @@
 // start on its own: one call to startAiVideo() = at most one paid generation.
 import { downscalePhoto } from "./ai"
 import { storyFramePhoto } from "./videoFrame"
+import { type VideoCaption } from "./videoCaption"
+import { captionVideo } from "./videoCaptioner"
 
 export type AiVideoDetails = {
   productName: string
@@ -151,6 +153,17 @@ function videoFileName(title: string) {
   return `${safe || "홍보잇다"}_AI영상.mp4`
 }
 
+/**
+ * The finished AI clip as a file with the caption drawn in (src/videoCaptioner.ts), made once when the clip is
+ * ready so 저장 / 공유하기 can use it at once (a phone only opens the share sheet right after the tap). Falls back
+ * to the clip as it is when the browser cannot record.
+ */
+export async function prepareAiVideoFile(url: string, title: string, caption?: VideoCaption, accent?: string) {
+  const file = await fetchVideoFile(url, title)
+  if (!caption) return file
+  return (await captionVideo(file, caption, accent, videoFileName(title).replace(/\.mp4$/, ""))) ?? file
+}
+
 async function fetchVideoFile(url: string, title: string) {
   const response = await fetch(url, { mode: "cors", credentials: "omit" })
   if (!response.ok) throw new Error("download-failed")
@@ -162,13 +175,15 @@ async function fetchVideoFile(url: string, title: string) {
  * Saves the real MP4. Tries fetch → blob (needs CORS on the provider CDN); if that is blocked, opens
  * the URL in a new tab with a download attribute so the browser can save it there.
  */
-export async function downloadAiVideo(url: string, title: string): Promise<"saved" | "opened"> {
+export async function downloadAiVideo(url: string, title: string, prepared?: File | null): Promise<"saved" | "opened"> {
   const link = document.createElement("a")
   link.rel = "noopener"
   link.download = videoFileName(title)
   let objectUrl = ""
   try {
-    objectUrl = URL.createObjectURL(await fetchVideoFile(url, title))
+    const file = prepared ?? (await fetchVideoFile(url, title))
+    if (prepared) link.download = prepared.name
+    objectUrl = URL.createObjectURL(file)
     link.href = objectUrl
   } catch {
     link.href = url
@@ -182,11 +197,11 @@ export async function downloadAiVideo(url: string, title: string): Promise<"save
 }
 
 /** Shares the MP4 as a file when the browser allows it, otherwise shares the link. */
-export async function shareAiVideo(url: string, title: string): Promise<"shared" | "cancelled" | "unsupported" | "failed"> {
+export async function shareAiVideo(url: string, title: string, prepared?: File | null): Promise<"shared" | "cancelled" | "unsupported" | "failed"> {
   if (!navigator.share) return "unsupported"
   let data: ShareData = { title, url }
   try {
-    const file = await fetchVideoFile(url, title)
+    const file = prepared ?? (await fetchVideoFile(url, title))
     if (navigator.canShare?.({ files: [file] })) data = { title, files: [file] }
   } catch {
     // CORS or network: fall back to sharing the URL.

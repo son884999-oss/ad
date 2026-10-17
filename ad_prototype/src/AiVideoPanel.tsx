@@ -131,16 +131,16 @@ export function AiVideoStatus({
 }
 
 /** 다운로드 for the real video; returns the message for the action bar. */
-export async function saveRealVideo(state: AiVideoState, title: string) {
+export async function saveRealVideo(state: AiVideoState, title: string, prepared?: File | null) {
   if (!state.videoUrl) return ""
-  const result = await downloadAiVideo(state.videoUrl, title)
+  const result = await downloadAiVideo(state.videoUrl, title, prepared)
   return result === "saved" ? "AI가 만든 영상을 저장했어요." : "새 창에서 영상을 열었어요. 그 화면에서 저장해 주세요."
 }
 
 /** 공유하기 for the real video; returns the message for the share status. */
-export async function shareRealVideo(state: AiVideoState, title: string) {
+export async function shareRealVideo(state: AiVideoState, title: string, prepared?: File | null) {
   if (!state.videoUrl) return ""
-  const result = await shareAiVideo(state.videoUrl, title)
+  const result = await shareAiVideo(state.videoUrl, title, prepared)
   if (result === "shared") return "공유 요청을 전달했어요."
   if (result === "cancelled") return "공유를 취소했어요. 결과는 그대로 있어요."
   if (result === "unsupported") return "이 브라우저는 공유를 지원하지 않아요. 다운로드한 뒤 원하는 앱에서 공유해 주세요."

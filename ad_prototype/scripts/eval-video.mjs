@@ -61,16 +61,17 @@ const contrast = await viewer.evaluate(async (src) => {
   const ctx = canvas.getContext("2d")
   ctx.drawImage(img, 0, 0)
   const lum = (r, g, b) => { const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4 }; return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b) }
-  const zone = (from, to) => {
-    const data = ctx.getImageData(20, Math.round(from * img.height), img.width - 40, Math.round((to - from) * img.height)).data
+  // pick: which share of the background pixels to judge by (0.1 = the worst tenth; 0.5 = the typical one)
+  const zone = (from, to, left = 0.02, right = 0.98, pick = 0.1) => {
+    const data = ctx.getImageData(Math.round(left * img.width), Math.round(from * img.height), Math.round((right - left) * img.width), Math.round((to - from) * img.height)).data
     const ratios = []
     for (let i = 0; i < data.length; i += 16) { const l = lum(data[i], data[i + 1], data[i + 2]); if (l < 0.85) ratios.push(1.05 / (l + 0.05)) }
     ratios.sort((a, b) => a - b)
-    return ratios[Math.floor(ratios.length * 0.1)] ?? 21
+    return ratios[Math.floor(ratios.length * pick)] ?? 21
   }
   // src/videoCaption.ts with a headline and a call to action (this script's input): headline rows ≈ 1354–1458 of
   // 1920, shop name pill 240–316.
-  return { headline: zone(0.705, 0.76), brand: zone(0.125, 0.165) }
+  return { headline: zone(0.705, 0.76), brand: zone(0.13, 0.16, 0.075, 0.2, 0.5) } // inside the pill: its typical colour (text edges are grey)
 }, `data:image/png;base64,${(await readFile(frames.at(-1))).toString("base64")}`)
 
 const sheet = await browser.newPage({ viewport: { width: 1600, height: 760 } })

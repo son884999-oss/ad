@@ -105,7 +105,7 @@ export function drawVideoCaption(ctx: CanvasRenderingContext2D, seconds: number,
       ctx.font = font(800, 40)
       const [line] = wrap(ctx, caption.eyebrow ?? "", textWidth - 56, 1)
       const pillWidth = ctx.measureText(line).width + 56
-      ctx.fillStyle = "rgba(20,14,10,.62)"
+      ctx.fillStyle = "rgba(20,14,10,.72)"
       ctx.beginPath()
       ctx.roundRect(SIDE, TOP_SAFE, pillWidth, 76, 38)
       ctx.fill()

@@ -19,7 +19,7 @@ import { loadRecords, saveRecords } from "./recordsStore"
 import { analyzePhotoOnce, generatePromoText, isAiUnavailable, type PhotoCheck, type PhotoSuggestion, type PromoTextResult } from "./ai"
 import { useAiVideo, type AiVideoController, type SavedAiVideo } from "./useAiVideo"
 import { AiVideoPlayer, AiVideoStatus, saveRealVideo, shareRealVideo, showsRealVideo } from "./AiVideoPanel"
-import { toVideoDetails } from "./video"
+import { prepareAiVideoFile, toVideoDetails } from "./video"
 import { buildPosterContent, loadPosterFonts, POSTER_THEMES, posterThemeFor, renderPosterToCanvas } from "./poster"
 import { photoPalette } from "./poster/photoColor"
 import { localBody, localCopy } from "./localCopy"
@@ -1493,6 +1493,18 @@ function CreateFlow({
     price: details.priceInfo?.trim() || undefined,
     cta: videoCaption.cta || undefined,
   }
+  // The real AI clip with the same caption, made once when it is ready (저장 / 공유하기 then need no wait).
+  const [realVideoFile, setRealVideoFile] = useState<File | null>(null)
+  const realVideoKey = aiVideo.state.phase === "completed" && aiVideo.state.videoUrl ? JSON.stringify([aiVideo.state.videoUrl, sampleCaption]) : ""
+  useEffect(() => {
+    setRealVideoFile(null)
+    if (!realVideoKey || !aiVideo.state.videoUrl) return
+    let live = true
+    void prepareAiVideoFile(aiVideo.state.videoUrl, details.shopName?.trim() || details.name?.trim() || "", sampleCaption, channelTheme.rgb)
+      .then((file) => { if (live) setRealVideoFile(file) })
+      .catch(() => undefined)
+    return () => { live = false }
+  }, [realVideoKey]) // eslint-disable-line react-hooks/exhaustive-deps
   const posterRatio: PosterRatioKey = details.posterRatio ?? "4:5"
   // D's renderer has no side-by-side layout for a square; it would quietly fall back.
   const posterLayout: PosterLayoutKey = posterRatio === "1:1" && details.posterLayout === "split" ? "vertical" : details.posterLayout ?? "vertical"
@@ -2642,11 +2654,11 @@ function CreateFlow({
                   onClick={() => videoStatus === "preparing"
                     ? cancelVideoPreparation()
                     : showsRealVideo(aiVideo.state)
-                      ? saveRealVideo(aiVideo.state, details.shopName?.trim() || details.name?.trim() || "").then(setVideoMessage)
+                      ? saveRealVideo(aiVideo.state, details.shopName?.trim() || details.name?.trim() || "", realVideoFile).then(setVideoMessage)
                       : prepareVideoDownload()}
                   busy={videoStatus === "preparing"}
                   onShare={() => showsRealVideo(aiVideo.state)
-                    ? shareRealVideo(aiVideo.state, details.shopName?.trim() || details.name?.trim() || "홍보 영상").then((message) => setShareMessages((current) => ({ ...current, video: message })))
+                    ? shareRealVideo(aiVideo.state, details.shopName?.trim() || details.name?.trim() || "홍보 영상", realVideoFile).then((message) => setShareMessages((current) => ({ ...current, video: message })))
                     : shareResult("video")}
                   shareMessage={aiNote(t(shareMessages.video ?? ""))}
                   error={videoStatus === "failed" || videoStatus === "unsupported"}
