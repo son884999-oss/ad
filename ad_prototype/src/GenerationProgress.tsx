@@ -27,6 +27,9 @@ const flows: Record<Kind, { heading: string; done: string; steps: Step[] }> = {
   ] },
 }
 
+/** Just before the middle step (until 68) is ticked off. */
+const HOLD = 66
+
 // Shown between "홍보물 만들기" and the results: the user's own photo becomes a poster preview
 // while a short checklist ticks off. Progress is time-based for the prototype and only reaches
 // 100% once the real preview is ready.
@@ -49,10 +52,11 @@ export default function GenerationProgress({
 }) {
   const t = (text: string) => uiText(text, easyMode)
   const [percent, setPercent] = useState(0)
-  // The bar holds at 95% while the AI text is still coming; after 3 s say so instead of looking frozen.
+  // Until the result is really ready the bar holds at HOLD, inside the middle (text) step, so that step is never
+  // ticked off while the AI text is still coming; after 3 s it says so instead of looking frozen.
   const [slow, setSlow] = useState(false)
   useEffect(() => {
-    if (ready || percent < 95) return
+    if (ready || percent < HOLD) return
     const timer = window.setTimeout(() => setSlow(true), 3000)
     return () => window.clearTimeout(timer)
   }, [ready, percent])
@@ -66,7 +70,7 @@ export default function GenerationProgress({
 
   useEffect(() => {
     const timer = window.setInterval(() => {
-      setPercent((value) => Math.min(ready ? 100 : 95, value + (value < 70 ? 2 : 1)))
+      setPercent((value) => Math.min(ready ? 100 : HOLD, value + (value < 70 ? 2 : 1)))
     }, 40)
     return () => window.clearInterval(timer)
   }, [ready])

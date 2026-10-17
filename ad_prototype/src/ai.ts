@@ -63,6 +63,8 @@ const MAX_IMAGE_SIZE = 1024
 
 // Once the server says AI is off (or the API is missing, e.g. a static preview), stop asking.
 let aiUnavailable = false
+/** True once the server said AI is not set up (or there is no API): the app then simply works without it. */
+export const isAiUnavailable = () => aiUnavailable
 
 async function postJson(url: string, body: unknown, { signal, timeoutMs = DEFAULT_TIMEOUT_MS }: RequestOptions) {
   if (aiUnavailable || signal?.aborted) return null

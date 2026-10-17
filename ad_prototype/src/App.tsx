@@ -17,7 +17,7 @@ import { recognitionConstructor, useVoiceInput } from "./useVoiceInput"
 import VoiceField from "./VoiceField"
 import { isMobileDevice } from "./DesktopStage"
 import { loadRecords, saveRecords } from "./recordsStore"
-import { analyzePhotoOnce, generatePromoText, type PhotoCheck, type PhotoSuggestion, type PromoTextResult } from "./ai"
+import { analyzePhotoOnce, generatePromoText, isAiUnavailable, type PhotoCheck, type PhotoSuggestion, type PromoTextResult } from "./ai"
 import { useAiVideo, type AiVideoController, type SavedAiVideo } from "./useAiVideo"
 import { AiVideoPlayer, AiVideoStatus, saveRealVideo, shareRealVideo, showsRealVideo } from "./AiVideoPanel"
 import { toVideoDetails } from "./video"
@@ -41,6 +41,9 @@ import {
   StudioHome as Home,
   StudioLogin as Login,
 } from "./StudioScreens"
+
+/** Photo analysis with nothing in it: used when the analysis failed, to clear AI text left from an earlier photo. */
+const EMPTY_SUGGESTION: PhotoSuggestion = { productName: "", description: "", highlights: "", keyFeatures: [], targetAudience: "", tones: [], visualDetails: [], subjectBox: null, photoCheck: { isRealPhoto: true, isBlurry: false, reason: "" } }
 
 type Page = "login" | "home" | "create" | "records" | "plan"
 
@@ -1084,7 +1087,7 @@ function CreateFlow({
   const aiFilledRef = useRef<Partial<Record<string, string>>>({})
   const aiEligibleImageRef = useRef("")
   const analyzedImageRef = useRef("")
-  const [photoFill, setPhotoFill] = useState<"idle" | "loading" | "filled">("idle")
+  const [photoFill, setPhotoFill] = useState<"idle" | "loading" | "filled" | "failed">("idle")
   // AI photo check (from the same analysis): shown on the photo step only if it arrives while the
   // user is still there; after moving on it is dropped so nothing interrupts.
   const [aiPhotoCheck, setAiPhotoCheck] = useState<{ image: string; check: PhotoCheck } | null>(null)
@@ -1118,7 +1121,10 @@ function CreateFlow({
     void analyzePhotoOnce(imageUrl).then((suggestion) => {
       if (controller.signal.aborted) return
       analyzedImageRef.current = imageUrl
-      setPhotoFill(suggestion && applyPhotoSuggestion(suggestion) ? "filled" : "idle")
+      // No answer for this photo: what the AI wrote for an earlier photo no longer fits, so it is cleared too.
+      const applied = applyPhotoSuggestion(suggestion ?? EMPTY_SUGGESTION)
+      // A failed analysis is said out loud, so the owner knows to type instead of waiting (not when AI is off).
+      setPhotoFill(suggestion ? (applied ? "filled" : "idle") : isAiUnavailable() ? "idle" : "failed")
     })
     return () => {
       controller.abort()
@@ -1142,6 +1148,14 @@ function CreateFlow({
     let changed = false
     for (const [key, value] of textFields) {
       const currentValue = String(current[key] ?? "")
+      // The new photo has nothing for this field: an AI value from the previous photo (not edited by the owner)
+      // would describe the wrong thing, so it is cleared.
+      if (!value && filled[key] && currentValue === filled[key] && !userEditedRef.current.has(key)) {
+        Object.assign(next, { [key]: "" })
+        delete filled[key]
+        changed = true
+        continue
+      }
       if (!value || !fillable(key, currentValue) || currentValue === value) continue
       Object.assign(next, { [key]: value })
       filled[key] = value
@@ -2042,7 +2056,7 @@ function CreateFlow({
             </h2>
             <p>{t("사진과 입력한 내용으로 만든 체험 결과예요. ")}</p>
           </div>
-          {(showCopy || showPoster) && (
+          {showCopy && (
             <p className={`ai-notice${activePromo ? " is-ai" : ""}`}>
               {t(activePromo ? "AI가 쓴 글이 들어 있어요. 올리기 전에 읽어 봐 주세요." : "AI 없이 기본 문구로 만들었어요.")}
             </p>
@@ -2131,7 +2145,7 @@ function CreateFlow({
               {photoFill !== "idle" && (
                 <p className={`ai-fill-status${photoFill === "loading" ? " is-loading" : ""}`}>
                   {photoFill === "loading" && <span className="ai-fill-spinner" aria-hidden="true" />}
-                  {t(photoFill === "loading" ? "사진을 보고 내용을 채우고 있어요…" : "사진을 보고 채웠어요. 맞지 않으면 고쳐 주세요.")}
+                  {t(photoFill === "loading" ? "사진을 보고 내용을 채우고 있어요…" : photoFill === "failed" ? "사진을 읽지 못했어요. 아래 칸에 직접 적어 주세요." : "사진을 보고 채웠어요. 맞지 않으면 고쳐 주세요.")}
                 </p>
               )}
             </div>
