@@ -1896,7 +1896,12 @@ function CreateFlow({
           framed,
           caption: sampleCaption,
           points: (details.keywords ?? "").split(",").map((item) => item.trim()).filter(Boolean),
-          accent: channelTheme.rgb,
+          // The photo's own deep colour (as on the poster) for the shop pill and the call to action; the channel
+          // colour (navy for 파일만 저장) clashed with warm food photos.
+          accent: (() => {
+            const ink = photoPalette(image)?.ink
+            return ink ? [1, 3, 5].map((i) => parseInt(ink.slice(i, i + 2), 16)).join(", ") : channelTheme.rgb
+          })(),
           effect: motionEffectFor([details.name, details.description, details.features, details.keywords].filter(Boolean).join(" ")),
         }
 
