@@ -818,3 +818,15 @@ html[data-view=mobile] .easy-offer { top:calc(64px * var(--s) + 34px); }
    When real login arrives, swap these back (see 품질개선_로드맵.md). */
 .reference-login-form .studio-primary { border:1.5px solid #b44d1d;background:#fff;color:#93390f;box-shadow:none; }
 .reference-login-guest { border:1px solid #a84418;background:linear-gradient(110deg,#bd5219,#963710);color:#fff;box-shadow:0 3px 8px #8a3a1430; }
+/* Home: room to breathe between the button, the sample cards and the 세 단계 guide (tall screens only;
+   short screens keep the tight layout above so everything still fits) */
+@container studio-main (min-height:640px) {
+ :where(html[data-layout=mobile]) .reference-home .home-samples { margin-top:calc(18px * var(--s));margin-bottom:calc(14px * var(--s)); }
+ .reference-home .reference-home-steps { margin-top:calc(22px * var(--s)); }
+}
+@container studio-main (min-height:561px) and (max-height:639px) {
+ :where(html[data-layout=mobile]) .reference-home .home-samples { margin-bottom:calc(8px * var(--s)); }
+ .reference-home .reference-home-steps { margin-top:calc(16px * var(--s)); }
+}
+/* 쉬운 화면 home scrolls anyway, so it always gets the gap */
+.easy-mode .reference-home .reference-home-steps { margin-top:calc(24px * var(--s)); }
