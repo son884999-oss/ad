@@ -859,3 +859,10 @@ html[data-view=mobile] .easy-offer { top:calc(64px * var(--s) + 34px); }
 .record-delete { min-width:44px;min-height:44px;padding:0 12px;border:1px solid #c9b3a2;border-radius:10px;background:#fff;color:#93390f;font-size:max(14px,calc(14px * var(--s)));font-weight:700; }
 .records-grid .record-delete { width:100%;margin-top:6px; } /* below the card, never over it: no accidental delete */
 .easy-mode .record-delete { min-height:52px;font-size:calc(17px * var(--s)); }
+/* Video preview caption = the caption in the saved video (src/videoCaption.ts): dark fade at the bottom,
+   white headline, light product line, white call-to-action pill. */
+.reference-app .result-motion-preview:not(:has(.ai-video-player)) strong.video-caption { left:0;right:0;bottom:0;top:auto;transform:none;width:auto;max-width:none;align-items:flex-start;gap:6px;padding:56px 16px 16px;border-radius:0;background:linear-gradient(rgba(20,14,10,0),rgba(20,14,10,.8) 40%,rgba(20,14,10,.92));box-shadow:none; }
+.reference-app .result-motion-preview:not(:has(.ai-video-player)) .video-caption > * { text-align:left; }
+.reference-app .result-motion-preview:not(:has(.ai-video-player)) .video-caption-headline { color:#fff;font-size:calc(22px * var(--s,1)); }
+.reference-app .result-motion-preview:not(:has(.ai-video-player)) .video-caption-brand { color:#f4eee8; }
+.reference-app .result-motion-preview:not(:has(.ai-video-player)) .video-caption-cta { background:#fff;color:var(--color-brand-hover); }

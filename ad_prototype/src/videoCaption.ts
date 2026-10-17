@@ -1,0 +1,149 @@
+// Captions for the 9:16 videos (1080 × 1920), in the same style as the "사진 크게" poster: a dark fade at the
+// bottom carrying a large white headline, the product line, the price and a call-to-action pill, and the shop
+// name on a see-through pill at the top. Lines rise in one after another. Reels / Shorts cover about the top
+// 240 px and the bottom 340 px with their own buttons, so nothing is drawn there.
+// Used for the sample video, and later on top of the real AI clip.
+
+export type VideoCaption = {
+  /** Shop name, top-left. */
+  eyebrow?: string
+  headline: string
+  /** The product line under the headline (shop · product), when it is not the headline itself. */
+  subline?: string
+  price?: string
+  cta?: string
+}
+
+const FONT = '"Pretendard Variable", Pretendard, "Noto Sans KR", sans-serif'
+const font = (weight: number, size: number) => `${weight} ${size}px ${FONT}`
+const SIDE = 72
+const TOP_SAFE = 240
+const BOTTOM_SAFE = 340
+
+/** Word wrap with a character fallback for long unspaced Korean words; the last line gets "…" when cut. */
+function wrap(ctx: CanvasRenderingContext2D, text: string, maxWidth: number, maxLines: number) {
+  const lines: string[] = []
+  let line = ""
+  for (const word of text.trim().split(/\s+/).filter(Boolean)) {
+    const candidate = line ? `${line} ${word}` : word
+    if (ctx.measureText(candidate).width <= maxWidth) {
+      line = candidate
+      continue
+    }
+    if (line) lines.push(line)
+    line = ""
+    for (const character of Array.from(word)) {
+      if (ctx.measureText(line + character).width <= maxWidth) line += character
+      else {
+        lines.push(line)
+        line = character
+      }
+    }
+  }
+  if (line) lines.push(line)
+  if (lines.length <= maxLines) return lines
+  const kept = lines.slice(0, maxLines)
+  let last = kept[maxLines - 1]
+  while (last.length > 1 && ctx.measureText(`${last}…`).width > maxWidth) last = Array.from(last).slice(0, -1).join("")
+  kept[maxLines - 1] = `${last.trimEnd()}…`
+  return kept
+}
+
+/** 0 → 1 over 0.45 s starting at `from` seconds. */
+const appear = (seconds: number, from: number) => Math.min(Math.max((seconds - from) / 0.45, 0), 1)
+
+/**
+ * Draws the caption for the frame at `seconds` on a 1080 × 1920 canvas (call after drawing the picture).
+ * `accent` is the shop's colour for the call-to-action text, as "r, g, b".
+ */
+export function drawVideoCaption(ctx: CanvasRenderingContext2D, seconds: number, caption: VideoCaption, accent = "150, 55, 16") {
+  const { width, height } = ctx.canvas
+  const textWidth = width - SIDE * 2
+
+  // Measure bottom-up so the fade sits exactly behind the text block.
+  ctx.font = font(800, 104)
+  const headline = wrap(ctx, caption.headline, textWidth, 2)
+  ctx.font = font(600, 46)
+  const subline = caption.subline ? wrap(ctx, caption.subline, textWidth, 1) : []
+  let y = height - BOTTOM_SAFE
+  const ctaY = caption.cta ? y - 92 : y
+  if (caption.cta) y -= 92 + 30
+  const priceY = caption.price ? y : 0
+  if (caption.price) y -= 84 + 22
+  const sublineY = subline.length ? y : 0
+  if (subline.length) y -= 46 + 26
+  const headlineBottom = y
+  const headlineTop = headlineBottom - (headline.length - 1) * 116 - 104
+
+  // Clear above the text, already dark at the headline (white text on a white cup must stay readable).
+  const fadeStart = Math.max(0, headlineTop - 320)
+  const fade = ctx.createLinearGradient(0, fadeStart, 0, height)
+  fade.addColorStop(0, "rgba(20,14,10,0)")
+  fade.addColorStop(Math.min(0.95, 280 / (height - fadeStart)), "rgba(20,14,10,.78)")
+  fade.addColorStop(1, "rgba(20,14,10,.92)")
+  ctx.fillStyle = fade
+  ctx.fillRect(0, 0, width, height)
+
+  const rise = (value: number, draw: () => void) => {
+    if (value <= 0) return
+    ctx.save()
+    ctx.globalAlpha = value
+    ctx.translate(0, (1 - value) * 28)
+    draw()
+    ctx.restore()
+  }
+  ctx.textAlign = "left"
+  ctx.textBaseline = "alphabetic"
+
+  if (caption.eyebrow) {
+    rise(appear(seconds, 0.2), () => {
+      const top = ctx.createLinearGradient(0, 0, 0, TOP_SAFE + 200)
+      top.addColorStop(0, "rgba(20,14,10,.5)")
+      top.addColorStop(1, "rgba(20,14,10,0)")
+      ctx.fillStyle = top
+      ctx.fillRect(0, 0, width, TOP_SAFE + 200)
+      ctx.font = font(800, 40)
+      const [line] = wrap(ctx, caption.eyebrow ?? "", textWidth - 56, 1)
+      const pillWidth = ctx.measureText(line).width + 56
+      ctx.fillStyle = "rgba(20,14,10,.62)"
+      ctx.beginPath()
+      ctx.roundRect(SIDE, TOP_SAFE, pillWidth, 76, 38)
+      ctx.fill()
+      ctx.fillStyle = "#ffffff"
+      ctx.fillText(line, SIDE + 28, TOP_SAFE + 52)
+    })
+  }
+  rise(appear(seconds, 0.4), () => {
+    ctx.font = font(800, 104)
+    ctx.fillStyle = "#ffffff"
+    headline.forEach((line, index) => ctx.fillText(line, SIDE, headlineTop + 104 + index * 116))
+  })
+  if (subline.length) {
+    rise(appear(seconds, 1.1), () => {
+      ctx.font = font(600, 46)
+      ctx.fillStyle = "#f4eee8"
+      ctx.fillText(subline[0], SIDE, sublineY)
+    })
+  }
+  if (caption.price) {
+    rise(appear(seconds, 1.8), () => {
+      ctx.font = font(800, 84)
+      ctx.fillStyle = "#ffc79e"
+      const [line] = wrap(ctx, caption.price ?? "", textWidth, 1)
+      ctx.fillText(line, SIDE, priceY)
+    })
+  }
+  if (caption.cta) {
+    rise(appear(seconds, 2.8), () => {
+      ctx.font = font(800, 44)
+      const [line] = wrap(ctx, caption.cta ?? "", textWidth - 88, 1)
+      const pillWidth = ctx.measureText(line).width + 88
+      ctx.fillStyle = "#ffffff"
+      ctx.beginPath()
+      ctx.roundRect(SIDE, ctaY, pillWidth, 92, 46)
+      ctx.fill()
+      ctx.fillStyle = `rgb(${accent})`
+      ctx.fillText(line, SIDE + 44, ctaY + 62)
+    })
+  }
+}

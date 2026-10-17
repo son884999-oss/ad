@@ -68,8 +68,9 @@ const contrast = await viewer.evaluate(async (src) => {
     ratios.sort((a, b) => a - b)
     return ratios[Math.floor(ratios.length * 0.1)] ?? 21
   }
-  // Headline is drawn around y 1040/1920 and the shop name around 1206/1920 (src/App.tsx sample video).
-  return { headline: zone(0.49, 0.54), brand: zone(0.615, 0.64) }
+  // src/videoCaption.ts with a headline and a call to action (this script's input): headline rows ≈ 1354–1458 of
+  // 1920, shop name pill 240–316.
+  return { headline: zone(0.705, 0.76), brand: zone(0.125, 0.165) }
 }, `data:image/png;base64,${(await readFile(frames.at(-1))).toString("base64")}`)
 
 const sheet = await browser.newPage({ viewport: { width: 1600, height: 760 } })

@@ -11,7 +11,6 @@ import {
   useRef,
   useState,
 } from "react"
-import { wrapCanvasText } from "./canvasText"
 import { uiText } from "./easyText"
 import { recognitionConstructor, useVoiceInput } from "./useVoiceInput"
 import VoiceField from "./VoiceField"
@@ -24,6 +23,7 @@ import { toVideoDetails } from "./video"
 import { buildPosterContent, loadPosterFonts, POSTER_THEMES, posterThemeFor, renderPosterToCanvas } from "./poster"
 import { photoPalette } from "./poster/photoColor"
 import { localBody, localCopy } from "./localCopy"
+import { drawVideoCaption, type VideoCaption } from "./videoCaption"
 import type { PosterThemeKey } from "./poster"
 import PhotoStep from "./PhotoStep"
 import GenerationProgress from "./GenerationProgress"
@@ -541,27 +541,6 @@ function drawImageCover(
   )
 }
 
-function drawWrappedText(
-  context: CanvasRenderingContext2D,
-
-  text: string,
-
-  x: number,
-
-  y: number,
-
-  maxWidth: number,
-
-  lineHeight: number,
-
-  maxLines: number,
-) {
-  const lines = wrapCanvasText(context, text, maxWidth, maxLines)
-
-  lines.forEach((value, index) =>
-    context.fillText(value, x, y + index * lineHeight),
-  )
-}
 
 /** "바닐라_라떼_포스터_20261016.png" — product name and date, like D_고혜숙's generatePosterFilename. */
 function outputFileName(title: string, kind: string, extension: string) {
@@ -1501,10 +1480,19 @@ function CreateFlow({
     const headline = activePromo?.videoHeadline || name || shop || details.description.trim()
     return {
       headline,
-      brand: [shop, name].filter((value) => value && value !== headline).join(" · "),
+      // A name the headline already contains ("오늘 만든 크림 커피") is not repeated underneath.
+      brand: [shop, name].filter((value) => value && !headline.includes(value)).join(" · "),
       cta: activePromo?.cta || (shop ? `${shop}에서 만나요` : ""),
     }
   })()
+  // The same caption drawn into the 9:16 video file.
+  const sampleCaption: VideoCaption = {
+    eyebrow: details.shopName?.trim() || undefined,
+    headline: videoCaption.headline,
+    subline: details.name?.trim() && !videoCaption.headline.includes(details.name.trim()) ? details.name.trim() : undefined,
+    price: details.priceInfo?.trim() || undefined,
+    cta: videoCaption.cta || undefined,
+  }
   const posterRatio: PosterRatioKey = details.posterRatio ?? "4:5"
   // D's renderer has no side-by-side layout for a square; it would quietly fall back.
   const posterLayout: PosterLayoutKey = posterRatio === "1:1" && details.posterLayout === "split" ? "vertical" : details.posterLayout ?? "vertical"
@@ -1814,9 +1802,6 @@ function CreateFlow({
           const t = ease(Math.min(Math.max((progress - a.at) / (b.at - a.at), 0), 1))
           return { zoom: a.zoom + (b.zoom - a.zoom) * t, x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t }
         }
-        // Each caption line rises in at its own time (A_손용범 compose-push order).
-        const appear = (seconds: number, from: number) => Math.min(Math.max((seconds - from) / 0.45, 0), 1)
-        const font = (weight: number, size: number) => `${weight} ${size}px "Pretendard Variable", "Noto Sans KR", sans-serif`
 
         const drawFrame = (now: number) => {
           if (videoCancelledRef.current) return
@@ -1841,48 +1826,8 @@ function CreateFlow({
 
           context.restore()
 
-          // Soft scrim behind the caption; text stays inside the Reels/Shorts safe area (about 52–66% height).
-          const scrim = context.createLinearGradient(0, 860, 0, 1620)
-          scrim.addColorStop(0, `rgba(${channelTheme.rgb},0)`)
-          scrim.addColorStop(0.25, `rgba(${channelTheme.rgb},0.72)`)
-          scrim.addColorStop(0.65, `rgba(${channelTheme.rgb},0.72)`)
-          scrim.addColorStop(1, `rgba(${channelTheme.rgb},0)`)
-          context.fillStyle = scrim
-          context.fillRect(0, 860, canvas.width, 760)
-
-          const line = (value: number, draw: () => void) => {
-            if (value <= 0) return
-            context.save()
-            context.globalAlpha = value
-            context.translate(0, (1 - value) * 24)
-            draw()
-            context.restore()
-          }
-
-          line(appear(seconds, 0.3), () => {
-            context.fillStyle = "#ffffff"
-            context.font = font(800, 72)
-            drawWrappedText(context, videoCaption.headline, 72, 1040, 936, 88, 2)
-          })
-          if (videoCaption.brand) {
-            line(appear(seconds, 1.2), () => {
-              context.fillStyle = "#ffffff"
-              context.font = font(600, 42)
-              drawWrappedText(context, videoCaption.brand, 72, 1206, 936, 54, 1)
-            })
-          }
-          if (videoCaption.cta) {
-            line(appear(seconds, 3.5), () => {
-              context.font = font(700, 42)
-              const width = Math.min(context.measureText(videoCaption.cta).width + 80, 936)
-              context.fillStyle = "#ffffff"
-              context.beginPath()
-              context.roundRect(72, 1240, width, 84, 42)
-              context.fill()
-              context.fillStyle = `rgb(${channelTheme.rgb})`
-              context.fillText(videoCaption.cta, 112, 1296, 936 - 80)
-            })
-          }
+          // Poster-style caption (src/videoCaption.ts): dark fade, big white headline, price, call to action.
+          drawVideoCaption(context, seconds, sampleCaption, channelTheme.rgb)
 
           if (progress < 1) {
             videoFrameRef.current = window.requestAnimationFrame(drawFrame)

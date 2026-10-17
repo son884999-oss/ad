@@ -108,8 +108,11 @@ function measure() {
       const s = getComputedStyle(n)
       if (s.backgroundImage !== "none") {
         if (!s.backgroundImage.includes("gradient")) return null // photo behind text: skip
-        const stops = (s.backgroundImage.match(/rgba?([^)]*)/g) || []).map(parse).filter((c) => (c[3] ?? 1) >= 1)
+        const all = (s.backgroundImage.match(/rgba?\([^)]*\)/g) || []).map(parse)
+        const stops = all.filter((c) => (c[3] ?? 1) >= 1)
         if (stops.length) { layers.push(stops); break }
+        // Only see-through stops (a fade over a photo or video): what is behind is unknown, like a photo.
+        if (all.length) return null
       }
       const c = parse(s.backgroundColor)
       if ((c[3] ?? 1) > 0) { layers.push([c]); if ((c[3] ?? 1) >= 1) break }
