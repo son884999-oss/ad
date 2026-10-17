@@ -839,3 +839,10 @@ html[data-view=mobile] .easy-offer { top:calc(64px * var(--s) + 34px); }
  .result-tabs button svg { display:none; }
  .result-action-buttons { grid-template-columns:1fr; }
 }
+/* The note above the fixed 만들기 bar sits over scrolling text: give it its own background so the two never mix */
+.details-primary-bar .missing-details-note { padding:calc(4px * var(--s)) 8px;border-radius:8px;background:#fff;box-shadow:0 0 0 6px #fff; }
+.details-primary-bar .missing-details-note:empty { background:none;box-shadow:none; }
+/* First-visit offer: part of the page under the header (it used to float over the home headline) */
+.easy-offer,html[data-view=mobile] .easy-offer { position:relative;top:auto;right:auto;flex:none;margin:2px 12px 6px auto; }
+/* One main (orange) button per screen: on home that is 홍보물 만들기, so the offer uses a softer emphasis */
+.easy-offer .easy-offer-yes { border:1.5px solid #b44d1d;background:#fdf0e6;color:#93390f;font-weight:800; }
