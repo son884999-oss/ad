@@ -25,6 +25,7 @@ import { photoPalette } from "./poster/photoColor"
 import { localBody, localCopy } from "./localCopy"
 import { type VideoCaption } from "./videoCaption"
 import { drawStoryFrame } from "./videoFrame"
+import { makeScene } from "./scene"
 import { drawMotionFrame, MOTION_SECONDS, motionEffectFor, type MotionScene } from "./motionVideo"
 import type { PosterThemeKey } from "./poster"
 import PhotoStep from "./PhotoStep"
@@ -61,6 +62,8 @@ type FileStatus = "idle" | "preparing" | "ready" | "cancelled" | "failed" | "uns
 type GeneratedRecord = {
   editedHashtags?: Record<Channel, boolean>
   id: string
+  /** 고급형 "배경 바꾸기" picture (data URL) the poster and the AI video were made from. */
+  sceneUrl?: string
   /** Results the owner deleted from 내 홍보물 (the record goes when all of them are gone). */
   removed?: ("poster" | "video" | "copy")[]
 
@@ -134,16 +137,16 @@ const posterLayoutOptions: [PosterLayoutKey, string][] = [
   ["editorial", "사진 먼저"],
 ]
 /** 기본형 (free motion video) or 고급형 (paid AI video), chosen under the photo. */
-function VideoModeToggle({ value, premiumAvailable, easyMode, onChange }: { value: "basic" | "premium"; premiumAvailable: boolean; easyMode: boolean; onChange: (value: "basic" | "premium") => void }) {
+function VideoModeToggle({ value, premiumAvailable, easyMode, onChange, withVideo = true }: { value: "basic" | "premium"; premiumAvailable: boolean; easyMode: boolean; onChange: (value: "basic" | "premium") => void; withVideo?: boolean }) {
   const t = (text: string) => uiText(text, easyMode)
   const options: ["basic" | "premium", string, string][] = [
     ["basic", "기본형", "무료 · 바로 만들어요"],
-    ["premium", "고급형", premiumAvailable ? "AI 영상 · 유료 · 약 2분" : "지금은 쓸 수 없어요"],
+    ["premium", "고급형", premiumAvailable ? (withVideo ? "AI 배경 + AI 영상 · 유료 · 약 3분" : "AI 배경 · 유료 · 약 1분") : "지금은 쓸 수 없어요"],
   ]
   const current = premiumAvailable ? value : "basic"
   return (
     <fieldset className="video-mode" role="radiogroup">
-      <legend>{t("영상은 어떻게 만들까요?")}</legend>
+      <legend>{t(withVideo ? "영상은 어떻게 만들까요?" : "포스터는 어떻게 만들까요?")}</legend>
       <div>
         {options.map(([id, label, note], index) => (
           <button
@@ -981,6 +984,8 @@ function CreateFlow({
   aiPromo,
   setAiPromo,
   aiVideo,
+  sceneImage,
+  setSceneImage,
   onStopSpeech,
 }: {
   onStopSpeech?: () => void
@@ -1029,6 +1034,9 @@ function CreateFlow({
   aiPromo: AiPromo | null
   setAiPromo: (promo: AiPromo | null) => void
   aiVideo: AiVideoController
+  /** 고급형 scene picture for the photo it was made from (kept in App so 내 홍보물 can save and reopen it). */
+  sceneImage: { forImage: string; url: string } | null
+  setSceneImage: (scene: { forImage: string; url: string } | null) => void
 }) {
   const { notify } = useFeedback()
   const t = (text: string) => uiText(text, easyMode)
@@ -1543,11 +1551,50 @@ function CreateFlow({
       .catch(() => undefined)
     return () => { live = false }
   }, [realVideoKey]) // eslint-disable-line react-hooks/exhaustive-deps
+  // 고급형: one scene picture (about a minute), then the AI video from it. Without the scene (failed or
+  // switched off) the AI video is made from the photo as before.
+  const [sceneState, setSceneState] = useState<{ forImage: string; status: "making" | "ready" | "failed" } | null>(null)
+  const sceneControllerRef = useRef<AbortController | null>(null)
+  useEffect(() => () => sceneControllerRef.current?.abort(), [])
+  const startPremium = () => {
+    const forImage = imageUrl
+    const box = photoBox?.image === imageUrl ? photoBox.box : null
+    const videoDetails = toVideoDetails(details)
+    if (sceneImage?.forImage === forImage) {
+      setSceneState({ forImage, status: "ready" })
+      if (showVideo) aiVideo.start({ imageUrl: sceneImage.url, details: videoDetails, box: null })
+      return
+    }
+    sceneControllerRef.current?.abort()
+    const controller = new AbortController()
+    sceneControllerRef.current = controller
+    setSceneState({ forImage, status: "making" })
+    void makeScene(forImage, { productName: details.name?.trim() ?? "", productDescription: details.description, highlights: details.features }, box, controller.signal).then((result) => {
+      if (controller.signal.aborted) return
+      if ("url" in result) {
+        setSceneImage({ forImage, url: result.url })
+        setSceneState({ forImage, status: "ready" })
+        if (showVideo) aiVideo.start({ imageUrl: result.url, details: videoDetails, box: null })
+      } else {
+        setSceneState({ forImage, status: "failed" })
+        if (showVideo) aiVideo.start({ imageUrl: forImage, details: videoDetails, box })
+      }
+    })
+  }
+  const sceneNotice = sceneState?.forImage === imageUrl
+    ? sceneState.status === "making"
+      ? "고급형 배경을 만들고 있어요 · 약 1분. 다 되면 포스터와 영상이 바뀌어요."
+      : sceneState.status === "ready"
+        ? "AI가 배경을 바꿨어요. 제품은 그대로예요."
+        : "배경을 바꾸지 못해서 원래 사진으로 만들었어요."
+    : ""
   const posterRatio: PosterRatioKey = details.posterRatio ?? "4:5"
   // D's renderer has no side-by-side layout for a square; it would quietly fall back.
   const posterLayout: PosterLayoutKey = posterRatio === "1:1" && details.posterLayout === "split" ? "vertical" : details.posterLayout ?? "vertical"
   const posterTheme: PosterThemeKey = details.posterTheme || posterThemeFor(tones)
-  const posterKey = JSON.stringify([posterContent, posterTheme, posterRatio, posterLayout, photoBox?.image === imageUrl ? photoBox.box : null])
+  // 고급형: the poster is drawn from the new advertising scene once it is back (the product is unchanged).
+  const sceneUrl = sceneImage?.forImage === imageUrl ? sceneImage.url : ""
+  const posterKey = JSON.stringify([posterContent, posterTheme, posterRatio, posterLayout, photoBox?.image === imageUrl ? photoBox.box : null, sceneUrl.length])
   const posterDrawnTextRef = useRef("")
 
   const createPosterFile = async (download: boolean) => {
@@ -1566,7 +1613,7 @@ function CreateFlow({
     if (download) setPosterStatus("preparing")
 
     try {
-      const image = await loadCanvasImage(imageUrl)
+      const image = await loadCanvasImage(sceneUrl || imageUrl)
       // Poster renderer ported from D_고혜숙 (src/poster). The first 홍보 분위기 picks the theme.
       await loadPosterFonts(Object.values(posterContent).filter(Boolean) as string[])
 
@@ -1582,7 +1629,7 @@ function CreateFlow({
         aiMark: Boolean(activePromo),
         // "색: 분위기대로" follows the product photo; a colour the user picked is kept as is.
         photoColors: details.posterTheme ? null : photoPalette(image),
-        focusBox: photoBox?.image === imageUrl ? photoBox.box : null,
+        focusBox: !sceneUrl && photoBox?.image === imageUrl ? photoBox.box : null,
       })
 
       if (!drawnText) throw new Error("canvas-unavailable")
@@ -1993,6 +2040,7 @@ function CreateFlow({
             </h2>
             <p>{t("사진과 입력한 내용으로 만든 체험 결과예요. ")}</p>
           </div>
+          {sceneNotice && <p className={`ai-notice scene-notice${sceneState?.status === "ready" ? " is-ai" : ""}`} role="status">{t(sceneNotice)}</p>}
           {showCopy && (
             <p className={`ai-notice${activePromo ? " is-ai" : ""}`}>
               {t(activePromo ? "AI가 쓴 글이 들어 있어요. 올리기 전에 읽어 봐 주세요." : "AI 없이 기본 문구로 만들었어요.")}
@@ -2019,8 +2067,9 @@ function CreateFlow({
           aiCheck={aiPhotoCheck?.image === imageUrl ? aiPhotoCheck.check : null}
           onNext={() => setStep(2)}
           easyMode={easyMode}
-          extra={showVideo ? (
+          extra={showVideo || showPoster ? (
             <VideoModeToggle
+              withVideo={showVideo}
               value={details.videoMode ?? "basic"}
               premiumAvailable={!isVideoUnavailable()}
               easyMode={easyMode}
@@ -2448,8 +2497,8 @@ function CreateFlow({
                 onClick={() => {
                   setSelectedResultTab(resultTabs[0].id)
                   if (showCopy) requestPromoText()
-                  // Only 고급형 asks for the paid AI video; 기본형 is the motion video the app makes itself.
-                  if (showVideo && details.videoMode === "premium") aiVideo.start({ imageUrl, details: toVideoDetails(details), box: photoBox?.image === imageUrl ? photoBox.box : null })
+                  // Only 고급형 pays: the new advertising scene first (poster + video), then the AI video made from it.
+                  if (details.videoMode === "premium" && (showPoster || showVideo)) startPremium()
                   setGenerating(true)
                   setStep(3)
                 }}
@@ -3044,6 +3093,7 @@ export default function App() {
   const [channel, setChannel] = useState<Channel>("download")
 
   const [imageUrl, setImageUrl] = useState("")
+  const [sceneImage, setSceneImage] = useState<{ forImage: string; url: string } | null>(null)
 
   const [mobileOpen, setMobileOpen] = useState(false)
   // A result opened from 내 홍보물 goes back to that list, not to the 정보 입력 step.
@@ -3531,6 +3581,12 @@ export default function App() {
     return () => window.removeEventListener("beforeunload", warn)
   }, [hasWorkToLose])
 
+  // The 고급형 scene arrives about a minute after the result was saved: put it into that record too.
+  useEffect(() => {
+    if (!sceneImage) return
+    setRecords((current) => current.map((record) => record.id === currentRecordId && record.imageUrl === sceneImage.forImage && record.sceneUrl !== sceneImage.url ? { ...record, sceneUrl: sceneImage.url } : record))
+  }, [sceneImage]) // eslint-disable-line react-hooks/exhaustive-deps
+
   // Changes made on the result screen (poster shape, chosen first line) are saved into the record shown.
   // Not while 만드는 중: a new AI answer then belongs to the record about to be created, not the old one.
   useEffect(() => {
@@ -3646,6 +3702,8 @@ export default function App() {
 
       imageUrl,
 
+      ...(sceneImage?.forImage === imageUrl ? { sceneUrl: sceneImage.url } : {}),
+
       details: { ...details, tones: normalizeTones(details) },
 
       userHashtags: { ...safeUserHashtags },
@@ -3674,6 +3732,7 @@ export default function App() {
     setChannel(record.channel)
 
     setImageUrl(record.imageUrl)
+    setSceneImage(record.sceneUrl ? { forImage: record.imageUrl, url: record.sceneUrl } : null)
 
     // Older records stored a single `tone`; normalizeTones() migrates it to `tones`.
     const { tone: _legacyTone, ...recordDetails } = record.details
@@ -3802,6 +3861,8 @@ export default function App() {
           aiPromo={aiPromo}
           setAiPromo={setAiPromo}
           aiVideo={aiVideo}
+          sceneImage={sceneImage}
+          setSceneImage={setSceneImage}
         />
       )}
       {page === "records" && (
