@@ -32,6 +32,7 @@
     "verify:photo": "node scripts/verify-photo-step.mjs",
     "verify:promo": "node scripts/verify-promo-rules.mjs",
     "verify:guard": "node scripts/verify-api-guard.mjs",
+    "verify:scene": "node scripts/verify-scene-api.mjs",
     "eval:promo": "node scripts/eval-promo.mjs",
     "audit:screens": "node scripts/audit-mobile-screens.mjs",
     "eval:poster": "node scripts/eval-poster.mjs",

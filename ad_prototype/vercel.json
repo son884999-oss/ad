@@ -3,6 +3,12 @@
   "functions": {
     "api/video-start.js": {
       "maxDuration": 60
+    },
+    "api/scene-start.js": {
+      "maxDuration": 60
+    },
+    "api/scene-status.js": {
+      "maxDuration": 30
     }
   }
 }

@@ -160,7 +160,10 @@ export function mapStatus(data) {
   if (status === "queued" || status === "in_progress") return { status }
   if (status === "completed") {
     const videoUrl = data?.video?.url
-    return isHttpsUrl(videoUrl) ? { status: "completed", videoUrl } : { status: "failed", error: "VIDEO_NO_OUTPUT" }
+    if (isHttpsUrl(videoUrl)) return { status: "completed", videoUrl }
+    // Image jobs (the 고급형 scene picture) answer with images[].url instead.
+    const imageUrl = data?.images?.[0]?.url
+    return isHttpsUrl(imageUrl) ? { status: "completed", imageUrl } : { status: "failed", error: "VIDEO_NO_OUTPUT" }
   }
   if (status === "nsfw") return { status: "failed", error: "VIDEO_BLOCKED" }
   if (status === "canceled") return { status: "failed", error: "VIDEO_CANCELED" }

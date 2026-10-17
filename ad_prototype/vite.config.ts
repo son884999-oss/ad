@@ -12,6 +12,8 @@ const aiRoutes: Record<string, string> = {
   '/api/video-start': '/api/video-start.js',
   '/api/video-status': '/api/video-status.js',
   '/api/video-cancel': '/api/video-cancel.js',
+  '/api/scene-start': '/api/scene-start.js',
+  '/api/scene-status': '/api/scene-status.js',
 }
 
 // `npm run dev:mock`: the same app with made-up AI answers, so it can be tried or shown without using the Gemini
