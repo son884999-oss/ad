@@ -23,6 +23,7 @@ import { AiVideoPlayer, AiVideoStatus, saveRealVideo, shareRealVideo, showsRealV
 import { toVideoDetails } from "./video"
 import { buildPosterContent, loadPosterFonts, POSTER_THEMES, posterThemeFor, renderPosterToCanvas } from "./poster"
 import { photoPalette } from "./poster/photoColor"
+import { localBody, localCopy } from "./localCopy"
 import type { PosterThemeKey } from "./poster"
 import PhotoStep from "./PhotoStep"
 import GenerationProgress from "./GenerationProgress"
@@ -1361,50 +1362,9 @@ function CreateFlow({
     }
   }
 
-  const keyFeatureList = (details.keywords ?? "").split(",").map((item) => item.trim()).filter(Boolean)
-  const productSummary = [
-    details.name?.trim(),
-    details.shopName?.trim(),
-    details.description,
-    keyFeatureList.length ? keyFeatureList.map((item) => "✔ " + item).join("  ") : "",
-  ].filter(Boolean).join("\n")
-  const toneLine = toneClosing(tones)
-  // Without 설명 / 특징 the copy would be the name alone; give it one plain sentence and an invitation.
-  const shopName = details.shopName?.trim() ?? ""
-  const body =
-    details.features.trim() ||
-    (details.description.trim() || keyFeatureList.length
-      ? ""
-      : shopName
-        ? `${shopName}에서 직접 준비했어요. 편하게 들러 보세요.`
-        : "가까이에서 편하게 만나 보세요.")
-  const shopInfo = [
-    details.location?.trim() && `위치 · ${details.location.trim()}`,
-    details.priceInfo?.trim() && `가격 · ${details.priceInfo.trim()}`,
-    details.contact?.trim() && `문의 · ${details.contact.trim()}`,
-  ].filter(Boolean).join("\n")
-  const audienceRecommendation = details.audience.trim()
-    ? `\n\n${details.audience}께 추천해요.`
-    : ""
-  const audienceLabel = details.audience.trim()
-    ? `\n\n추천 대상: ${details.audience}`
-    : ""
-  const baseCopy: Record<Channel, string> = {
-    ...mapChannels(
-      () => `${productSummary}\n\n${body}${audienceRecommendation}`,
-    ),
-    naver_place: `${productSummary}\n\n${body}${audienceLabel}`,
-    kakao: `우리 가게 소식을 전해요.\n\n${productSummary}\n${body}\n\n궁금한 점은 편하게 문의해 주세요.`,
-    naver_blog: `${productSummary}\n\n${details.features.trim() ? "이런 특징이 있어요\n" : ""}${body}${audienceLabel}`,
-    daangn: `이웃 여러분께 우리 가게를 소개해요.\n\n${productSummary}\n${body}\n\n궁금한 점은 문의해 주세요.`,
-    youtube: `${body}\n\n${productSummary}${audienceLabel}`,
-    instagram: `오늘 소개할 ${productSummary}\n\n${body}\n지금 사진으로 만나 보세요.`,
-
-    x: `${body || productSummary.split("\n")[0]} — 필요한 분은 바로 확인해 보세요.${audienceRecommendation}`,
-
-    threads: `오늘은 이걸 소개하고 싶어요.\n${productSummary}\n${details.features.trim() ? `특히 ${details.features.trim()} 이 부분이 좋아요. ` : body ? `${body} ` : ""}궁금한 점은 편하게 물어보세요.`,
-  }
-  const resultCopy = mapChannels((id) => [baseCopy[id], shopInfo, toneLine].filter(Boolean).join("\n\n").replace(/\n{3,}/g, "\n\n").trim())
+  // The app's own 홍보 글 (src/localCopy.ts), shown whenever the AI text is not available.
+  const resultCopy = mapChannels((id) => localCopy({ ...details, tones }, id))
+  const body = localBody({ ...details, tones })
   const channelTheme = channelThemes[channel]
 
   const safeRecommendations = normalizeHashtagValues(

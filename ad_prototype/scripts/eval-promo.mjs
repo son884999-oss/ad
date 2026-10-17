@@ -78,3 +78,51 @@ if (live) {
   }
   if (rows.length) console.log(`\n평균 ${Math.round(rows.reduce((a, b) => a + b, 0) / rows.length)}점 (${rows.length}개)`)
 }
+
+// --local: the app's own 홍보 글 (src/localCopy.ts, used whenever the AI text is not available) for the same
+// products and 5 channels, scored with the same rules (hashtags are made elsewhere, so not scored here) plus
+// two checks for text the app writes itself: lines that are bare words rather than sentences, and repeats.
+if (args.includes("--local")) {
+  const { legacyLocalCopy, localCopy } = await import("../src/localCopy.ts")
+  const channels = ["download", "instagram", "naver_place", "daangn", "kakao"]
+  const toInput = (product) => ({
+    name: product.productName ?? "",
+    shopName: product.shopName ?? "",
+    description: product.productDescription ?? "",
+    features: product.highlights ?? "",
+    keywords: (product.keyFeatures ?? []).join(", "),
+    audience: product.targetAudience ?? "",
+    location: product.location ?? "",
+    priceInfo: product.priceInfo ?? "",
+    contact: product.contact ?? "",
+    tones: [],
+  })
+  const scoreLocal = (text, product) => {
+    const lines = text.split("\n").map((line) => line.trim()).filter(Boolean)
+    const [first = "", ...rest] = lines
+    // The app has no AI to reword the owner's description, so "repeats the description" (a rule for the AI text)
+    // is not counted here; every other rule is.
+    const { issues: all } = score({ copy: first, sns: rest.join(" "), intro: "", hashtags: ["#a", "#b", "#c"] }, product)
+    const issues = all.filter((issue) => !issue.includes("되풀이함"))
+    // A line that ends without a sentence ending (요/다/. ! ?) and is not an info line ("가격 · …") reads like a form.
+    const bare = lines.slice(1).filter((line) => !/[.!?요다]$/.test(line) && !/ · /.test(line) && !line.startsWith("✔"))
+    if (bare.length >= 2) issues.push(`양식처럼 나열된 줄 ${bare.length}개`)
+    if (/✔/.test(text)) issues.push("체크 표시 나열")
+    const seen = new Set()
+    for (const line of lines) {
+      const key = line.replace(/[^가-힣a-z0-9]/gi, "")
+      if (key.length >= 4 && seen.has(key)) issues.push(`같은 줄 되풀이 "${line.slice(0, 12)}"`)
+      seen.add(key)
+    }
+    return { score: Math.max(0, 100 - issues.length * 15), issues }
+  }
+  for (const [label, make] of [["지금(legacy)", legacyLocalCopy], ["새 기본 문구", localCopy]]) {
+    const all = []
+    for (const product of products) for (const channel of channels) {
+      const { score: points, issues } = scoreLocal(make(toInput(product), channel), product)
+      all.push(points)
+      if (args.includes("--verbose") && issues.length) console.log(`  [${points}] ${product.productName} / ${channel}: ${issues.join(" / ")}`)
+    }
+    console.log(`${label}: 평균 ${Math.round(all.reduce((a, b) => a + b, 0) / all.length)}점 (${all.length}개 = 제품 ${products.length} × 곳 ${channels.length})`)
+  }
+}
