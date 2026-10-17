@@ -18,6 +18,111 @@ export type MotionScene = {
   points: string[]
   /** The shop's colour as "r, g, b". */
   accent: string
+  /** The kind of product (motionEffectFor): picks the moving touch on top of the photo. */
+  effect?: MotionEffect
+}
+
+export type MotionEffect = "steam" | "sparkle" | "petals" | "glow" | "sheen"
+
+/**
+ * The same product groups as the AI video prompt (E_이채원 rules in api/_lib/video-prompt.js), plus flowers:
+ * food gets rising steam, beauty a sparkle, flowers falling petals, household goods a soft glow.
+ */
+export function motionEffectFor(text: string): MotionEffect {
+  if (/꽃|플라워|부케|화분|\b(flower|flowers|bouquet)\b/i.test(text)) return "petals"
+  if (/쿠키|과자|식품|음료|커피|라떼|녹차|홍차|밀크티|초콜릿|빵|케이크|떡|디저트|잼|국밥|국수|라면|냉면|찌개|전골|김치|반찬|도시락|떡볶이|\b(cookie|food|snack|coffee|latte|tea|chocolate|bread|cake|dessert|soup)\b/i.test(text)) return "steam"
+  if (/화장품|세럼|로션|크림|스킨케어|립스틱|향수|샴푸|비누|\b(cosmetic|serum|lotion|skincare|lipstick|perfume|shampoo|soap)\b/i.test(text)) return "sparkle"
+  if (/머그|컵|생활용품|텀블러|수건|주방|그릇|\b(mug|cup|tumbler|towel|kitchen|bowl)\b/i.test(text)) return "glow"
+  return "sheen"
+}
+
+/** Repeatable "random" numbers, so every render of the same video is identical. */
+const seeded = (seed: number) => {
+  const x = Math.sin(seed * 12.9898) * 43758.5453
+  return x - Math.floor(x)
+}
+
+/** Soft wisps rising from the middle of the picture (food): blurred, see-through curves drifting up and fading. */
+function drawSteam(ctx: CanvasRenderingContext2D, seconds: number) {
+  const { width, height } = ctx.canvas
+  const strength = Math.min(1, seconds / 0.8) * (1 - progress(seconds, END_CARD - 0.4, 0.4))
+  if (strength <= 0) return
+  ctx.save()
+  ctx.filter = "blur(12px)"
+  ctx.lineCap = "round"
+  for (let i = 0; i < 5; i += 1) {
+    const life = (seconds * 0.45 + seeded(i + 1)) % 1
+    const x = width * (0.38 + 0.24 * seeded(i + 7)) + Math.sin(seconds * 1.3 + i) * 26
+    const y = height * (0.3 - life * 0.2)
+    ctx.globalAlpha = strength * 0.55 * Math.sin(Math.PI * life)
+    ctx.strokeStyle = "#ffffff"
+    ctx.lineWidth = 40
+    ctx.beginPath()
+    ctx.moveTo(x, y + 160)
+    ctx.bezierCurveTo(x - 50, y + 100, x + 50, y + 50, x, y)
+    ctx.stroke()
+  }
+  ctx.restore()
+}
+
+/** Little four-point stars twinkling around the product (beauty). */
+function drawSparkles(ctx: CanvasRenderingContext2D, seconds: number) {
+  const { width, height } = ctx.canvas
+  const strength = 1 - progress(seconds, END_CARD - 0.4, 0.4)
+  if (strength <= 0) return
+  ctx.save()
+  ctx.fillStyle = "#ffffff"
+  for (let i = 0; i < 9; i += 1) {
+    const phase = (seconds * 0.9 + seeded(i + 3)) % 1
+    const size = 10 + 18 * Math.sin(Math.PI * phase)
+    const x = width * (0.22 + 0.56 * seeded(i + 11))
+    const y = height * (0.2 + 0.4 * seeded(i + 23))
+    ctx.globalAlpha = strength * 0.85 * Math.sin(Math.PI * phase)
+    ctx.beginPath()
+    ctx.moveTo(x, y - size)
+    ctx.quadraticCurveTo(x, y, x + size, y)
+    ctx.quadraticCurveTo(x, y, x, y + size)
+    ctx.quadraticCurveTo(x, y, x - size, y)
+    ctx.quadraticCurveTo(x, y, x, y - size)
+    ctx.fill()
+  }
+  ctx.restore()
+}
+
+/** Petals drifting down across the picture (flowers). */
+function drawPetals(ctx: CanvasRenderingContext2D, seconds: number) {
+  const { width, height } = ctx.canvas
+  const strength = 1 - progress(seconds, END_CARD - 0.4, 0.4)
+  if (strength <= 0) return
+  ctx.save()
+  for (let i = 0; i < 12; i += 1) {
+    const fall = (seconds * (0.12 + 0.06 * seeded(i + 5)) + seeded(i + 2)) % 1
+    const x = width * seeded(i + 9) + Math.sin(seconds * 1.6 + i) * 40
+    const y = -60 + fall * (height * 0.72)
+    ctx.globalAlpha = strength * 0.8
+    ctx.fillStyle = i % 3 ? "#f7c6d0" : "#fde7ee"
+    ctx.translate(x, y)
+    ctx.rotate(seconds * 1.2 + i)
+    ctx.beginPath()
+    ctx.ellipse(0, 0, 18, 10, 0, 0, Math.PI * 2)
+    ctx.fill()
+    ctx.setTransform(1, 0, 0, 1, 0, 0)
+  }
+  ctx.restore()
+}
+
+/** A warm light slowly breathing over the middle of the picture (household goods). */
+function drawGlow(ctx: CanvasRenderingContext2D, seconds: number) {
+  const { width, height } = ctx.canvas
+  const strength = (0.5 + 0.5 * Math.sin(seconds * 1.4)) * (1 - progress(seconds, END_CARD - 0.4, 0.4))
+  const glow = ctx.createRadialGradient(width * 0.62, height * 0.3, 0, width * 0.62, height * 0.3, width * 0.7)
+  glow.addColorStop(0, `rgba(255,236,200,${0.22 * strength})`)
+  glow.addColorStop(1, "rgba(255,236,200,0)")
+  ctx.save()
+  ctx.globalCompositeOperation = "screen"
+  ctx.fillStyle = glow
+  ctx.fillRect(0, 0, width, height)
+  ctx.restore()
 }
 
 const FONT = '"Pretendard Variable", Pretendard, "Noto Sans KR", sans-serif'
@@ -176,7 +281,13 @@ export function drawMotionFrame(ctx: CanvasRenderingContext2D, seconds: number, 
   ctx.clearRect(0, 0, width, height)
   ctx.imageSmoothingQuality = "high"
   drawPhoto(ctx, scene, seconds)
-  drawSheen(ctx, seconds)
+  const effect = scene.effect ?? "sheen"
+  if (effect === "steam") drawSteam(ctx, seconds)
+  else if (effect === "sparkle") drawSparkles(ctx, seconds)
+  else if (effect === "petals") drawPetals(ctx, seconds)
+  else if (effect === "glow") drawGlow(ctx, seconds)
+  // The light sweep runs for every kind except flowers (petals already move across the picture).
+  if (effect !== "petals") drawSheen(ctx, seconds)
   if (seconds < END_CARD + 0.35) {
     // Scenes 1–2: shop name and headline only; price and call to action wait for the end card.
     const fade = 1 - progress(seconds, END_CARD, 0.35)

@@ -25,7 +25,7 @@ import { photoPalette } from "./poster/photoColor"
 import { localBody, localCopy } from "./localCopy"
 import { type VideoCaption } from "./videoCaption"
 import { drawStoryFrame } from "./videoFrame"
-import { drawMotionFrame, MOTION_SECONDS, type MotionScene } from "./motionVideo"
+import { drawMotionFrame, MOTION_SECONDS, motionEffectFor, type MotionScene } from "./motionVideo"
 import type { PosterThemeKey } from "./poster"
 import PhotoStep from "./PhotoStep"
 import GenerationProgress from "./GenerationProgress"
@@ -1850,6 +1850,7 @@ function CreateFlow({
           caption: sampleCaption,
           points: (details.keywords ?? "").split(",").map((item) => item.trim()).filter(Boolean),
           accent: channelTheme.rgb,
+          effect: motionEffectFor([details.name, details.description, details.features, details.keywords].filter(Boolean).join(" ")),
         }
 
         const drawFrame = (now: number) => {
