@@ -11,6 +11,7 @@
 ```powershell
 pnpm install
 pnpm dev          # http://localhost:5173
+pnpm dev:mock     # http://127.0.0.1:5174 — 가짜 AI 답(사진 자동 채우기·홍보 글). 키를 읽지 않고 Gemini 한도·영상 요금을 쓰지 않음. 시연 연습·확인용
 pnpm build        # dist/
 ```
 
