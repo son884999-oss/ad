@@ -39,12 +39,13 @@ if (!file) {
 const viewer = await browser.newPage({ viewport: { width: 540, height: 960 } })
 const type = file.endsWith(".webm") ? "video/webm" : "video/mp4"
 await viewer.setContent(`<body style="margin:0;background:#000"><video id=v muted style="width:540px;height:960px;object-fit:contain" src="data:${type};base64,${(await readFile(file)).toString("base64")}"></video></body>`)
-await viewer.waitForFunction(() => document.getElementById("v").readyState >= 1)
+// HAVE_CURRENT_DATA, and one frame after each seek: at readyState 1 the 0 s frame was captured black
+await viewer.waitForFunction(() => document.getElementById("v").readyState >= 2)
 const duration = await viewer.evaluate(() => document.getElementById("v").duration)
 const times = [0, 1, 2.5, 4]
 const frames = []
 for (const time of times) {
-  await viewer.evaluate((t) => new Promise((done) => { const el = document.getElementById("v"); el.onseeked = () => done(); el.currentTime = t }), time)
+  await viewer.evaluate((t) => new Promise((done) => { const el = document.getElementById("v"); el.onseeked = () => requestAnimationFrame(() => requestAnimationFrame(() => done())); el.currentTime = t }), time)
   const path = `${out}/frame-${time}.png`
   await viewer.screenshot({ path })
   frames.push(path)
