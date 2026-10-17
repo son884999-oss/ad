@@ -53,39 +53,49 @@ const loadImage = (src: string) =>
     image.src = src
   })
 
+/**
+ * Draws the photo as a 9:16 frame filling the canvas (crop around the product, or the whole photo with a blurred
+ * fill). The AI photo and the sample video use the same frame, so both videos show the product the same way.
+ */
+export function drawStoryFrame(ctx: CanvasRenderingContext2D, image: CanvasImageSource & { naturalWidth?: number; naturalHeight?: number; width?: number; height?: number }, box?: Box | null) {
+  const { width: frameWidth, height: frameHeight } = ctx.canvas
+  const width = image.naturalWidth || Number(image.width) || 0
+  const height = image.naturalHeight || Number(image.height) || 0
+  if (!width || !height) return false
+  ctx.fillStyle = "#ffffff" // transparent PNGs would turn black in JPEG
+  ctx.fillRect(0, 0, frameWidth, frameHeight)
+  const frame = storyFrame(width, height, box)
+  if (frame.mode === "crop") {
+    ctx.drawImage(image, frame.sx, frame.sy, frame.sw, frame.sh, 0, 0, frameWidth, frameHeight)
+    return true
+  }
+  // Blurred, slightly darkened copy as the background, then the whole photo across the full width.
+  const cover = Math.max(frameWidth / width, frameHeight / height)
+  const bleed = frameWidth * 0.055
+  ctx.save()
+  ctx.filter = `blur(${Math.round(frameWidth * 0.05)}px) brightness(.85)`
+  ctx.drawImage(image, (frameWidth - width * cover) / 2 - bleed, (frameHeight - height * cover) / 2 - bleed, width * cover + bleed * 2, height * cover + bleed * 2)
+  ctx.restore()
+  // As large as the product allows (it must fit the width) but never taller than the frame or narrower than it.
+  const productWidth = frame.productRight - frame.productLeft
+  const scale = Math.max(frameWidth / width, Math.min(frameWidth / productWidth, frameHeight / height))
+  const drawWidth = width * scale
+  const drawHeight = height * scale
+  const productCenter = ((frame.productLeft + frame.productRight) / 2) * scale
+  const x = Math.min(0, Math.max(frameWidth - drawWidth, frameWidth / 2 - productCenter))
+  ctx.drawImage(image, x, (frameHeight - drawHeight) / 2, drawWidth, drawHeight)
+  return true
+}
+
 /** The photo as a 9:16 JPEG (720 × 1280, the clip size) for the video request, or null if it cannot be read. */
 export async function storyFramePhoto(source: string, box?: Box | null): Promise<{ mimeType: "image/jpeg"; data: string } | null> {
   try {
     const image = await loadImage(source)
-    const width = image.naturalWidth
-    const height = image.naturalHeight
-    if (!width || !height) return null
     const canvas = document.createElement("canvas")
     canvas.width = 720
     canvas.height = 1280
     const ctx = canvas.getContext("2d")
-    if (!ctx) return null
-    ctx.fillStyle = "#ffffff" // transparent PNGs would turn black in JPEG
-    ctx.fillRect(0, 0, canvas.width, canvas.height)
-    const frame = storyFrame(width, height, box)
-    if (frame.mode === "crop") {
-      ctx.drawImage(image, frame.sx, frame.sy, frame.sw, frame.sh, 0, 0, canvas.width, canvas.height)
-    } else {
-      // Blurred, slightly darkened copy as the background, then the whole photo across the full width.
-      const cover = Math.max(canvas.width / width, canvas.height / height)
-      ctx.save()
-      ctx.filter = "blur(36px) brightness(.85)"
-      ctx.drawImage(image, (canvas.width - width * cover) / 2 - 40, (canvas.height - height * cover) / 2 - 40, width * cover + 80, height * cover + 80)
-      ctx.restore()
-      // As large as the product allows (it must fit the width) but never taller than the frame or narrower than it.
-      const productWidth = frame.productRight - frame.productLeft
-      const scale = Math.max(canvas.width / width, Math.min(canvas.width / productWidth, canvas.height / height))
-      const drawWidth = width * scale
-      const drawHeight = height * scale
-      const productCenter = ((frame.productLeft + frame.productRight) / 2) * scale
-      const x = Math.min(0, Math.max(canvas.width - drawWidth, canvas.width / 2 - productCenter))
-      ctx.drawImage(image, x, (canvas.height - drawHeight) / 2, drawWidth, drawHeight)
-    }
+    if (!ctx || !drawStoryFrame(ctx, image, box)) return null
     const data = canvas.toDataURL("image/jpeg", 0.88).split(",")[1] ?? ""
     return data ? { mimeType: "image/jpeg", data } : null
   } catch {

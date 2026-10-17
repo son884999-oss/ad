@@ -24,6 +24,7 @@ import { buildPosterContent, loadPosterFonts, POSTER_THEMES, posterThemeFor, ren
 import { photoPalette } from "./poster/photoColor"
 import { localBody, localCopy } from "./localCopy"
 import { drawVideoCaption, type VideoCaption } from "./videoCaption"
+import { drawStoryFrame } from "./videoFrame"
 import type { PosterThemeKey } from "./poster"
 import PhotoStep from "./PhotoStep"
 import GenerationProgress from "./GenerationProgress"
@@ -1796,6 +1797,14 @@ function CreateFlow({
 
         const startedAt = performance.now()
 
+        // The photo framed exactly like the one sent for the AI clip (src/videoFrame.ts), so the product is never
+        // cut at the sides and both videos look the same.
+        const framed = document.createElement("canvas")
+        framed.width = canvas.width
+        framed.height = canvas.height
+        const framedContext = framed.getContext("2d")
+        if (!framedContext || !drawStoryFrame(framedContext, image, photoBox?.image === imageUrl ? photoBox.box : null)) framedContext?.drawImage(image, 0, 0, framed.width, framed.height)
+
         // Same length as the real clip (5 s).
         const duration = 5000
 
@@ -1834,7 +1843,7 @@ function CreateFlow({
 
           context.translate(-canvas.width / 2, -canvas.height / 2)
 
-          drawImageCover(context, image, canvas.width, canvas.height)
+          context.drawImage(framed, 0, 0, canvas.width, canvas.height)
 
           context.restore()
 
