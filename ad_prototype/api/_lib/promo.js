@@ -214,7 +214,7 @@ function finishPromo(result, product) {
 // breaks the sentence ("특별한 날", "정성으로 짠") are left for the retry and the score to catch.
 const DROPPABLE_CLICHES = [
   "정성껏", "정성스럽게", "정성스레", "정성 가득한", "정성 가득", "정성을 담은", "정성 담은", "정성 들여",
-  "최고의", "엄선한", "엄선된", "남다른", "완벽한", "프리미엄", "품격 있는", "차원이 다른",
+  "최고급", "최고의", "엄선한", "엄선된", "남다른", "완벽한", "프리미엄", "품격 있는", "차원이 다른",
 ]
 
 /** Drops cliché modifiers the model kept after the retry, unless the owner wrote that word. */

@@ -197,6 +197,7 @@ try {
 
   await check("cliché modifiers left after the rewrite are trimmed, unless the owner wrote them", async () => {
     assert.equal(trimCliches("매일 아침 정성껏 내린 아메리카노"), "매일 아침 내린 아메리카노")
+    assert.equal(trimCliches("이탈리아산 최고급 소가죽을 손으로 꿰매 만들었어요."), "이탈리아산 소가죽을 손으로 꿰매 만들었어요.")
     assert.equal(trimCliches("최고의 원두로\n엄선된 맛"), "원두로\n맛")
     assert.equal(trimCliches("특별한 날 선물"), "특별한 날 선물", "not droppable: the sentence would break")
     assert.equal(trimCliches("정성껏 구운 빵", "정성껏 구워요"), "정성껏 구운 빵", "owner's own word")
