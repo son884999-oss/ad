@@ -158,10 +158,10 @@ function videoFileName(title: string) {
  * ready so 저장 / 공유하기 can use it at once (a phone only opens the share sheet right after the tap). Falls back
  * to the clip as it is when the browser cannot record.
  */
-export async function prepareAiVideoFile(url: string, title: string, caption?: VideoCaption, accent?: string) {
+export async function prepareAiVideoFile(url: string, title: string, caption?: VideoCaption, accent?: string, style: "bold" | "elegant" = "elegant") {
   const file = await fetchVideoFile(url, title)
   if (!caption) return file
-  return (await captionVideo(file, caption, accent, videoFileName(title).replace(/\.mp4$/, ""))) ?? file
+  return (await captionVideo(file, caption, accent, videoFileName(title).replace(/\.mp4$/, ""), style)) ?? file
 }
 
 async function fetchVideoFile(url: string, title: string) {

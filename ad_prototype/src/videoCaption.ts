@@ -147,3 +147,73 @@ export function drawVideoCaption(ctx: CanvasRenderingContext2D, seconds: number,
     })
   }
 }
+
+/**
+ * 고급형 caption, after the reference ad the owner chose (쵸이셀 리디자인): small and quiet in the lower left —
+ * a spaced English label ("SHOP / PRODUCT"), a thin mood line, the product name, then "…에서 만나보세요 →".
+ * A soft shade under the text keeps it readable without hiding the picture.
+ */
+export function drawElegantCaption(ctx: CanvasRenderingContext2D, seconds: number, caption: VideoCaption & { mood?: string; label?: string }) {
+  const { width, height } = ctx.canvas
+  const textWidth = width - SIDE * 2
+  const bottom = height - BOTTOM_SAFE
+  const shade = ctx.createLinearGradient(0, bottom - 520, 0, height)
+  shade.addColorStop(0, "rgba(10,14,12,0)")
+  shade.addColorStop(0.5, "rgba(10,14,12,.62)")
+  shade.addColorStop(1, "rgba(10,14,12,.78)")
+  ctx.fillStyle = shade
+  ctx.fillRect(0, bottom - 520, width, height - bottom + 520)
+  ctx.textAlign = "left"
+  ctx.textBaseline = "alphabetic"
+  const fadeIn = (from: number, draw: () => void) => {
+    const value = appear(seconds, from)
+    if (value <= 0) return
+    ctx.save()
+    ctx.globalAlpha = value
+    ctx.translate(0, (1 - value) * 14)
+    ctx.shadowColor = "rgba(0,0,0,.45)"
+    ctx.shadowBlur = 18
+    draw()
+    ctx.restore()
+  }
+  // Line 1: the spaced label; line 2: the mood line (or the headline); line 3: the product name; line 4: the invitation.
+  const label = (caption.label ?? [caption.eyebrow, caption.subline].filter(Boolean).join("  /  ")).toUpperCase()
+  const mood = caption.mood || caption.headline
+  const product = caption.subline && caption.subline !== mood ? caption.subline : ""
+  let y = bottom - 40
+  const invite = caption.cta ? `${caption.cta}  →` : ""
+  if (invite) {
+    fadeIn(2.6, () => {
+      ctx.font = font(500, 36)
+      ctx.fillStyle = "rgba(255,255,255,.88)"
+      ctx.fillText(wrap(ctx, invite, textWidth, 1)[0], SIDE, y)
+    })
+    y -= 90
+  }
+  if (product) {
+    fadeIn(1.8, () => {
+      ctx.font = font(600, 52)
+      ctx.fillStyle = "#ffffff"
+      ctx.fillText(wrap(ctx, product, textWidth, 1)[0], SIDE, y)
+    })
+    y -= 92
+  }
+  ctx.font = font(300, 84)
+  const moodLines = wrap(ctx, mood, textWidth, 2)
+  const moodBaseline = y
+  fadeIn(0.9, () => {
+    ctx.font = font(300, 84)
+    ctx.fillStyle = "#ffffff"
+    moodLines.forEach((line, index) => ctx.fillText(line, SIDE, moodBaseline - (moodLines.length - 1 - index) * 100))
+  })
+  const labelBaseline = moodBaseline - (moodLines.length - 1) * 100 - 84 - 34
+  if (label) {
+    fadeIn(0.5, () => {
+      ctx.font = font(500, 28)
+      if ("letterSpacing" in ctx) ctx.letterSpacing = "6px"
+      ctx.fillStyle = "rgba(255,255,255,.8)"
+      ctx.fillText(wrap(ctx, label, textWidth, 1)[0], SIDE, labelBaseline)
+      if ("letterSpacing" in ctx) ctx.letterSpacing = "0px"
+    })
+  }
+}

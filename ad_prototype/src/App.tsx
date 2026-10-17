@@ -1535,7 +1535,10 @@ function CreateFlow({
     setRealVideoFile(null)
     if (!realVideoKey || !aiVideo.state.videoUrl) return
     let live = true
-    void prepareAiVideoFile(aiVideo.state.videoUrl, details.shopName?.trim() || details.name?.trim() || "", sampleCaption, channelTheme.rgb)
+    // 고급형 gets the quiet caption of the reference ad (drawElegantCaption); the invitation names the shop.
+    const shop = details.shopName?.trim() ?? ""
+    const premiumCaption: VideoCaption = { ...sampleCaption, cta: shop ? `${shop}에서 만나보세요` : sampleCaption.cta }
+    void prepareAiVideoFile(aiVideo.state.videoUrl, shop || details.name?.trim() || "", premiumCaption, channelTheme.rgb, "elegant")
       .then((file) => { if (live) setRealVideoFile(file) })
       .catch(() => undefined)
     return () => { live = false }
