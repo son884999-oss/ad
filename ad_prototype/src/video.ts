@@ -105,6 +105,7 @@ export async function fetchAiVideoStatus(requestId: string, signal?: AbortSignal
     const response = await fetch(`/api/video-status?id=${encodeURIComponent(requestId)}`, { signal: request.signal })
     const data = (await response.json().catch(() => null)) as Record<string, unknown> | null
     if (response.status === 400 && data?.error === "INVALID_ID") return { status: "failed", error: "INVALID_ID" }
+    if (response.status === 503 && data?.error === "VIDEO_NOT_CONFIGURED") return { status: "failed", error: "VIDEO_NOT_CONFIGURED" }
     if (!response.ok || !data) return null
     if (data.status === "queued" || data.status === "in_progress") return { status: data.status }
     if (data.status === "completed" && isHttpsUrl(data.videoUrl)) return { status: "completed", videoUrl: data.videoUrl }

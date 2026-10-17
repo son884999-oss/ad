@@ -307,7 +307,7 @@ function hasForbiddenClaim(result, product) {
 export async function generatePromo(product, config, { now = Date.now } = {}) {
   const startedAt = now()
   const remaining = () => TOTAL_BUDGET_MS - (now() - startedAt)
-  let best = null // { result, problems }
+  let best = null // { result, problems, forbidden }
   let retryNote = ""
   let lastError = new ApiError(502, "AI_BAD_RESPONSE")
 
@@ -338,7 +338,9 @@ export async function generatePromo(product, config, { now = Date.now } = {}) {
       continue
     }
     const problems = reviewPromo(result, product)
-    if (!best || problems.length < best.problems.length) best = { result, problems }
+    // A usable answer (no health or made-up claim) always beats one the app would have to throw away.
+    const forbidden = hasForbiddenClaim(result, product)
+    if (!best || (best.forbidden && !forbidden) || (best.forbidden === forbidden && problems.length < best.problems.length)) best = { result, problems, forbidden }
     if (problems.length === 0) break
     retryNote = buildRetryNote(problems)
   }

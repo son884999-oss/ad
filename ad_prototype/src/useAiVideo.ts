@@ -35,14 +35,29 @@ const POLL_MS = 5_000
 const MAX_POLL_MS = 20_000
 const DEADLINE_MS = 10 * 60_000
 
+/**
+ * The idempotency key to send again after a failure of the same photo + details. Re-sending it is always safe:
+ * if the first request never reached the provider the key is new to it, and if it did (network error, a
+ * response we could not read, a timeout) the provider returns that job instead of charging again. Only when
+ * the provider rejected the key itself (same key, different request) is a new one needed.
+ */
+const keyToReuse = (current: AiVideoState, signature: string) =>
+  current.phase === "failed" && current.jobId && current.signature === signature && current.error !== "VIDEO_INVALID_REQUEST" ? current.jobId : undefined
+
 const idleState = (): AiVideoState => ({ phase: isVideoUnavailable() ? "off" : "idle", jobId: "", signature: "", startedAt: 0 })
 
-export function useAiVideo(onJobUpdate?: (jobId: string, saved: SavedAiVideo) => void) {
+/**
+ * @param onJobUpdate a job learned its request id or URL (update the saved record)
+ * @param isSaved whether a job belongs to a saved record: such a job is never refunded when a new one replaces it
+ */
+export function useAiVideo(onJobUpdate?: (jobId: string, saved: SavedAiVideo) => void, isSaved?: (jobId: string) => boolean) {
   const [state, setState] = useState<AiVideoState>(idleState)
   const stateRef = useRef(state)
   stateRef.current = state
   const updateRef = useRef(onJobUpdate)
   updateRef.current = onJobUpdate
+  const isSavedRef = useRef(isSaved)
+  isSavedRef.current = isSaved
   // Bumped whenever the current job changes; any async answer for an older generation is ignored.
   const generationRef = useRef(0)
   const timerRef = useRef<number | null>(null)
@@ -102,8 +117,9 @@ export function useAiVideo(onJobUpdate?: (jobId: string, saved: SavedAiVideo) =>
   }, [])
 
   const begin = useCallback((input: AiVideoInput, signature: string, reuseJobId?: string) => {
-    // A new paid job replaces the running one (e.g. the details were edited): cancel the old one first.
-    dropRunningJob()
+    // A new paid job replaces the running one (e.g. the details were edited): cancel the old one first, unless a
+    // saved record (내 홍보물) holds it: that video keeps being made and is resumed when the record is reopened.
+    if (!isSavedRef.current?.(stateRef.current.jobId)) dropRunningJob()
     stopPolling()
     const generation = generationRef.current
     const jobId = reuseJobId ?? newVideoJobId()
@@ -138,20 +154,18 @@ export function useAiVideo(onJobUpdate?: (jobId: string, saved: SavedAiVideo) =>
       if (current.phase === "timeout" && current.requestId) resume()
       return
     }
-    begin(input, signature)
+    begin(input, signature, keyToReuse(current, signature))
   }, [begin]) // eslint-disable-line react-hooks/exhaustive-deps
 
   /**
-   * Manual 다시 만들기: one click = one new paid request. After a network error or timeout the server may
-   * already have started (and charged) the job, so the same idempotency key is sent again and the provider
-   * returns that job instead of charging a second one.
+   * Manual 다시 만들기 after a failure: the same photo + details send the same idempotency key again
+   * (see keyToReuse), so a job the provider already started is returned instead of charged twice.
    */
   const retry = useCallback(() => {
     const input = inputRef.current
     if (!input || isVideoUnavailable()) return
-    const current = stateRef.current
-    const maybeStarted = current.phase === "failed" && ["NETWORK", "VIDEO_TIMEOUT", "HTTP_502", "HTTP_504"].includes(current.error ?? "")
-    begin(input, videoSignature(input.imageUrl, input.details), maybeStarted ? current.jobId : undefined)
+    const signature = videoSignature(input.imageUrl, input.details)
+    begin(input, signature, keyToReuse(stateRef.current, signature))
   }, [begin])
 
   /** After the 10-minute window: check the same job again (free, no new request). */

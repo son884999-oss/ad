@@ -181,6 +181,10 @@ export function analyzePhotoOnce(source: string) {
   if (sharedAnalysis?.source === source) return sharedAnalysis.promise
   const promise = analyzePhoto(source)
   sharedAnalysis = { source, promise }
+  // A failure (network, quota) is not remembered: the next time this photo is chosen it is analysed again.
+  void promise.then((result) => {
+    if (!result && sharedAnalysis?.promise === promise) sharedAnalysis = null
+  })
   return promise
 }
 

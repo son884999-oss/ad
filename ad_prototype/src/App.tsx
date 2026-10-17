@@ -3087,15 +3087,20 @@ export default function App() {
 
   const [aiPromo, setAiPromo] = useState<AiPromo | null>(null)
 
-  // Real video: when a job learns its request id or URL later, update the saved record too.
+  // Real video: when a job learns its request id or URL later, update the saved record too. A job started by
+  // 다시 만들기 after the record was saved (its first try failed, so the record has no video) belongs to the
+  // record on screen.
   const aiVideo = useAiVideo((jobId, video) =>
     setRecords((current) => current.some((record) => record.video?.jobId === jobId)
       ? current.map((record) => (record.video?.jobId === jobId ? { ...record, video: { ...record.video, ...video } } : record))
-      : current))
+      : current.map((record) => (record.id === currentRecordId && !record.video ? { ...record, video } : record))),
+    (jobId) => Boolean(jobId) && recordsRef.current.some((record) => record.video?.jobId === jobId))
 
   const [continuationNotice, setContinuationNotice] = useState(false)
 
   const [records, setRecords] = useState<GeneratedRecord[]>([])
+  const recordsRef = useRef(records)
+  recordsRef.current = records
   // 내 홍보물 on this device: read once, then saved whenever the list changes.
   const [recordsStored, setRecordsStored] = useState(false)
   const recordsLoadedRef = useRef(false)
@@ -3535,8 +3540,10 @@ export default function App() {
   }, [page, step, generatingView, easyMode])
 
   // Warn before a reload or tab close would throw work away: results when they could not be stored on this
-  // device, and a photo that has not become a result yet.
-  const hasWorkToLose = (records.length > 0 && !recordsStored) || (Boolean(imageUrl) && page === "create" && step < 3)
+  // device, a photo that has not become a result yet, the 만드는 중 screen (nothing saved yet), and a paid video
+  // whose request id has not come back (closing then would leave a charged job nobody can find).
+  const hasWorkToLose = (records.length > 0 && !recordsStored) || (Boolean(imageUrl) && page === "create" && step < 3) ||
+    generatingView || aiVideo.state.phase === "starting"
   useEffect(() => {
     if (!hasWorkToLose) return
     const warn = (event: BeforeUnloadEvent) => {
@@ -3718,7 +3725,12 @@ export default function App() {
       generating={page === "create" && step === 3 && generatingView}
       creationView={page === "create"}
       navigate={navigate}
-      onBack={() => page === "create" && step > 1 ? setStep((step - 1) as Step) : navigate("home")}
+      onBack={() => {
+        // ← while 만드는 중 works like its 취소 button: the paid video job is refunded, not left without a record.
+        if (generatingView) aiVideo.cancel()
+        if (page === "create" && step > 1) setStep((step - 1) as Step)
+        else navigate("home")
+      }}
       easyMode={easyMode}
       setEasyMode={setEasyMode}
       speaking={speaking}
