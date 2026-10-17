@@ -19,6 +19,8 @@ const fixtures = [
   { photo: "store.webp", content: { eyebrow: "작은꽃집  ·  망원동", productName: "작은꽃집", productDescription: "제철 꽃으로 그날 만드는 꽃다발", keySellingPoint: "꽃다발 25,000원부터", targetAudience: "" } },
 ]
 const ratios = ["4:5", "1:1", "9:16"]
+// --layout vertical (사진 크게, default) | editorial (사진 먼저) | split (나란히)
+const layout = args.includes("--layout") ? args[args.indexOf("--layout") + 1] : "vertical"
 
 const browser = await chromium.launch({ channel: "msedge", headless: true })
 const page = await browser.newPage()
@@ -26,7 +28,7 @@ await page.route("**/api/**", (route) => route.fulfill({ status: 503, contentTyp
 await page.goto(base)
 if (out) await mkdir(out, { recursive: true })
 
-const results = await page.evaluate(async ({ fixtures, ratios }) => {
+const results = await page.evaluate(async ({ fixtures, ratios, layout }) => {
   const renderer = await import("/src/poster/posterRenderer.ts")
   const { photoPalette } = await import("/src/poster/photoColor.ts")
   const load = (src) => new Promise((done, fail) => { const img = new Image(); img.onload = () => done(img); img.onerror = fail; img.src = src })
@@ -78,7 +80,7 @@ const results = await page.evaluate(async ({ fixtures, ratios }) => {
         return realDrawImage.call(this, img, ...rest)
       }
       try {
-        renderer.renderPosterToCanvas({ canvas, content, productImage: image, ratioKey, aiMark: true, photoColors: photoPalette(image) })
+        renderer.renderPosterToCanvas({ canvas, content, productImage: image, ratioKey, compositionKey: layout, aiMark: true, photoColors: photoPalette(image) })
       } finally {
         proto.fillText = realFillText
         proto.drawImage = realDrawImage
@@ -101,7 +103,7 @@ const results = await page.evaluate(async ({ fixtures, ratios }) => {
     }
   }
   return rows
-}, { fixtures, ratios })
+}, { fixtures, ratios, layout })
 
 for (const row of results) {
   console.log(`[${row.score}점] ${row.name}  사진 ${(row.photoArea * 100).toFixed(0)}%  글자 ${row.lines}줄  최저 대비 ${row.minContrast.toFixed(1)}${row.issues.length ? "\n    " + row.issues.join("\n    ") : ""}`)

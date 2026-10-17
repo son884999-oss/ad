@@ -170,24 +170,6 @@ function getContainedImageRect(size: { width: number; height: number }, x: numbe
   return { x: x + (width - drawWidth) / 2, y: y + (height - drawHeight) / 2, width: drawWidth, height: drawHeight }
 }
 
-/**
- * Between "contain" and "cover": the photo grows until it fills the area or until `maxCrop` of one side would
- * be cut off, whichever comes first. The crop is centred on the source (which may already be the product box).
- */
-function fitWithCrop(source: { x: number; y: number; width: number; height: number }, x: number, y: number, width: number, height: number, maxCrop = 0.25) {
-  const contain = Math.min(width / source.width, height / source.height)
-  const cover = Math.max(width / source.width, height / source.height)
-  const scale = Math.min(cover, contain / (1 - maxCrop))
-  const shownWidth = Math.min(width, source.width * scale)
-  const shownHeight = Math.min(height, source.height * scale)
-  const cropWidth = shownWidth / scale
-  const cropHeight = shownHeight / scale
-  return {
-    source: { x: source.x + (source.width - cropWidth) / 2, y: source.y + (source.height - cropHeight) / 2, width: cropWidth, height: cropHeight },
-    photo: { x: x + (width - shownWidth) / 2, y: y + (height - shownHeight) / 2, width: shownWidth, height: shownHeight },
-  }
-}
-
 function drawCoverImage(ctx: Ctx, image: Img, x: number, y: number, width: number, height: number) {
   const size = imageSize(image)
   if (!image || !size) return
@@ -214,41 +196,6 @@ function sourceRect(size: { width: number; height: number }, focus?: FocusBox | 
 }
 
 let currentFocus: FocusBox | null = null
-
-function drawPortraitBackdrop(ctx: Ctx, image: Img, background: Img, width: number, height: number, theme: PosterTheme, photoTop: number) {
-  ctx.fillStyle = theme.bgGradient[1]
-  ctx.fillRect(0, 0, width, height)
-  const size = imageSize(image)
-  if (!image || !size) return
-
-  const hasBackground = Boolean(imageSize(background))
-  ctx.save()
-  ctx.filter = hasBackground ? "blur(22px) saturate(1.08)" : "blur(38px) saturate(1.12)"
-  drawCoverImage(ctx, hasBackground ? background : image, -54, -54, width + 108, height + 108)
-  ctx.restore()
-
-  ctx.save()
-  ctx.globalAlpha = 0.13
-  ctx.fillStyle = theme.bgGradient[0]
-  ctx.fillRect(0, 0, width, height)
-  ctx.restore()
-
-  // The photo fills the area under the text panel so the title never covers the product. When its shape
-  // differs from that area, up to a quarter of its edges is cropped so no wide empty band is left.
-  const { source, photo } = fitWithCrop(sourceRect(size, currentFocus), 0, photoTop, width, height - photoTop)
-  ctx.save()
-  ctx.shadowColor = "rgba(18,35,24,.24)"
-  ctx.shadowBlur = 34
-  ctx.shadowOffsetY = 8
-  ctx.drawImage(image, source.x, source.y, source.width, source.height, photo.x, photo.y, photo.width, photo.height)
-  ctx.restore()
-
-  ctx.save()
-  ctx.strokeStyle = "rgba(255,255,255,.42)"
-  ctx.lineWidth = 2
-  ctx.strokeRect(photo.x + 1, photo.y + 1, photo.width - 2, photo.height - 2)
-  ctx.restore()
-}
 
 /** Large Korean titles read tighter with about -1.5% tracking; browsers without canvas letterSpacing ignore it. */
 function setTitleTracking(ctx: Ctx, size: number) {
@@ -279,94 +226,221 @@ function fitTitleLines(ctx: Ctx, text: string, maxWidth: number, maxLines: numbe
 
 type RenderArgs = { ctx: Ctx; image: Img; background: Img; content: PosterContent; theme: PosterTheme; width: number; height: number }
 
-function renderVerticalPoster({ ctx, image, background, content, theme, width, height }: RenderArgs) {
+/**
+ * Cover-crops the photo into the rectangle, centred on the product box when the photo analysis gave one, and
+ * never reaching outside the photo.
+ */
+function drawPhotoCover(ctx: Ctx, image: Img, x: number, y: number, width: number, height: number) {
+  const size = imageSize(image)
+  if (!image || !size) return false
+  const focus = sourceRect(size, currentFocus)
+  const scale = Math.max(width / focus.width, height / focus.height, width / size.width, height / size.height)
+  const cropWidth = Math.min(size.width, width / scale)
+  const cropHeight = Math.min(size.height, height / scale)
+  const centerX = focus.x + focus.width / 2
+  const centerY = focus.y + focus.height / 2
+  const sx = Math.min(size.width - cropWidth, Math.max(0, centerX - cropWidth / 2))
+  const sy = Math.min(size.height - cropHeight, Math.max(0, centerY - cropHeight / 2))
+  ctx.drawImage(image, sx, sy, cropWidth, cropHeight, x, y, width, height)
+  return true
+}
+
+/** "5,500원 · 직접 만든 크림" → the price (shown large) and the other short points (shown as a badge). */
+function splitPoint(point: string) {
+  const items = point.split("·").map((item) => item.trim()).filter(Boolean)
+  const price = items.find((item) => /\d/.test(item) && /원|₩|만/.test(item)) ?? ""
+  return { price, others: items.filter((item) => item !== price) }
+}
+
+function drawPill(ctx: Ctx, text: string, x: number, y: number, { size, background, color }: { size: number; background: string; color: string }) {
+  ctx.font = font(800, size)
+  const width = ctx.measureText(text).width + size * 1.4
+  const height = size * 1.9
+  ctx.fillStyle = background
+  roundedRect(ctx, x, y, width, height, height / 2)
+  ctx.fill()
+  ctx.fillStyle = color
+  ctx.textAlign = "left"
+  ctx.textBaseline = "middle"
+  ctx.fillText(text, x + size * 0.7, y + height / 2 + 1)
+  return { width, height }
+}
+
+const DARK = "#1d1a17"
+
+/**
+ * "사진 크게": the photo fills the poster and the text sits on a dark fade at the bottom, like a magazine ad
+ * (the coffee sample on the home screen). Story (9:16) keeps the top 250px and the bottom 340px clear.
+ */
+function renderFullBleedPoster({ ctx, image, content, theme, width, height }: RenderArgs) {
   const { eyebrow = "", productName, productDescription = "", keySellingPoint = "", targetAudience = "" } = content
   const drawn: string[] = []
-  const colors = textColors(theme)
-  // 9:16 is posted as a Story: Instagram's own UI covers about 250px at the top and 340px at the bottom.
   const isStory = height > 1500
-  const panelX = 48
-  const panelY = isStory ? 250 : 48
-  const panelWidth = width - panelX * 2
-  const inset = 38
-  const textX = panelX + inset
-  const textWidth = panelWidth - inset * 2
-  const hasEyebrow = Boolean(eyebrow)
-  const titleY = panelY + (hasEyebrow ? 138 : 104)
-  const title = fitTitle(ctx, productName, textWidth, 2, height > 1500 ? 80 : 72, 42)
+  const side = 72
+  const bottomSafe = isStory ? 360 : 76
+  const topSafe = isStory ? 260 : 64
+  const textWidth = width - side * 2
+
+  ctx.fillStyle = theme.bgGradient[1]
+  ctx.fillRect(0, 0, width, height)
+  drawPhotoCover(ctx, image, 0, 0, width, height)
+
+  // Measure the text block first (bottom-up) so the dark fade sits exactly behind it.
+  const { price, others } = splitPoint(keySellingPoint)
+  const badge = others[0] ?? ""
+  const title = fitTitle(ctx, productName, textWidth, 2, isStory ? 124 : 112, 64)
   const titleLineHeight = title.size * 1.12
-  // Sizes are for a 1080px canvas that a phone feed shows at about a third: 36px body is about 13pt there.
-  const descriptionFontSize = isStory ? 38 : 36
-  const descriptionLineHeight = isStory ? 52 : 50
-  const lastTitleBaseline = titleY + (title.lines.length - 1) * titleLineHeight
-  const descriptionY = lastTitleBaseline + 58
-  ctx.font = font(500, descriptionFontSize)
+  ctx.font = font(500, 44)
   const descriptionLines = productDescription ? wrapText(ctx, productDescription, textWidth, 2) : []
-  const afterDescription = descriptionLines.length ? descriptionY + (descriptionLines.length - 1) * descriptionLineHeight + 28 : lastTitleBaseline + 34
-  ctx.font = font(700, 30)
-  const benefitLines = keySellingPoint ? wrapText(ctx, keySellingPoint, textWidth - 52, 2) : []
-  const benefitY = afterDescription
-  const benefitHeight = benefitLines.length ? Math.max(68, benefitLines.length * 38 + 30) : 0
-  ctx.font = font(600, 27)
-  const audienceLines = targetAudience ? wrapText(ctx, `추천 대상  ·  ${targetAudience}`, textWidth, 2) : []
-  const audienceY = benefitLines.length ? benefitY + benefitHeight + 20 : afterDescription + 4
-  const panelBottom = audienceLines.length
-    ? audienceY + audienceLines.length * 38 + 26
-    : benefitLines.length
-      ? benefitY + benefitHeight + 30
-      : afterDescription + 10
-  const panelHeight = panelBottom - panelY
+  const audience = targetAudience ? `${targetAudience}에게 추천해요` : ""
+  const priceSize = 76
+  let y = height - bottomSafe
+  const priceY = price ? y : 0
+  if (price) y -= priceSize + 30
+  const audienceY = !price && audience ? y : 0
+  if (!price && audience) y -= 34 + 28
+  const descriptionY = descriptionLines.length ? y - (descriptionLines.length - 1) * 56 : 0
+  if (descriptionLines.length) y -= descriptionLines.length * 56 + 18
+  const titleBottom = y
+  const titleTop = titleBottom - (title.lines.length - 1) * titleLineHeight - title.size
+  const badgeY = badge ? titleTop - 36 - 64 : 0
+  const blockTop = badge ? badgeY : titleTop
 
-  drawPortraitBackdrop(ctx, image, background, width, height, theme, Math.min(panelBottom + 24, height * 0.55))
-
-  ctx.save()
-  ctx.shadowColor = "rgba(17,38,25,.14)"
-  ctx.shadowBlur = 28
-  ctx.shadowOffsetY = 10
-  ctx.globalAlpha = 0.97
-  ctx.fillStyle = theme.paper
-  roundedRect(ctx, panelX, panelY, panelWidth, panelHeight, 34)
-  ctx.fill()
-  ctx.restore()
-
-  if (hasEyebrow) {
-    ctx.fillStyle = theme.accent
-    roundedRect(ctx, textX, panelY + 30, 9, 30, 4)
-    ctx.fill()
-    ctx.textAlign = "left"
-    ctx.textBaseline = "middle"
-    ctx.fillStyle = colors.sub
-    ctx.font = font(700, 32)
-    const [line] = wrapText(ctx, eyebrow, textWidth - 20, 1)
-    ctx.fillText(line, textX + 20, panelY + 45)
+  // Dark fade from well above the text to the bottom; a light one at the top keeps the shop name readable.
+  const fade = ctx.createLinearGradient(0, Math.max(0, blockTop - 420), 0, height)
+  fade.addColorStop(0, "rgba(20,14,10,0)")
+  fade.addColorStop(Math.min(0.9, 420 / Math.max(1, height - blockTop + 420)), "rgba(20,14,10,.66)")
+  fade.addColorStop(1, "rgba(20,14,10,.9)")
+  ctx.fillStyle = fade
+  ctx.fillRect(0, 0, width, height)
+  if (eyebrow) {
+    const top = ctx.createLinearGradient(0, 0, 0, topSafe + 200)
+    top.addColorStop(0, "rgba(20,14,10,.55)")
+    top.addColorStop(1, "rgba(20,14,10,0)")
+    ctx.fillStyle = top
+    ctx.fillRect(0, 0, width, topSafe + 200)
+    // On a dark see-through pill so the shop name stays readable on a bright photo.
+    ctx.font = font(800, 38)
+    const [line] = wrapText(ctx, eyebrow, textWidth - 56, 1)
+    drawPill(ctx, line, side, topSafe, { size: 38, background: "rgba(20,14,10,.62)", color: "#ffffff" })
     drawn.push(line)
   }
 
+  if (badge) {
+    drawPill(ctx, badge, side, badgeY, { size: 34, background: "#ffffff", color: readableOn("#ffffff", [theme.accent, theme.ink, DARK]) })
+    drawn.push(badge)
+  }
   setTitleTracking(ctx, title.size)
-  drawLines(ctx, title.lines, { x: textX, y: titleY, font: font(800, title.size), color: theme.ink, lineHeight: titleLineHeight })
+  drawLines(ctx, title.lines, { x: side, y: titleTop + title.size, font: font(800, title.size), color: "#ffffff", lineHeight: titleLineHeight })
   resetTracking(ctx)
   drawn.push(title.lines.join(" "))
-
   if (descriptionLines.length) {
-    drawLines(ctx, descriptionLines, { x: textX, y: descriptionY, font: font(500, descriptionFontSize), color: colors.sub, lineHeight: descriptionLineHeight })
+    drawLines(ctx, descriptionLines, { x: side, y: descriptionY, font: font(500, 44), color: "#f4eee8", lineHeight: 56 })
     drawn.push(descriptionLines.join(" "))
   }
+  if (price) {
+    // A light tint of the accent, kept readable on the dark fade.
+    const priceColor = readableOn(DARK, ["#ffc79e", "#ffd9bd", "#ffffff"])
+    drawLines(ctx, [price], { x: side, y: priceY, font: font(800, priceSize), color: priceColor, lineHeight: priceSize })
+    drawn.push(price)
+  } else if (audience) {
+    ctx.font = font(600, 34)
+    const [line] = wrapText(ctx, audience, textWidth, 1)
+    drawLines(ctx, [line], { x: side, y: audienceY, font: font(600, 34), color: "#f4eee8", lineHeight: 40 })
+    drawn.push(line)
+  }
+  return drawn
+}
 
-  if (benefitLines.length) {
-    ctx.font = font(700, 30)
-    const pointTextWidth = Math.max(0, ...benefitLines.map((line) => ctx.measureText(line).width))
-    const pointWidth = Math.min(textWidth, pointTextWidth + 52)
-    ctx.fillStyle = theme.accent
-    roundedRect(ctx, textX, benefitY, pointWidth, benefitHeight, Math.min(34, benefitHeight / 2))
-    ctx.fill()
-    drawLines(ctx, benefitLines, { x: textX + 26, y: benefitY + 45, font: font(700, 30), color: colors.badge, lineHeight: 38 })
-    drawn.push(benefitLines.join(" "))
+/**
+ * "사진 먼저": the photo fills the top and fades into a calm panel with the text centred below it (the cake
+ * sample on the home screen).
+ */
+function renderPanelPoster({ ctx, image, content, theme, width, height }: RenderArgs) {
+  const { eyebrow = "", productName, productDescription = "", keySellingPoint = "", targetAudience = "" } = content
+  const drawn: string[] = []
+  const isStory = height > 1500
+  const isSquare = width === height
+  const paper = theme.id === "luxury" ? theme.paper : "#fdf8f3"
+  const ink = readableOn(paper, [theme.ink, DARK, "#ffffff"])
+  const sub = readableOn(paper, [theme.sub, "#5b4f47", ink])
+  const accent = readableOn(paper, [theme.accent, theme.ink, ink])
+  const side = 72
+  const textWidth = width - side * 2
+  const photoHeight = Math.round(height * (isStory ? 0.56 : isSquare ? 0.56 : 0.62))
+
+  ctx.fillStyle = paper
+  ctx.fillRect(0, 0, width, height)
+  drawPhotoCover(ctx, image, 0, 0, width, photoHeight)
+  const fade = ctx.createLinearGradient(0, photoHeight - 220, 0, photoHeight)
+  fade.addColorStop(0, `${paper}00`)
+  fade.addColorStop(1, paper)
+  ctx.fillStyle = fade
+  ctx.fillRect(0, photoHeight - 220, width, 220)
+
+  const center = width / 2
+  ctx.textAlign = "center"
+  ctx.textBaseline = "alphabetic"
+  let y = photoHeight + (isSquare ? 34 : 56)
+  if (eyebrow) {
+    ctx.font = font(800, 38)
+    const [line] = wrapText(ctx, eyebrow, textWidth, 1)
+    ctx.fillStyle = accent
+    ctx.fillText(line, center, y)
+    drawn.push(line)
+    y += isSquare ? 24 : 34
+  }
+  const title = fitTitle(ctx, productName, textWidth, 2, isStory ? 112 : isSquare ? 84 : 100, 56)
+  setTitleTracking(ctx, title.size)
+  ctx.font = font(800, title.size)
+  ctx.fillStyle = ink
+  title.lines.forEach((line, index) => ctx.fillText(line, center, y + title.size + index * title.size * 1.12))
+  resetTracking(ctx)
+  drawn.push(title.lines.join(" "))
+  y += title.size + (title.lines.length - 1) * title.size * 1.12 + (isSquare ? 50 : 66)
+  if (productDescription) {
+    ctx.font = font(500, isSquare ? 36 : 40)
+    const lines = wrapText(ctx, productDescription, textWidth, isSquare ? 1 : 2)
+    ctx.fillStyle = sub
+    lines.forEach((line, index) => ctx.fillText(line, center, y + index * 54))
+    drawn.push(lines.join(" "))
+    y += (lines.length - 1) * 54
   }
 
-  if (audienceLines.length) {
-    drawLines(ctx, audienceLines, { x: textX, y: audienceY + 30, font: font(600, 27), color: theme.ink, lineHeight: 38 })
-    drawn.push(audienceLines.join(" "))
+  // Info row at the bottom: the selling point on the left, who it is for on the right.
+  const left = keySellingPoint
+  const right = targetAudience ? `${targetAudience} 추천` : ""
+  if (left || right) {
+    const rowY = Math.max(y + 70, height - (isStory ? 380 : isSquare ? 64 : 92))
+    ctx.save()
+    ctx.strokeStyle = `${sub}55`
+    ctx.lineWidth = 2
+    ctx.setLineDash([10, 10])
+    ctx.beginPath()
+    ctx.moveTo(side, rowY - 62)
+    ctx.lineTo(width - side, rowY - 62)
+    ctx.stroke()
+    ctx.restore()
+    ctx.font = font(700, 34)
+    if (left && right) {
+      const [l] = wrapText(ctx, left, textWidth * 0.56, 1)
+      const [r] = wrapText(ctx, right, textWidth * 0.4, 1)
+      ctx.fillStyle = ink
+      ctx.textAlign = "left"
+      ctx.fillText(l, side, rowY)
+      ctx.fillStyle = sub
+      ctx.textAlign = "right"
+      ctx.fillText(r, width - side, rowY)
+      drawn.push(l, r)
+    } else {
+      const [line] = wrapText(ctx, left || right, textWidth, 1)
+      ctx.fillStyle = ink
+      ctx.textAlign = "center"
+      ctx.fillText(line, center, rowY)
+      drawn.push(line)
+    }
   }
+  ctx.textAlign = "left"
   return drawn
 }
 
@@ -421,7 +495,7 @@ export type RenderPosterOptions = {
   aiMark?: boolean
 }
 
-function drawAiMark(ctx: Ctx, width: number, height: number, isStory: boolean) {
+function drawAiMark(ctx: Ctx, width: number, height: number, isStory: boolean, atTop = false) {
   const label = "AI 활용"
   ctx.save()
   ctx.font = font(700, 24)
@@ -429,7 +503,7 @@ function drawAiMark(ctx: Ctx, width: number, height: number, isStory: boolean) {
   const h = 40
   const x = width - w - 24
   // Stories: above Instagram's bottom UI band (340px); otherwise near the bottom-right corner.
-  const y = height - h - (isStory ? 352 : 24)
+  const y = atTop ? (isStory ? 260 : 24) : height - h - (isStory ? 352 : 24)
   ctx.fillStyle = "rgba(29,26,23,.62)"
   roundedRect(ctx, x, y, w, h, h / 2)
   ctx.fill()
@@ -466,9 +540,10 @@ export function renderPosterToCanvas({
   const ctx = canvas.getContext("2d")
   if (!ctx) return null
 
-  if (compositionKey === "vertical") {
-    const drawn = renderVerticalPoster({ ctx, image: productImage, background: backgroundImage, content, theme, width, height })
-    if (aiMark) drawAiMark(ctx, width, height, ratioKey === "9:16")
+  if (compositionKey === "vertical" || compositionKey === "editorial") {
+    const render = compositionKey === "vertical" ? renderFullBleedPoster : renderPanelPoster
+    const drawn = render({ ctx, image: productImage, background: backgroundImage, content, theme, width, height })
+    if (aiMark) drawAiMark(ctx, width, height, ratioKey === "9:16", compositionKey === "editorial")
     return drawn
   }
 
@@ -476,7 +551,7 @@ export function renderPosterToCanvas({
   const drawn: string[] = []
   const colors = textColors(theme)
   const isStory = ratioKey === "9:16"
-  // Story safe zone (see renderVerticalPoster): nothing in the top ~250px or the bottom ~340px.
+  // Story safe zone (see renderFullBleedPoster): nothing in the top ~250px or the bottom ~340px.
   const top = isStory ? 170 : 0
   const isSquare = ratioKey === "1:1"
   const pad = 82
@@ -514,15 +589,7 @@ export function renderPosterToCanvas({
   let maxTitleLines: number
   let titleSize: number
 
-  if (compositionKey === "editorial") {
-    imageRect = { x: pad, y: isStory ? 150 + top : 125, width: width - pad * 2, height: isStory ? 760 : isSquare ? 430 : 540 }
-    titleY = imageRect.y + imageRect.height + (isStory ? 100 : 88)
-    titleWidth = width - pad * 2
-    descriptionY = titleY + (isStory ? 150 : 120)
-    copyWidth = titleWidth * 0.9
-    maxTitleLines = 2
-    titleSize = isStory ? 80 : 66
-  } else if (compositionKey === "split" && !isSquare) {
+  if (compositionKey === "split" && !isSquare) {
     imageRect = { x: 570, y: isStory ? 400 : 300, width: 430, height: isStory ? 1000 : 760 }
     titleY = isStory ? 430 : 370
     titleWidth = imageRect.x - titleX - 52
