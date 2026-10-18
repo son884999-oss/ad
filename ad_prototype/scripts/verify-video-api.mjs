@@ -153,13 +153,13 @@ try {
     // Commercial direction: food concept, premium mood, 5-second take in three camera beats ending on a hero frame
     // with room for the caption, a light sweep (never steam) on cake, preservation rules.
     assert.match(input.prompt, /^Create a cinematic food product commercial\. Use an elegant, restrained mood/)
-    assert.match(input.prompt, /one continuous 5-second commercial take in three smooth beats\. 0-2 s: a slow dolly-in at eye level/)
-    assert.match(input.prompt, /slight crane down with a soft focus pull/)
-    assert.match(input.prompt, /hero frame, the product sharp in the upper middle of the frame, no taller than half the frame, and the lower third calm and uncluttered for text/)
+    assert.match(input.prompt, /one continuous 5-second shot with a slow, subtle camera push-in/)
+    assert.match(input.prompt, /No orbit, no arc, no crane, no rotation of the product/)
+    assert.match(input.prompt, /still hero frame: the product sharp in the upper middle of the frame, no taller than half the frame, the lower third calm and uncluttered for text/)
     assert.match(input.prompt, /no steam, no dust or particles/)
     // Real run 2026-10-18: an 8° arc showed the cake's unseen side and the model invented it.
-    assert.match(input.prompt, /never orbit, arc, pan around or circle the product/)
-    assert.doesNotMatch(input.prompt, /gentle arc/)
+    // Real runs 2026-10-18: timed beats with an arc or a crane made Kling invent the unseen side of the cake.
+    assert.doesNotMatch(input.prompt, /gentle arc|crane down|smooth beats/)
     assert.match(input.prompt, /Preserve the reference background, lighting direction, product shape, proportions and colors\. Keep any text or logo exactly as it appears in the photo; where the photo has no text, add none/)
     assert.ok(!/label readable/.test(input.prompt), "never ask the model to keep a label readable (it invents one)")
     assert.equal(headerOf(submit.init, "idempotency-key"), startBody.idempotencyKey)
@@ -189,7 +189,7 @@ try {
     assert.equal(sent[2].url, "https://api.higgsfield.ai/kling-video/v2.1/pro/image-to-video")
     assert.equal(JSON.parse(sent[2].init.body).duration, 10)
     assert.equal(JSON.parse(sent[2].init.body).cfg_scale, 0.5, "Kling keeps its own schema")
-    assert.match(r.json.videoPrompt, /10-second commercial take in four smooth beats/)
+    assert.match(r.json.videoPrompt, /10-second shot with a slow, subtle camera push-in/)
     assert.equal(headerOf(sent[1].init, "authorization"), null, "an Authorization upload header is dropped")
     delete process.env.HF_VIDEO_DURATION
     delete process.env.HF_VIDEO_MODEL
@@ -209,7 +209,7 @@ try {
     assert.equal(input.duration, 3)
     assert.equal(input.resolution, "480p")
     assert.equal(input.generate_audio, false)
-    assert.match(input.prompt, /3-second commercial take.* Avoid: deformed product/)
+    assert.match(input.prompt, /3-second shot.* Avoid: deformed product/)
     delete process.env.HF_VIDEO_MODEL
     delete process.env.HF_VIDEO_DURATION
   })
@@ -220,7 +220,7 @@ try {
     sent.length = 0
     const r = await call(videoStart, request("POST", startBody))
     assert.equal(r.status, 200)
-    assert.match(r.json.videoPrompt, /^Create a warm bakery portrait of the strawberry cake\. Soft warm window light\. Shoot one continuous 5-second commercial take/)
+    assert.match(r.json.videoPrompt, /^Create a warm bakery portrait of the strawberry cake\. Soft warm window light\. Use one continuous 5-second shot/)
     assert.match(r.json.videoPrompt, /Preserve the reference background/)
     const gem = sent.find((s) => s.url.includes("generativelanguage"))
     assert.equal(gem.init.headers["x-goog-api-key"], "gem-key")
@@ -347,7 +347,6 @@ try {
     assert.match(rulesPrompt({ productName: "수분 세럼", tones: [] }), /^Create a luxurious beauty product commercial\. Use a calm mood/)
     assert.match(rulesPrompt({ productName: "머그컵", tones: ["friendly"] }), /^Create a calm lifestyle product commercial\. Use a warm, welcoming mood/)
     assert.match(rulesPrompt({ productName: "동네 꽃다발", tones: ["trendy", "premium"] }), /^Create a fresh floral commercial\. Use an elegant/)
-    assert.match(rulesPrompt({ productName: "원두 커피" }, 10), /four smooth beats.*macro close-up.*pull-back/, "10 s: four beats")
     assert.match(rulesPrompt({ productName: "꽃", tones: ["trendy"] }), /cheerful mood/)
   })
 

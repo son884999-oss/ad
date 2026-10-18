@@ -11,32 +11,16 @@ export const PRESERVATION =
   "Preserve the reference background, lighting direction, product shape, proportions and colors. Keep any text or logo exactly as it appears in the photo; where the photo has no text, add none: no letters, labels, logos or brand names on the product or anywhere else. The product itself never moves, bends or changes; only the camera and the light move. Every object visible now is the only object that ever appears; avoid jump cuts, morphing, new objects and unsupported product benefits."
 
 /**
- * The camera as a commercial: timed beats in one continuous take (a dolly-in, a slight crane with a focus pull, a
- * settled hero frame), so a 5-second clip already feels edited. 10 seconds adds a macro pass over the texture and
- * a pull-back. The last frame leaves the lower third clear for the caption drawn later.
+ * One slow push-in, nothing else. Three real paid runs (2026-10-18) settled this: a single push-in kept the cake
+ * exactly as photographed, while timed beats with a small arc or a crane made Kling turn the camera and invent the
+ * unseen side (pale sponge, no shavings): a different cake. The varied shots and edits of the commercial are made
+ * afterwards in the browser from these real pixels (src/videoCaptioner.ts), where the product cannot change.
+ * The last frame leaves the lower third clear for the caption drawn later.
  */
-// A real paid run (2026-10-18) with an 8° arc showed the cake's unseen side, and the model invented it: pale sponge,
-// no shavings. The camera now only moves toward, up and down, never around: only what the photo shows is shown.
-const FACE_ONLY = "Camera moves are smooth and cinematic, like a motion-control rig, but never orbit, arc, pan around or circle the product: only the side visible in the photo is ever seen, and the product itself never rotates or changes."
-
 export function cameraFor(duration = 5) {
-  const hero = "the product sharp in the upper middle of the frame, no taller than half the frame, and the lower third calm and uncluttered for text"
-  if (duration >= 10) {
-    return [
-      `Shoot one continuous ${duration}-second commercial take in four smooth beats.`,
-      "0-2 s: a slow dolly-in at eye level from a wide establishing frame.",
-      "2-5 s: a macro close-up gliding slowly across the most appealing surface texture, shallow depth of field.",
-      "5-8 s: a slow crane down to eye level while the focus settles from its top detail to the whole product, the same face of the product toward camera.",
-      `8-10 s: an elegant pull-back that settles into a still hero frame, ${hero}.`,
-      FACE_ONLY,
-    ].join(" ")
-  }
   return [
-    `Shoot one continuous ${duration}-second commercial take in three smooth beats.`,
-    "0-2 s: a slow dolly-in at eye level toward the product.",
-    "2-4 s: a slight crane down with a soft focus pull that lands on the product's most appealing detail, the same face of the product toward camera.",
-    `4-5 s: the camera eases to a stop on a still hero frame, ${hero}.`,
-    FACE_ONLY,
+    `Use one continuous ${duration}-second shot with a slow, subtle camera push-in, keeping the entire product in view and ending on a still hero frame: the product sharp in the upper middle of the frame, no taller than half the frame, the lower third calm and uncluttered for text.`,
+    "No orbit, no arc, no crane, no rotation of the product: only the side visible in the photo is ever seen.",
   ].join(" ")
 }
 

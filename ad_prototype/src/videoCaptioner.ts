@@ -4,7 +4,8 @@
 // Returns null when the browser cannot record; the caller then uses the clip as it is.
 //
 // 고급형 ("elegant") gets a commercial finish on top (owner's goal 2026-10-18: show off the technology and make the
-// ad work): a light grade and vignette, an opening that pulls focus from a soft flash, an end hold of 1.6 s on
+// ad work): a light grade and vignette, an opening that pulls focus from a soft flash, three shots cut from the
+// clip (wide, close-up on the detail, hero), an end hold of 1.6 s on
 // the last frame with a slow push while the invitation fills in, and synthesized sound (a whoosh into the
 // opening, a warm pad under the shot, a chime with the invitation). No music licence is needed.
 
@@ -18,16 +19,32 @@ const MIME_CANDIDATES = ["video/mp4;codecs=avc1.42E01E", "video/mp4;codecs=avc1"
 export const END_HOLD_SECONDS = 1.6
 const INTRO_SECONDS = 0.7
 
-/** The grade, opening and end-hold push for one 고급형 frame (exported for the checks). */
+// The edit: the real clip is cut into three shots — wide, a close-up on the top detail, wide again for the hero
+// frame. The close-up is a crop of the real pixels, so it adds a camera angle without the model ever inventing
+// one (three paid runs showed Kling invents the product when asked to move around it).
+const CLOSE_UP = { from: 0.44, to: 0.72, scale: 1.5, anchor: 0.34 }
+const CUT_BLUR_SECONDS = 0.14
+
+/** The grade, opening, cuts and end-hold push for one 고급형 frame (exported for the checks). */
 export function finishFor(seconds: number, clipSeconds: number) {
   const intro = Math.max(0, 1 - seconds / INTRO_SECONDS)
   const hold = Math.min(Math.max((seconds - clipSeconds) / END_HOLD_SECONDS, 0), 1)
+  const closeFrom = clipSeconds * CLOSE_UP.from
+  const closeTo = clipSeconds * CLOSE_UP.to
+  const closeUp = clipSeconds >= 4 && seconds >= closeFrom && seconds < closeTo
+  // A short motion blur and a faint flash on each cut.
+  const fromCut = Math.min(...[closeFrom, closeTo].map((cut) => Math.abs(seconds - cut)))
+  const cut = clipSeconds >= 4 && seconds > INTRO_SECONDS ? Math.max(0, 1 - fromCut / CUT_BLUR_SECONDS) : 0
+  // Inside the close-up the crop keeps drifting in, so the shot is alive.
+  const drift = closeUp ? (seconds - closeFrom) / (closeTo - closeFrom) : 0
   return {
     // Soft focus pulling sharp, with a warm flash that fades (the "reveal").
-    blur: Math.round(intro * intro * 14 * 10) / 10,
-    flash: intro * 0.38,
-    // A slow push on the frozen last frame, eased.
-    scale: 1 + 0.045 * (1 - (1 - hold) * (1 - hold)),
+    blur: Math.round((intro * intro * 14 + cut * 6) * 10) / 10,
+    flash: intro * 0.38 + cut * 0.12,
+    // The close-up, then a slow eased push on the frozen last frame.
+    scale: closeUp ? CLOSE_UP.scale + 0.08 * drift : 1 + 0.045 * (1 - (1 - hold) * (1 - hold)),
+    // Where the zoom is anchored (0 top … 1 bottom): the product's upper middle for the close-up.
+    anchor: closeUp ? CLOSE_UP.anchor : 0.5,
   }
 }
 
@@ -132,12 +149,12 @@ export async function captionVideo(clip: Blob, caption: VideoCaption, accent?: s
     const vignette = ctx.createRadialGradient(540, 820, 520, 540, 960, 1250)
     vignette.addColorStop(0, "rgba(0,0,0,0)")
     vignette.addColorStop(1, "rgba(0,0,0,.34)")
-    const drawClip = (scale = 1) => {
+    const drawClip = (scale = 1, anchor = 0.5) => {
       // The clip is 9:16 already (src/videoFrame.ts); cover keeps any other shape full-frame too.
       const cover = Math.max(canvas.width / video.videoWidth, canvas.height / video.videoHeight) * scale
       const width = video.videoWidth * cover
       const height = video.videoHeight * cover
-      ctx.drawImage(video, (canvas.width - width) / 2, (canvas.height - height) / 2, width, height)
+      ctx.drawImage(video, (canvas.width - width) / 2, (canvas.height - height) * anchor, width, height)
     }
     const draw = (seconds: number) => {
       if (!elegant) {
@@ -148,7 +165,7 @@ export async function captionVideo(clip: Blob, caption: VideoCaption, accent?: s
       const finish = finishFor(seconds, clipSeconds)
       ctx.save()
       ctx.filter = `contrast(1.06) saturate(1.1) brightness(1.02)${finish.blur ? ` blur(${finish.blur}px)` : ""}`
-      drawClip(finish.scale)
+      drawClip(finish.scale, finish.anchor)
       ctx.restore()
       ctx.fillStyle = vignette
       ctx.fillRect(0, 0, canvas.width, canvas.height)
