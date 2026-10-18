@@ -2836,7 +2836,8 @@ function CreateFlow({
                     : shareResult("video")}
                   shareMessage={aiNote(t(shareMessages.video ?? ""))}
                   error={videoStatus === "failed" || videoStatus === "unsupported"}
-                  message={t(showsRealVideo(aiVideo.state)
+                  // The AI clip: after 저장 its own result message; before, whether the captioned file is ready.
+                  message={t(showsRealVideo(aiVideo.state) && !/^(AI가 만든 영상을 저장|새 창)/.test(videoMessage)
                     ? realVideoFile ? "AI가 만든 영상에 글자를 넣어 준비했어요. 저장하거나 보낼 수 있어요." : "AI 영상에 글자를 넣고 있어요. 잠시만 기다려 주세요."
                     : videoStatus === "preparing"
                       ? `${videoMessage} 다른 작업으로 이동하면 준비를 취소해요.`
