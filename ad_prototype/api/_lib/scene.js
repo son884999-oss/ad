@@ -43,6 +43,8 @@ export function scenePrompt(details) {
     "Keep the product exactly as it is in the photo: the same shape, size, colours, surface details and any printed text or logo, unchanged.",
     `Replace only the surroundings with this advertising scene: ${scene}.`,
     "Photorealistic commercial product photography, vertical frame: the product sharp and centred about 40% from the top, filling about 40% of the frame height, its base no lower than 60% of the height; the lower third is a calm, plain, softly lit surface with no objects (text goes there later); light consistent across product and scene.",
+    // Owner's goal (2026-10-18): a frame that looks like a top-tier commercial, not a catalogue shot.
+    "Lit like a high-end TV commercial: a soft key light, a warm rim light tracing the product's silhouette against a slightly darker backdrop, gentle reflections on the surface, rich depth and fine texture detail.",
     "Add no fruit, food, flowers or other props that are not part of the product; never change what the product is.",
     "Do not add any text, letters, words, logos, labels or watermarks anywhere.",
   ].join(" ")
