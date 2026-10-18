@@ -153,10 +153,10 @@ try {
     // Commercial direction: food concept, premium mood, 5-second take in three camera beats ending on a hero frame
     // with room for the caption, a light sweep (never steam) on cake, preservation rules.
     assert.match(input.prompt, /^Create a cinematic food product commercial\. Use an elegant, restrained mood/)
-    assert.match(input.prompt, /one continuous 5-second commercial take in three smooth beats\. 0-2 s: a slow, low-angle dolly-in/)
-    assert.match(input.prompt, /no more than 15 degrees/)
-    assert.match(input.prompt, /hero frame, the product sharp in the upper middle of the frame and the lower third calm and uncluttered for text/)
-    assert.match(input.prompt, /no steam/)
+    assert.match(input.prompt, /one continuous 5-second commercial take in three smooth beats\. 0-2 s: a slow dolly-in at eye level/)
+    assert.match(input.prompt, /no more than 8 degrees/)
+    assert.match(input.prompt, /hero frame, the product sharp in the upper middle of the frame, no taller than half the frame, and the lower third calm and uncluttered for text/)
+    assert.match(input.prompt, /no steam, no dust or particles/)
     assert.match(input.prompt, /Preserve the reference background, lighting direction, product shape, proportions and colors\. Keep any text or logo exactly as it appears in the photo; where the photo has no text, add none/)
     assert.ok(!/label readable/.test(input.prompt), "never ask the model to keep a label readable (it invents one)")
     assert.equal(headerOf(submit.init, "idempotency-key"), startBody.idempotencyKey)

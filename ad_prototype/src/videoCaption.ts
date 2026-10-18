@@ -159,7 +159,7 @@ export async function loadCaptionFonts(texts: string[]) {
   if (typeof document === "undefined" || !document.fonts?.load) return
   const sample = texts.filter(Boolean).join(" ") || "가"
   try {
-    await Promise.all([serif(600, 88), font(500, 46), font(600, 40), font(700, 46)].map((value) => document.fonts.load(value, sample)))
+    await Promise.all([serif(600, 78), serif(600, 64), font(500, 46), font(600, 40), font(700, 46)].map((value) => document.fonts.load(value, sample)))
   } catch {
     // Fallback fonts are fine.
   }
@@ -231,22 +231,32 @@ export function drawElegantCaption(ctx: CanvasRenderingContext2D, seconds: numbe
     })
     y -= 104
   }
-  ctx.font = serif(600, 88)
-  const moodLines = wrap(ctx, mood, textWidth, 2)
+  // 78px serif; a second line holding a single word ("진한 / 초콜릿") is pulled back onto one line at up to 64px.
+  let moodSize = 78
+  ctx.font = serif(600, moodSize)
+  let moodLines = wrap(ctx, mood, textWidth, 2)
+  if (moodLines.length === 2 && !/\s/.test(moodLines[1].trim())) {
+    ctx.font = serif(600, 64)
+    if (ctx.measureText(mood).width <= textWidth) {
+      moodSize = Math.min(78, Math.floor((64 * textWidth) / ctx.measureText(mood).width))
+      moodLines = [mood]
+    }
+  }
+  const moodStep = Math.round(moodSize * 1.28)
   const moodBaseline = y
   fadeIn(0.3, () => {
-    ctx.font = serif(600, 88)
+    ctx.font = serif(600, moodSize)
     ctx.fillStyle = CREAM
-    moodLines.forEach((line, index) => ctx.fillText(line, SIDE, moodBaseline - (moodLines.length - 1 - index) * 112))
+    moodLines.forEach((line, index) => ctx.fillText(line, SIDE, moodBaseline - (moodLines.length - 1 - index) * moodStep))
   })
-  const labelBaseline = moodBaseline - (moodLines.length - 1) * 112 - 88 - 40
+  const labelBaseline = moodBaseline - (moodLines.length - 1) * moodStep - moodSize - 40
   if (label) {
     fadeIn(0, () => {
       ctx.fillStyle = GOLD
       ctx.fillRect(SIDE, labelBaseline - 12, 44, 3)
-      ctx.font = font(600, 32)
+      ctx.font = font(600, 36)
       ctx.fillStyle = CREAM
-      if ("letterSpacing" in ctx) ctx.letterSpacing = "8px"
+      if ("letterSpacing" in ctx) ctx.letterSpacing = "5px"
       ctx.fillText(wrap(ctx, label.toUpperCase(), textWidth - 64, 1)[0], SIDE + 64, labelBaseline)
       if ("letterSpacing" in ctx) ctx.letterSpacing = "0px"
     })

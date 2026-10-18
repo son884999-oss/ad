@@ -17,21 +17,21 @@ export const PRESERVATION =
  * lower third clear for the caption drawn later.
  */
 export function cameraFor(duration = 5) {
-  const hero = "the product sharp in the upper middle of the frame and the lower third calm and uncluttered for text"
+  const hero = "the product sharp in the upper middle of the frame, no taller than half the frame, and the lower third calm and uncluttered for text"
   if (duration >= 10) {
     return [
       `Shoot one continuous ${duration}-second commercial take in four smooth beats.`,
-      "0-2 s: a slow, low-angle dolly-in from a wide establishing frame.",
+      "0-2 s: a slow dolly-in at eye level from a wide establishing frame.",
       "2-5 s: a macro close-up gliding slowly across the most appealing surface texture, shallow depth of field.",
-      "5-8 s: a gentle arc of no more than 20 degrees around the product with a rack focus from foreground to product.",
+      "5-8 s: a gentle arc of no more than 10 degrees around the product while the focus settles from its top detail to the whole product.",
       `8-10 s: an elegant pull-back that settles into a still hero frame, ${hero}.`,
       "Camera moves are smooth and cinematic, like a motion-control rig; the product itself never rotates.",
     ].join(" ")
   }
   return [
     `Shoot one continuous ${duration}-second commercial take in three smooth beats.`,
-    "0-2 s: a slow, low-angle dolly-in toward the product.",
-    "2-4 s: a gentle arc of no more than 15 degrees with a soft rack focus that lands on the product's most appealing detail.",
+    "0-2 s: a slow dolly-in at eye level toward the product.",
+    "2-4 s: a gentle arc of no more than 8 degrees with a soft focus pull that lands on the product's most appealing detail.",
     `4-5 s: the camera eases to a stop on a still hero frame, ${hero}.`,
     "Camera moves are smooth and cinematic, like a motion-control rig; the product itself never rotates.",
   ].join(" ")
@@ -42,7 +42,7 @@ export function cameraFor(duration = 5) {
  * modes image-to-video guides list for product shots (warped labels, melting, flicker, colour shift).
  */
 export const NEGATIVE_PROMPT =
-  "deformed product, duplicated product, new text, letters, words, brand name, logo on the product, added label, captions, titles, watermark, people, hands, shaky camera, whip pan, jump cut, morphing, warped label, distorted logo, garbled text, extra product, melting, flicker, color shift, rotating product, objects sliding, moving garnish, drifting props, steam on cold food"
+  "deformed product, duplicated product, new text, letters, words, brand name, logo on the product, added label, captions, titles, watermark, people, hands, shaky camera, whip pan, jump cut, morphing, warped label, distorted logo, garbled text, extra product, melting, flicker, color shift, rotating product, objects sliding, moving garnish, drifting props, steam on cold food, dust, floating particles, lens flare, light stand, softbox, studio equipment in frame, layer warping"
 
 // Ported from E_이채원/src/rules.js; a few Korean shop words (케이크, 떡, 디저트 …) added for local shops,
 // and food is checked before beauty so "생크림 케이크" is food, not a cream cosmetic.
@@ -57,7 +57,7 @@ const categories = [
     // Cakes, bread, cookies and other cold or room-temperature food: no steam (round 1), a soft sheen only.
     pattern: /쿠키|과자|식품|음료|초콜릿|빵|케이크|떡|디저트|잼|김치|반찬|도시락|과일|\b(cookie|cookies|food|snack|chocolate|bread|drink|cake|dessert|jam)\b/i,
     concept: "Create a cinematic food product commercial.",
-    emphasis: "Hero moment: a warm light sweep glides across the surface, picking out the texture and layers with a soft glint, and fine dust motes float in the backlight; no steam; the plate, garnish and every object stay exactly where they are.",
+    emphasis: "Hero moment: a warm light sweep glides across the surface, picking out the texture and layers with a soft glint; no steam, no dust or particles; the plate, garnish and every object stay exactly where they are.",
   },
   {
     pattern: /화장품|세럼|로션|크림|스킨케어|립스틱|향수|\b(cosmetic|cosmetics|serum|lotion|skincare|lipstick|moisturizer|perfume)\b/i,

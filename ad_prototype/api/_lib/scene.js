@@ -42,7 +42,7 @@ export function scenePrompt(details) {
   return [
     "Keep the product exactly as it is in the photo: the same shape, size, colours, surface details and any printed text or logo, unchanged.",
     `Replace only the surroundings with this advertising scene: ${scene}.`,
-    "Photorealistic commercial product photography, vertical frame: the product sharp and centred about 40% from the top, filling about half the frame height; the lower third is a calm, plain, softly lit surface with no objects (text goes there later); light consistent across product and scene.",
+    "Photorealistic commercial product photography, vertical frame: the product sharp and centred about 40% from the top, filling about 40% of the frame height, its base no lower than 60% of the height; the lower third is a calm, plain, softly lit surface with no objects (text goes there later); light consistent across product and scene.",
     "Add no fruit, food, flowers or other props that are not part of the product; never change what the product is.",
     "Do not add any text, letters, words, logos, labels or watermarks anywhere.",
   ].join(" ")

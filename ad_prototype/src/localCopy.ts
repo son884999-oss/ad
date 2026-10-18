@@ -80,7 +80,7 @@ export function legacyLocalCopy(input: LocalCopyInput, channel: string) {
 /** Ends a line the owner typed as a sentence, so it does not read like a form field. */
 const sentence = (text: string) => {
   const value = text.replace(/\s+/g, " ").trim()
-  return !value || /[.!?…~요다]$/.test(value) ? value : `${value}.`
+  return !value || /[.!?…~]$/.test(value) ? value : `${value}.`
 }
 
 /** One closing line per place: what the reader should do next (a visit, a question, a save). */

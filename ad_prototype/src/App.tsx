@@ -461,13 +461,16 @@ function makeHashtags(
     name?: string
 
     shopName?: string
+
+    location?: string
   },
 ) {
   // B_이창훈 rule: tags without spaces, ≤10 characters. The product and shop names lead so a
   // name-only input still gets tags.
   const nameTag = (value?: string) => (value ?? "").replace(/[^0-9A-Za-z가-힣]/g, "")
   const keywords = [
-    ...[nameTag(details.name), nameTag(details.shopName)].filter((tag) => tag.length > 1 && tag.length <= 10),
+    // The neighbourhood ("서울 망원동" → #망원동) is how locals search.
+    ...[nameTag(details.name), nameTag(details.shopName), nameTag(details.location?.trim().split(/s+/).pop())].filter((tag) => tag.length > 1 && tag.length <= 10),
 
     ...(details.keywords ?? "").split(",").map((item) => item.replace(/[^0-9A-Za-z가-힣]/g, "")).filter((item) => item.length > 1),
 
@@ -1552,7 +1555,9 @@ function CreateFlow({
     let live = true
     // 고급형 gets the quiet caption of the reference ad (drawElegantCaption); the invitation names the shop.
     const shop = details.shopName?.trim() ?? ""
-    const premiumCaption: VideoCaption = { ...sampleCaption, cta: shop ? `${shop}에서 만나보세요` : sampleCaption.cta }
+    // The label above already names the shop, so the invitation names the place when there is one.
+    const place = details.location?.trim() ?? ""
+    const premiumCaption: VideoCaption = { ...sampleCaption, cta: place ? `${place} 매장에서 만나보세요` : shop ? `${shop}에서 만나보세요` : sampleCaption.cta }
     void prepareAiVideoFile(aiVideo.state.videoUrl, shop || details.name?.trim() || "", premiumCaption, channelTheme.rgb, "elegant")
       .then((file) => { if (live) setRealVideoFile(file) })
       .catch(() => undefined)
