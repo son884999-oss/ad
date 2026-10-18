@@ -35,7 +35,13 @@ export function buildPosterContent(details: Details, headline = "", headlineFirs
   const keywords = (details.keywords ?? "").split(",").map((item) => item.trim()).filter(Boolean)
   // A first line that repeats the shop and product names shown above it keeps only its own part
   // ("입안 가득 퍼지는 달콤함, 달빛제과 수제 초코 케이크" → "입안 가득 퍼지는 달콤함").
-  const line = [shopName, title].filter(Boolean).reduce((text, part) => text.split(part).join(" "), headline)
+  // A comma part made only of those names ("…생크림, 달빛제과 케이크") goes too.
+  const nameWords = new Set([shopName, title].join(" ").split(/\s+/).filter(Boolean))
+  const namePart = (part: string) => [shopName, title].some((name) => name && part.includes(name))
+    && part.trim().split(/\s+/).every((word) => !word || nameWords.has(word))
+  let kept = headline
+  for (let tail = kept.match(/[,·]([^,·]*)$/); tail && namePart(tail[1]); tail = kept.match(/[,·]([^,·]*)$/)) kept = kept.slice(0, tail.index)
+  const line = [shopName, title].filter(Boolean).reduce((text, part) => text.split(part).join(" "), kept)
     .replace(/[,·\s]+$/, "").replace(/^[,·\s]+/, "").replace(/\s+/g, " ").trim() || headline.replace(/\s+/g, " ").trim()
   const formBody = [description, features].find((value) => value && !same(value, title)) ?? ""
   const body = (headlineFirst && line && !same(line, title) ? line : "") || formBody || (line && !same(line, title) ? line : "")
