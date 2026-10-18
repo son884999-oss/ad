@@ -2836,9 +2836,11 @@ function CreateFlow({
                     : shareResult("video")}
                   shareMessage={aiNote(t(shareMessages.video ?? ""))}
                   error={videoStatus === "failed" || videoStatus === "unsupported"}
-                  message={t(videoStatus === "preparing"
-                    ? `${videoMessage} 다른 작업으로 이동하면 준비를 취소해요.`
-                    : videoMessage)}
+                  message={t(showsRealVideo(aiVideo.state)
+                    ? realVideoFile ? "AI가 만든 영상에 글자를 넣어 준비했어요. 저장하거나 보낼 수 있어요." : "AI 영상에 글자를 넣고 있어요. 잠시만 기다려 주세요."
+                    : videoStatus === "preparing"
+                      ? `${videoMessage} 다른 작업으로 이동하면 준비를 취소해요.`
+                      : videoMessage)}
                 />
                 {RESULT_SECONDARY_FEATURES_ENABLED && <details className="media-full-copy">
                   <summary>영상 문구 원문 보기</summary>

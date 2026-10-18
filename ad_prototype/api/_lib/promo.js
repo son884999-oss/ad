@@ -266,7 +266,9 @@ export function reviewPromo(result, product) {
   if (unverified.length) problems.push(`확인할 수 없는 주장 사용: ${unverified.join(", ")} — 입력에 없는 순위·인증·최저가는 빼고 사실만 쓸 것`)
 
   const aiStyle = aiStyleHits([result.copy, result.sns, result.intro].join(" "), input)
-  if (aiStyle.length >= AI_STYLE_LIMIT) {
+  // "당신" alone is enough: a shop owner never addresses a customer that way (real answer 2026-10-18:
+  // "당신의 아침을 더욱 특별하게").
+  if (aiStyle.length >= AI_STYLE_LIMIT || aiStyle.includes("당신")) {
     problems.push(`AI 말투(번역투) 사용: ${[...new Set(aiStyle)].join(", ")} — 사장님 말투로 짧게, 해요체로 바꿀 것`)
   }
 

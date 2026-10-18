@@ -886,3 +886,5 @@ html[data-view=mobile] .easy-offer { top:calc(64px * var(--s) + 34px); }
 .reference-app .result-card .result-preview:has(.motion-preview-video) { height:auto!important;max-height:none;display:flex;justify-content:center;background:#1d1a17; }
 .reference-app .result-preview:has(.motion-preview-video) .result-motion-preview { width:auto;height:auto; }
 .reference-app .result-motion-preview .motion-preview-video { height:min(62dvh,560px);width:auto;aspect-ratio:9 / 16; }
+/* The AI clip carries its own caption in the lower left: the "AI 생성 영상" badge sits top-right, clear of it */
+.result-motion-preview .ai-badge { top:12px;bottom:auto; }
