@@ -233,15 +233,21 @@ export function drawElegantCaption(ctx: CanvasRenderingContext2D, seconds: numbe
   }
   if (name || price) {
     fadeIn(1.2, () => {
+      // The price keeps its place (up to 55% of the line) and a long name gets "…" in what is left, so a 50-letter
+      // name can never push the price off the right edge.
+      ctx.font = font(800, 56)
+      const priceLine = price ? wrap(ctx, price, textWidth * 0.55, 1)[0] ?? "" : ""
+      const priceWidth = priceLine ? ctx.measureText(priceLine).width : 0
       ctx.font = font(500, 52)
-      const shown = wrap(ctx, name, textWidth, 1)[0] ?? ""
+      const space = priceLine ? ctx.measureText("   ").width : 0
+      const shown = name ? wrap(ctx, name, textWidth - priceWidth - space, 1)[0] ?? "" : ""
       ctx.fillStyle = CREAM
       ctx.fillText(shown, SIDE, y)
-      if (price) {
-        const gap = shown ? ctx.measureText(shown + "   ").width : 0
+      if (priceLine) {
+        const gap = shown ? ctx.measureText(shown).width + space : 0
         ctx.font = font(800, 56)
         ctx.fillStyle = GOLD
-        ctx.fillText(wrap(ctx, price, Math.max(textWidth - gap, 120), 1)[0], SIDE + gap, y)
+        ctx.fillText(priceLine, SIDE + gap, y)
       }
     })
     y -= 118
