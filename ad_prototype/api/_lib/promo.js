@@ -272,6 +272,21 @@ export function reviewPromo(result, product) {
     problems.push(`AI 말투(번역투) 사용: ${[...new Set(aiStyle)].join(", ")} — 사장님 말투로 짧게, 해요체로 바꿀 것`)
   }
 
+  // The same describing word three times or more reads as filler ("달콤한 … 달콤함 … 달콤한", real answer
+  // 2026-10-18). Words of the product or shop name, which may repeat, are not counted.
+  const own = `${product.productName} ${product.shopName ?? ""}`
+  const stems = new Map()
+  for (const word of [result.copy, result.sns, result.intro].join(" ").match(/[가-힣]{3,}/g) ?? []) {
+    const stem = word.slice(0, 2)
+    if (own.includes(stem)) continue
+    stems.set(stem, (stems.get(stem) ?? 0) + 1)
+  }
+  // A word the owner used (a key noun such as 두피) may come back a third time; anything else may not.
+  // Once per part (first line, SNS, intro) is fine emphasis; twice inside one part on top of that is filler.
+  const twiceInOnePart = (stem) => [result.copy, result.sns, result.intro].some((part) => part.split(stem).length - 1 >= 2)
+  const repeated = [...stems].filter(([stem, count]) => count >= (input.includes(stem) ? 4 : 3) && twiceInOnePart(stem)).map(([stem]) => stem)
+  if (repeated.length) problems.push(`같은 꾸밈말 반복: ${repeated.join(", ")} — 세 번째부터는 다른 감각(식감·향·온도·모양)으로 바꿀 것`)
+
   const name = squeeze(product.productName)
   const description = squeeze(`${product.productDescription} ${product.highlights}`).replaceAll(name, "")
   if (description) {
