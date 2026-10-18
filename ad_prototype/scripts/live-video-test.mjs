@@ -30,7 +30,7 @@ async function loadEnvLocal() {
     return
   }
   for (const line of text.split(/\r?\n/)) {
-    const match = /^\s*(VIDEO_ENABLED|HF_CREDENTIALS|HF_VIDEO_MODEL|HF_VIDEO_DURATION|HF_VIDEO_RESOLUTION|GEMINI_API_KEY|GEMINI_MODEL)\s*=\s*(.*?)\s*$/.exec(line)
+    const match = /^\s*(VIDEO_ENABLED|HF_CREDENTIALS|HF_VIDEO_MODEL|HF_VIDEO_DURATION|HF_VIDEO_RESOLUTION|GEMINI_API_KEY|GEMINI_API_KEY_2|GEMINI_MODEL)\s*=\s*(.*?)\s*$/.exec(line)
     if (match && match[2] && !process.env[match[1]]) process.env[match[1]] = match[2].replace(/^["']|["']$/g, "")
   }
 }
