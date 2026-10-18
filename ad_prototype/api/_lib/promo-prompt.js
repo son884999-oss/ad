@@ -29,13 +29,13 @@ export const HEALTH_CLAIM_WORDS = [
 ]
 
 /** 확인할 수 없는 최상급·인증성 주장 — 사장님 입력에 그 말이 있을 때만 쓸 수 있다 */
-export const UNVERIFIED_CLAIM_WORDS = ["100%", "무첨가", "최저가", "1위", "유일"]
+export const UNVERIFIED_CLAIM_WORDS = ["100%", "무첨가", "최저가", "1위", "유일", "매일"]
 
 /**
  * 번역투·"AI 말투" — 금지는 아니지만 2번 이상 나오면 자동 점검에서 문제로 보고 한 번 다시 쓰게 한다.
  * ("만나 보세요"처럼 사장님도 흔히 쓰는 말은 넣지 않는다)
  */
-export const AI_STYLE_WORDS = ["를 통해", "을 통해", "다양한", "선사합니다", "선사해요", "의 매력", "놓치지 마세요", "한층", "경험해 보세요", "당신"]
+export const AI_STYLE_WORDS = ["를 통해", "을 통해", "다양한", "선사", "의 매력", "놓치지 마세요", "한층", "경험해 보세요", "당신"]
 
 /** 홍보할 곳(채널)별 SNS 문구 말투 — src/channels.ts의 채널 이름과 같다 */
 export const CHANNEL_STYLES = {

@@ -326,6 +326,8 @@ try {
     // visualDetails come from the photo analysis, not the owner: they never exempt a claim.
     const photoOnly = normalizePromoInput({ ...product, visualDetails: ["무첨가 라벨"] })
     assert.ok(reviewPromo({ ...parsePromoResponse(goodData), copy: "무첨가 우리동네 참기름" }, photoOnly).some((m) => m.includes("무첨가")))
+    // "매일 만들어요" only when the owner said so (real answer 2026-10-18 invented it).
+    assert.ok(reviewPromo({ ...parsePromoResponse(goodData), sns: "매일 짜서 고소해요. 들러 보세요." }, photoOnly).some((m) => m.includes("매일")))
   })
 
   await check("AI 말투: one hit is fine; 2+ hits → a review problem and one rewrite, never a hard reject", async () => {
@@ -335,7 +337,9 @@ try {
     const problems = reviewPromo(twice, p)
     assert.equal(problems.length, 1)
     assert.match(problems[0], /^AI 말투/)
-    for (const word of ["선사합니다", "한층", "놓치지 마세요", "해요체"]) assert.ok(problems[0].includes(word), word)
+    for (const word of ["선사", "한층", "놓치지 마세요", "해요체"]) assert.ok(problems[0].includes(word), word)
+    // Any 선사 form counts (real answer 2026-10-18: "달콤함을 선사한답니다").
+    assert.equal(reviewPromo({ ...parsePromoResponse(goodData), sns: "달콤함을 선사한답니다. 한층 진해요." }, p).length, 1)
     assert.equal(reviewPromo({ ...parsePromoResponse(goodData), intro: "다양한 요리에, 다양한 나물에 좋습니다." }, p).length, 1, "the same word twice counts twice")
     assert.deepEqual(reviewPromo({ ...parsePromoResponse(goodData), sns: "다양한 나물에, 한층 고소하게 둘러 보세요." }, normalizePromoInput({ ...product, highlights: "다양한 나물에 어울려요" })), [], "the owner's own words do not count")
     assert.deepEqual(reviewPromo({ ...parsePromoResponse(goodData), sns: "참기름을 만나보세요. 매장에서 만나 보세요." }, p), [], "만나 보세요 is fine")

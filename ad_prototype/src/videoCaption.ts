@@ -176,10 +176,11 @@ export function drawElegantCaption(ctx: CanvasRenderingContext2D, seconds: numbe
     draw()
     ctx.restore()
   }
-  // Line 1: the spaced label; line 2: the mood line (or the headline); line 3: the product name; line 4: the invitation.
+  // Line 1: the spaced label; line 2: the mood line (or the headline); line 3: the product name and price; line 4: the invitation.
   const mood = caption.mood || caption.headline
-  const product = caption.subline && caption.subline !== mood ? caption.subline : ""
-  const label = (caption.label ?? (product ? caption.eyebrow ?? "" : [caption.eyebrow, caption.subline].filter(Boolean).join("  /  "))).toUpperCase()
+  const name = caption.subline && caption.subline !== mood ? caption.subline : ""
+  const product = [name, caption.price].filter(Boolean).join("  ·  ")
+  const label = (caption.label ?? (name ? caption.eyebrow ?? "" : [caption.eyebrow, caption.subline].filter(Boolean).join("  /  "))).toUpperCase()
   let y = bottom - 40
   const invite = caption.cta ? `${caption.cta}  →` : ""
   if (invite) {
