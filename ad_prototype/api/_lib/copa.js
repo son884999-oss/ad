@@ -1,7 +1,7 @@
 // Claude through the institution's gateway (COPA, https://copa.codyssey.kr), Anthropic Messages API (/v1/messages).
 // The issued key is an Anthropic-compatible key: the OpenAI-compatible /v1/chat/completions answers 403 for it
-// (checked 2026-10-18). When COPA_API_KEY is set it is the second step for every AI function (photo, promo text,
-// video direction): free Gemini key → COPA → paid Gemini key (api/_lib/gemini.js generateJson). Server-only, never logged.
+// (checked 2026-10-18). When COPA_API_KEY is set it is the first step for every AI function (photo, promo text,
+// video direction): COPA → free Gemini key → paid Gemini key (api/_lib/gemini.js generateJson). Server-only, never logged.
 import { ApiError } from "./http.js"
 import { parseModelJson } from "./gemini.js"
 

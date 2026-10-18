@@ -229,43 +229,43 @@ try {
     }
   })
 
-  await check("COPA_API_KEY: free Gemini → Claude → paid Gemini (owner's order), photo sent as an image block; COPA alone works", async () => {
+  await check("COPA_API_KEY: Claude → free Gemini → paid Gemini (owner's order), photo sent as an image block; COPA alone works", async () => {
     process.env.COPA_API_KEY = "copa-key"
     const copaReply = (text) => new Response(JSON.stringify({ type: "message", stop_reason: "end_turn", content: [{ type: "text", text }] }), { status: 200 })
     const isCopa = (url) => String(url) === "https://copa.codyssey.kr/v1/messages"
     try {
-      // Gemini answers → COPA is never called.
-      reply = () => geminiReply(goodPromo)
+      // COPA answers → Gemini is never called; the Anthropic key header and the default model.
+      reply = (url) => isCopa(url) ? copaReply(goodPromo) : geminiReply(goodPromo)
       sent.length = 0
       assert.equal((await call(promoText, request("POST", promoBody))).status, 200)
-      assert.ok(sent.every((s) => !isCopa(s.url)), "no COPA call while Gemini works")
-      // Gemini limited → COPA answers, with the Anthropic key header and the default model.
-      reply = (url) => isCopa(url) ? copaReply(goodPromo) : new Response("{}", { status: 429 })
-      sent.length = 0
-      assert.equal((await call(promoText, request("POST", promoBody))).status, 200)
-      assert.deepEqual(sent.map((s) => isCopa(s.url)), [false, true], "Gemini first, then COPA")
-      const copaSent = sent.at(-1)
+      assert.ok(sent.every((s) => isCopa(s.url)), "no Gemini call while COPA works")
+      const copaSent = sent[0]
       assert.equal(copaSent.init.headers["x-api-key"], "copa-key")
       assert.equal(JSON.parse(copaSent.init.body).model, "claude-haiku-4")
+      // COPA limited → the free Gemini key answers.
+      reply = (url) => isCopa(url) ? new Response("{}", { status: 429 }) : geminiReply(goodPromo)
+      sent.length = 0
+      assert.equal((await call(promoText, request("POST", promoBody))).status, 200)
+      assert.deepEqual(sent.map((s) => isCopa(s.url)), [true, false], "COPA first, then Gemini")
       // The photo goes as an Anthropic base64 image block.
       reply = (url) => isCopa(url) ? copaReply(JSON.stringify({ productName: "딸기잼" })) : new Response("{}", { status: 503 })
       sent.length = 0
       await call(analyzePhoto, request("POST", photoBody))
-      const content = JSON.parse(sent.at(-1).init.body).messages[0].content
+      const content = JSON.parse(sent[0].init.body).messages[0].content
       assert.ok(content.some((part) => part.type === "image" && part.source.type === "base64" && part.source.media_type === "image/jpeg"))
       // Both limited → the app's usual AI_RATE_LIMITED.
       reply = () => new Response("{}", { status: 429 })
       assert.equal((await call(promoText, request("POST", promoBody))).json.error, "AI_RATE_LIMITED")
-      // With the paid key too: free key → COPA → paid key, the paid key last.
+      // With the paid key too: COPA → free key → paid key, the paid key last.
       process.env.GEMINI_API_KEY_2 = "backup-key"
       process.env.GEMINI_MODEL_2 = "gemini-3.5-flash-lite"
       process.env.GEMINI_KEY2_LEDGER = join(tmpdir(), `hongboitda-key2-copa-${process.pid}.json`)
       reply = (url, init) => !isCopa(url) && init.headers["x-goog-api-key"] === "backup-key" ? geminiReply(goodPromo) : new Response("{}", { status: 429 })
       sent.length = 0
       assert.equal((await call(promoText, request("POST", promoBody))).status, 200)
-      assert.deepEqual(sent.map((s) => isCopa(s.url) ? "copa" : s.init.headers["x-goog-api-key"]), ["test-key", "copa", "backup-key"])
+      assert.deepEqual(sent.map((s) => isCopa(s.url) ? "copa" : s.init.headers["x-goog-api-key"]), ["copa", "test-key", "backup-key"])
       assert.match(sent.at(-1).url, /models\/gemini-3\.5-flash-lite:generateContent$/, "GEMINI_MODEL_2 for the second key")
-      assert.match(sent[0].url, /models\/gemini-test-model:generateContent$/)
+      assert.match(sent[1].url, /models\/gemini-test-model:generateContent$/)
       delete process.env.GEMINI_MODEL_2
       rmSync(process.env.GEMINI_KEY2_LEDGER, { force: true })
       delete process.env.GEMINI_API_KEY_2

@@ -11,7 +11,7 @@ const ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models"
 
 /**
  * Reads GEMINI_API_KEY / GEMINI_MODEL, the optional COPA_API_KEY (Claude, api/_lib/copa.js) and the optional
- * GEMINI_API_KEY_2 (paid, ₩100/day). Order in generateJson: free key → COPA → paid key.
+ * GEMINI_API_KEY_2 (paid, ₩100/day). Order in generateJson: COPA → free key → paid key.
  * Neither Gemini nor COPA configured → 503 AI_NOT_CONFIGURED.
  */
 export function getGeminiConfig() {
@@ -124,11 +124,12 @@ export function buildGenerationConfig({ model, temperature, maxOutputTokens, res
  */
 export async function generateJson({ config, systemInstruction, parts, timeoutMs = 15_000, temperature = 0.7, maxOutputTokens = 1024, responseJsonSchema }) {
   const request = { systemInstruction, parts, timeoutMs, temperature, maxOutputTokens, responseJsonSchema }
-  // Owner's order (2026-10-18): free Gemini key → COPA (Claude, monthly token cap) → paid Gemini key (₩100/day).
+  // Owner's order (2026-10-18): COPA (Claude, the institution's monthly tokens; it wrote the more concrete copy in a
+  // side-by-side test) → free Gemini key → paid Gemini key (₩100/day).
   // Any failure (limit, error, timeout, bad answer) moves on to the next; the last error is the answer.
   const steps = [
-    config.apiKey && (() => geminiOnce(config.apiKey, config.model, request)),
     config.copa && (() => copaJson(config.copa, request)),
+    config.apiKey && (() => geminiOnce(config.apiKey, config.model, request)),
     config.backupKey && (() => geminiBackup(config, request)),
   ].filter(Boolean)
   let lastError = new ApiError(503, "AI_NOT_CONFIGURED")
