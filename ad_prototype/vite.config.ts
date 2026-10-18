@@ -105,7 +105,14 @@ function localSaveServer(): Plugin {
     configureServer(server) {
       server.middlewares.use(async (req, res, next) => {
         if ((req.url ?? '').split('?')[0] !== '/api/save-output' || req.method !== 'POST') return next()
-        const [status, answer] = saveOutput(await readBody(req))
+        // A locked or full disk must never take the dev server down: the copy on the computer is optional.
+        let status = 500
+        let answer: unknown = { error: "SAVE_FAILED" }
+        try {
+          ;[status, answer] = saveOutput(await readBody(req))
+        } catch {
+          // answered below with 500
+        }
         res.statusCode = status
         res.setHeader('Content-Type', 'application/json; charset=utf-8')
         res.end(JSON.stringify(answer))

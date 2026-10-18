@@ -44,7 +44,12 @@ export async function makeScene(
       const poll = await fetch(`/api/scene-status?id=${encodeURIComponent(data.requestId)}`, { signal }).catch(() => null)
       const status = (await poll?.json().catch(() => null)) as { status?: string; error?: string; image?: { mimeType: string; data: string } } | null
       if (status?.status === "completed" && status.image) return { url: `data:${status.image.mimeType};base64,${status.image.data}` }
-      if (status?.status === "failed") return { error: status.error ?? "SCENE_FAILED" }
+      if (status?.status === "failed") {
+        // A failed picture is final for its key; the next try gets a new key (a download failure keeps it: the
+        // picture exists and asking again returns it without paying).
+        if (status.error !== "SCENE_DOWNLOAD_FAILED") keys.delete(key)
+        return { error: status.error ?? "SCENE_FAILED" }
+      }
     }
     return { error: "SCENE_TIMEOUT" }
   } catch {

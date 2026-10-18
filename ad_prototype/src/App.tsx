@@ -1560,13 +1560,27 @@ function CreateFlow({
   const [sceneState, setSceneState] = useState<{ forImage: string; status: "making" | "ready" | "failed" | "off" } | null>(null)
   const sceneControllerRef = useRef<AbortController | null>(null)
   useEffect(() => () => sceneControllerRef.current?.abort(), [])
+  const currentImageRef = useRef(imageUrl)
+  currentImageRef.current = imageUrl
+  const dropScene = () => {
+    sceneControllerRef.current?.abort()
+    sceneControllerRef.current = null
+    setSceneState((current) => (current?.status === "making" ? null : current))
+  }
+  // A new photo or leaving the 만드는 중 / result step without a result: the scene being made no longer applies.
+  useEffect(() => dropScene(), [imageUrl])
+  useEffect(() => {
+    if (step !== 3) dropScene()
+  }, [step])
+  // The photo the current AI video job was started for (its own input may be the scene picture instead).
+  const aiVideoForImageRef = useRef("")
   const startPremium = () => {
     const forImage = imageUrl
     const box = photoBox?.image === imageUrl ? photoBox.box : null
     const videoDetails = toVideoDetails(details)
     if (sceneImage?.forImage === forImage) {
       setSceneState({ forImage, status: "ready" })
-      if (showVideo) aiVideo.start({ imageUrl: sceneImage.url, details: videoDetails, box: null })
+      if (showVideo) { aiVideoForImageRef.current = forImage; aiVideo.start({ imageUrl: sceneImage.url, details: videoDetails, box: null }) }
       return
     }
     sceneControllerRef.current?.abort()
@@ -1574,19 +1588,20 @@ function CreateFlow({
     sceneControllerRef.current = controller
     setSceneState({ forImage, status: "making" })
     void makeScene(forImage, { productName: details.name?.trim() ?? "", productDescription: details.description, highlights: details.features }, box, controller.signal).then((result) => {
-      if (controller.signal.aborted) return
+      // Cancelled, or the photo changed meanwhile: never start a paid video for it.
+      if (controller.signal.aborted || currentImageRef.current !== forImage) return
       if ("url" in result) {
         setSceneImage({ forImage, url: result.url })
         setSceneState({ forImage, status: "ready" })
-        if (showVideo) aiVideo.start({ imageUrl: result.url, details: videoDetails, box: null })
+        if (showVideo) { aiVideoForImageRef.current = forImage; aiVideo.start({ imageUrl: result.url, details: videoDetails, box: null }) }
       } else {
         // Switched off on the server (no paid generation) is not a failure: say so plainly.
         setSceneState({ forImage, status: result.error === "VIDEO_NOT_CONFIGURED" ? "off" : "failed" })
-        if (showVideo) aiVideo.start({ imageUrl: forImage, details: videoDetails, box })
+        if (showVideo) { aiVideoForImageRef.current = forImage; aiVideo.start({ imageUrl: forImage, details: videoDetails, box }) }
       }
     })
   }
-  const sceneNotice = sceneState?.forImage === imageUrl
+  const sceneNotice = details.videoMode === "premium" && sceneState?.forImage === imageUrl
     ? sceneState.status === "making"
       ? "고급형 배경을 만들고 있어요 · 약 1분. 다 되면 포스터와 영상이 바뀌어요."
       : sceneState.status === "ready"
@@ -1643,7 +1658,7 @@ function CreateFlow({
   const posterLayout: PosterLayoutKey = posterRatio === "1:1" && details.posterLayout === "split" ? "vertical" : details.posterLayout ?? "vertical"
   const posterTheme: PosterThemeKey = details.posterTheme || posterThemeFor(tones)
   // 고급형: the poster is drawn from the new advertising scene once it is back (the product is unchanged).
-  const sceneUrl = sceneImage?.forImage === imageUrl ? sceneImage.url : ""
+  const sceneUrl = details.videoMode === "premium" && sceneImage?.forImage === imageUrl ? sceneImage.url : ""
   const posterKey = JSON.stringify([posterContent, posterTheme, posterRatio, posterLayout, photoBox?.image === imageUrl ? photoBox.box : null, sceneUrl.length])
   const posterDrawnTextRef = useRef("")
 
@@ -2101,6 +2116,7 @@ function CreateFlow({
           easyMode={easyMode}
           onCancel={() => {
             cancelPromoRequest()
+            dropScene()
             aiVideo.cancel()
             setGenerating(false)
             setStep(2)
@@ -2579,6 +2595,9 @@ function CreateFlow({
                   setSelectedResultTab(resultTabs[0].id)
                   if (showCopy) requestPromoText()
                   // Only 고급형 pays: the new advertising scene first (poster + video), then the AI video made from it.
+                  // The AI video on screen belongs to an earlier photo or to 고급형: a new 기본형 creation, or 고급형
+                  // with another photo, starts clean (the record that holds it keeps it).
+                  if (details.videoMode !== "premium" || aiVideoForImageRef.current !== imageUrl) aiVideo.reset()
                   if (details.videoMode === "premium" && (showPoster || showVideo)) startPremium()
                   setGenerating(true)
                   setStep(3)
