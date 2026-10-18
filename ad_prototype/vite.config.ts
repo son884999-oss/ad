@@ -2,6 +2,8 @@ import { defineConfig, loadEnv, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import path from 'node:path'
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+const DEMO_SCENE = path.resolve(__dirname, 'public/assets/reference-fresh/demo-scene-cake.jpg')
 
 // Dev only: serve the Vercel functions in api/ from the Vite dev server so `pnpm dev` behaves like
 // the deployment. The Gemini and Higgsfield settings are copied into process.env on the server side only; they
@@ -59,8 +61,57 @@ function mockAnswer(path: string, body: Record<string, unknown>) {
       cta: '들러 보세요',
     }] as const
   }
+  // 고급형 scene: always the demo picture from the 2026-10-17 paid trial (a cake on a marble pedestal), so the
+  // flow can be seen without spending. It is a fixed sample, not made from the uploaded photo.
+  if (path === '/api/scene-start') return [200, { requestId: 'a1b2c3d4-1111-4222-8333-944455556666' }] as const
+  if (path === '/api/scene-status') {
+    const data = readFileSync(DEMO_SCENE).toString('base64')
+    return [200, { status: 'completed', image: { mimeType: 'image/jpeg', data } }] as const
+  }
   // Real AI video is never started in mock mode; the app shows its own sample video.
   return [503, { error: 'VIDEO_NOT_CONFIGURED' }] as const
+}
+
+// Dev only: POST /api/save-output writes a result into ad_prototype/outputs/<date>/<time>_<name>/ on this
+// computer (poster PNG, video, 홍보 글, inputs), so every try during a demo or test is kept. Vercel has no such
+// route, so the deployed app just gets a 404 and carries on. Names are cleaned; nothing leaves the folder.
+const OUTPUTS = path.resolve(__dirname, 'outputs')
+const safeName = (value: unknown, fallback: string) => {
+  const text = typeof value === 'string' ? value : ''
+  const cleaned = text.replace(/[\\/:*?"<>|\x00-\x1f]+/g, '_').replace(/\s+/g, '_').replace(/^[._]+|[._]+$/g, '').slice(0, 60)
+  return cleaned || fallback
+}
+function saveOutput(body: Record<string, unknown>) {
+  const files = Array.isArray(body.files) ? body.files : []
+  const folder = safeName(body.folder, 'result')
+  const day = folder.slice(0, 10).match(/^\d{4}-\d{2}-\d{2}$/) ? folder.slice(0, 10) : new Date().toISOString().slice(0, 10)
+  const dir = path.join(OUTPUTS, day, folder)
+  if (!dir.startsWith(OUTPUTS)) return [400, { error: 'INVALID_INPUT' }] as const
+  mkdirSync(dir, { recursive: true })
+  let saved = 0
+  for (const file of files.slice(0, 12)) {
+    const item = file as Record<string, unknown>
+    const name = safeName(item.name, `file-${saved + 1}`)
+    if (typeof item.data !== 'string' || !/\.(png|jpe?g|webp|mp4|webm|txt|json)$/i.test(name)) continue
+    writeFileSync(path.join(dir, name), item.text === true ? item.data : Buffer.from(item.data, 'base64'))
+    saved += 1
+  }
+  return [200, { saved, folder: path.relative(__dirname, dir) }] as const
+}
+function localSaveServer(): Plugin {
+  return {
+    name: 'hongboitda-local-save',
+    apply: 'serve',
+    configureServer(server) {
+      server.middlewares.use(async (req, res, next) => {
+        if ((req.url ?? '').split('?')[0] !== '/api/save-output' || req.method !== 'POST') return next()
+        const [status, answer] = saveOutput(await readBody(req))
+        res.statusCode = status
+        res.setHeader('Content-Type', 'application/json; charset=utf-8')
+        res.end(JSON.stringify(answer))
+      })
+    },
+  }
 }
 
 function aiApiDevServer(): Plugin {
@@ -104,6 +155,7 @@ export default defineConfig({
     react(),
     tailwindcss(),
     aiApiDevServer(),
+    localSaveServer(),
   ],
   resolve: {
     alias: {

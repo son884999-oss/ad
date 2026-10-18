@@ -26,6 +26,7 @@ import { localBody, localCopy } from "./localCopy"
 import { type VideoCaption } from "./videoCaption"
 import { drawStoryFrame } from "./videoFrame"
 import { makeScene } from "./scene"
+import { outputFolder, saveToComputer } from "./localSave"
 import { drawMotionFrame, MOTION_SECONDS, motionEffectFor, type MotionScene } from "./motionVideo"
 import type { PosterThemeKey } from "./poster"
 import PhotoStep from "./PhotoStep"
@@ -1556,7 +1557,7 @@ function CreateFlow({
   }, [realVideoKey]) // eslint-disable-line react-hooks/exhaustive-deps
   // 고급형: one scene picture (about a minute), then the AI video from it. Without the scene (failed or
   // switched off) the AI video is made from the photo as before.
-  const [sceneState, setSceneState] = useState<{ forImage: string; status: "making" | "ready" | "failed" } | null>(null)
+  const [sceneState, setSceneState] = useState<{ forImage: string; status: "making" | "ready" | "failed" | "off" } | null>(null)
   const sceneControllerRef = useRef<AbortController | null>(null)
   useEffect(() => () => sceneControllerRef.current?.abort(), [])
   const startPremium = () => {
@@ -1579,7 +1580,8 @@ function CreateFlow({
         setSceneState({ forImage, status: "ready" })
         if (showVideo) aiVideo.start({ imageUrl: result.url, details: videoDetails, box: null })
       } else {
-        setSceneState({ forImage, status: "failed" })
+        // Switched off on the server (no paid generation) is not a failure: say so plainly.
+        setSceneState({ forImage, status: result.error === "VIDEO_NOT_CONFIGURED" ? "off" : "failed" })
         if (showVideo) aiVideo.start({ imageUrl: forImage, details: videoDetails, box })
       }
     })
@@ -1589,7 +1591,9 @@ function CreateFlow({
       ? "고급형 배경을 만들고 있어요 · 약 1분. 다 되면 포스터와 영상이 바뀌어요."
       : sceneState.status === "ready"
         ? "AI가 배경을 바꿨어요. 제품은 그대로예요."
-        : "배경을 바꾸지 못해서 원래 사진으로 만들었어요."
+        : sceneState.status === "off"
+          ? "고급형(AI 배경)이 지금 꺼져 있어서 원래 사진으로 만들었어요."
+          : "배경을 바꾸지 못해서 원래 사진으로 만들었어요."
     : ""
   // Preview = the file that will be saved: the captioned AI clip (고급형) or the 6-second motion video (기본형).
   const previewVideoFile = showsRealVideo(aiVideo.state) ? realVideoFile : sampleVideoFile
@@ -1610,6 +1614,30 @@ function CreateFlow({
     if (playing) void video.play().catch(() => setPlaying(false))
     else video.pause()
   }, [playing, previewVideoUrl])
+  // A copy of every result on this computer (local dev server only, src/localSave.ts): one folder per creation,
+  // filled as each file becomes ready; a restyled poster or another channel's text replaces the earlier one.
+  const [outputFolderName, setOutputFolderName] = useState("")
+  useEffect(() => setOutputFolderName(""), [imageUrl])
+  useEffect(() => {
+    if (!outputFolderName) return
+    const { tone: _tone, ...inputs } = details as typeof details & { tone?: unknown }
+    void saveToComputer(outputFolderName, [{ name: "입력내용.json", text: JSON.stringify({ type, channel, ...inputs }, null, 2) }])
+  }, [outputFolderName]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (outputFolderName && showCopy && copyText) void saveToComputer(outputFolderName, [{ name: "홍보글.txt", text: copyText }])
+  }, [outputFolderName, copyText, showCopy])
+  useEffect(() => {
+    if (outputFolderName && posterPreviewUrl) void saveToComputer(outputFolderName, [{ name: "포스터.png", blob: posterPreviewFileRef.current }])
+  }, [outputFolderName, posterPreviewUrl])
+  useEffect(() => {
+    if (!outputFolderName || !previewVideoFile) return
+    const ext = previewVideoFile.name.split(".").pop() || "mp4"
+    void saveToComputer(outputFolderName, [{ name: `${showsRealVideo(aiVideo.state) ? "영상_AI" : "영상_기본형"}.${ext}`, blob: previewVideoFile }])
+  }, [outputFolderName, previewVideoFile]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    const scene = sceneImage?.forImage === imageUrl ? sceneImage.url : ""
+    if (outputFolderName && scene) void fetch(scene).then((r) => r.blob()).then((blob) => saveToComputer(outputFolderName, [{ name: "고급형_배경.jpg", blob }])).catch(() => undefined)
+  }, [outputFolderName, sceneImage]) // eslint-disable-line react-hooks/exhaustive-deps
   const posterRatio: PosterRatioKey = details.posterRatio ?? "4:5"
   // D's renderer has no side-by-side layout for a square; it would quietly fall back.
   const posterLayout: PosterLayoutKey = posterRatio === "1:1" && details.posterLayout === "split" ? "vertical" : details.posterLayout ?? "vertical"
@@ -1842,7 +1870,31 @@ function CreateFlow({
             oscillator.stop(startAt + length + 0.05)
           }
         }
+        // A soft "whoosh" (filtered noise sweeping up) on each scene change, made here: no music licence needed.
+        const whoosh = (at: number, level: number) => {
+          const length = 0.55
+          const buffer = audio!.createBuffer(1, Math.round(audio!.sampleRate * length), audio!.sampleRate)
+          const samples = buffer.getChannelData(0)
+          for (let i = 0; i < samples.length; i += 1) samples[i] = Math.random() * 2 - 1
+          const noise = audio!.createBufferSource()
+          noise.buffer = buffer
+          const filter = audio!.createBiquadFilter()
+          filter.type = "bandpass"
+          filter.Q.value = 1.2
+          const gain = audio!.createGain()
+          const startAt = audio!.currentTime + at
+          filter.frequency.setValueAtTime(300, startAt)
+          filter.frequency.exponentialRampToValueAtTime(2600, startAt + length)
+          gain.gain.setValueAtTime(0.0001, startAt)
+          gain.gain.exponentialRampToValueAtTime(level, startAt + length * 0.6)
+          gain.gain.exponentialRampToValueAtTime(0.0001, startAt + length)
+          noise.connect(filter).connect(gain).connect(destination)
+          noise.start(startAt)
+          noise.stop(startAt + length + 0.05)
+        }
         chime(0.3, [523.25, 659.25, 783.99], 1.2, 0.18)
+        whoosh(2.35, 0.12) // into the close-up (motionVideo.ts scene 2 at 2.6 s)
+        whoosh(4.15, 0.12) // into the end card (4.4 s)
         chime(4.5, [783.99, 1046.5], 1.0, 0.14) // the end card
         destination.stream.getAudioTracks().forEach((track) => stream.addTrack(track))
       } catch {
@@ -2056,6 +2108,7 @@ function CreateFlow({
           onDone={() => {
             focusResultRef.current = true
             setGenerating(false)
+            setOutputFolderName(outputFolder(details.name?.trim() || details.shopName?.trim() || ""))
             onResultCreated()
             if (!showPoster) notify("result")
           }}
