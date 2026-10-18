@@ -3,7 +3,7 @@
 // no extra cost. The AI photo carries no text (the model garbles text), so text only ever arrives this way.
 // Returns null when the browser cannot record; the caller then uses the clip as it is.
 
-import { drawElegantCaption, drawVideoCaption, type VideoCaption } from "./videoCaption"
+import { drawElegantCaption, drawVideoCaption, loadCaptionFonts, type VideoCaption } from "./videoCaption"
 
 const MIME_CANDIDATES = ["video/mp4;codecs=avc1.42E01E", "video/mp4;codecs=avc1", "video/mp4", "video/webm;codecs=vp9", "video/webm"]
 
@@ -23,6 +23,7 @@ export async function captionVideo(clip: Blob, caption: VideoCaption, accent?: s
       video.onloadeddata = () => resolve()
       video.onerror = () => reject(new Error("video-load"))
     })
+    if (style === "elegant") await loadCaptionFonts([caption.headline, caption.subline ?? "", caption.price ?? "", caption.cta ?? "", caption.eyebrow ?? ""])
     const canvas = document.createElement("canvas")
     canvas.width = 1080
     canvas.height = 1920

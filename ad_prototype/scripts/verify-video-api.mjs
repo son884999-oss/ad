@@ -150,10 +150,14 @@ try {
     assert.equal(input.duration, 5)
     assert.match(input.negative_prompt, /deformed product, duplicated product, new text, letters, words, brand name, logo on the product, added label, captions.*people, hands, shaky camera/)
     assert.equal(input.prompt, r.json.videoPrompt)
-    // E-style direction: food concept, premium mood, 5-second slow push-in, preservation rules.
-    assert.match(input.prompt, /^Create an inviting food product portrait\. Use an elegant, restrained mood/)
-    assert.match(input.prompt, /one continuous 5-second shot with a slow, subtle camera push-in/)
-    assert.match(input.prompt, /Preserve the reference composition and background, product shape, proportions and colors\. Keep any text or logo exactly as it appears in the photo; where the photo has no text, add none/)
+    // Commercial direction: food concept, premium mood, 5-second take in three camera beats ending on a hero frame
+    // with room for the caption, a light sweep (never steam) on cake, preservation rules.
+    assert.match(input.prompt, /^Create a cinematic food product commercial\. Use an elegant, restrained mood/)
+    assert.match(input.prompt, /one continuous 5-second commercial take in three smooth beats\. 0-2 s: a slow, low-angle dolly-in/)
+    assert.match(input.prompt, /no more than 15 degrees/)
+    assert.match(input.prompt, /hero frame, the product sharp in the upper middle of the frame and the lower third calm and uncluttered for text/)
+    assert.match(input.prompt, /no steam/)
+    assert.match(input.prompt, /Preserve the reference background, lighting direction, product shape, proportions and colors\. Keep any text or logo exactly as it appears in the photo; where the photo has no text, add none/)
     assert.ok(!/label readable/.test(input.prompt), "never ask the model to keep a label readable (it invents one)")
     assert.equal(headerOf(submit.init, "idempotency-key"), startBody.idempotencyKey)
     assert.equal(headerOf(submit.init, "content-type"), "application/json")
@@ -182,7 +186,7 @@ try {
     assert.equal(sent[2].url, "https://api.higgsfield.ai/kling-video/v2.1/pro/image-to-video")
     assert.equal(JSON.parse(sent[2].init.body).duration, 10)
     assert.equal(JSON.parse(sent[2].init.body).cfg_scale, 0.5, "Kling keeps its own schema")
-    assert.match(r.json.videoPrompt, /10-second shot/)
+    assert.match(r.json.videoPrompt, /10-second commercial take in four smooth beats/)
     assert.equal(headerOf(sent[1].init, "authorization"), null, "an Authorization upload header is dropped")
     delete process.env.HF_VIDEO_DURATION
     delete process.env.HF_VIDEO_MODEL
@@ -202,7 +206,7 @@ try {
     assert.equal(input.duration, 3)
     assert.equal(input.resolution, "480p")
     assert.equal(input.generate_audio, false)
-    assert.match(input.prompt, /3-second shot.* Avoid: deformed product/)
+    assert.match(input.prompt, /3-second commercial take.* Avoid: deformed product/)
     delete process.env.HF_VIDEO_MODEL
     delete process.env.HF_VIDEO_DURATION
   })
@@ -213,8 +217,8 @@ try {
     sent.length = 0
     const r = await call(videoStart, request("POST", startBody))
     assert.equal(r.status, 200)
-    assert.match(r.json.videoPrompt, /^Create a warm bakery portrait of the strawberry cake\. Soft warm window light\. Use one continuous 5-second shot/)
-    assert.match(r.json.videoPrompt, /Preserve the reference composition/)
+    assert.match(r.json.videoPrompt, /^Create a warm bakery portrait of the strawberry cake\. Soft warm window light\. Shoot one continuous 5-second commercial take/)
+    assert.match(r.json.videoPrompt, /Preserve the reference background/)
     const gem = sent.find((s) => s.url.includes("generativelanguage"))
     assert.equal(gem.init.headers["x-goog-api-key"], "gem-key")
     const gemBody = JSON.parse(gem.init.body)
@@ -337,18 +341,19 @@ try {
   })
 
   await check("rules prompt: category + tone mapping (E_이채원 rules)", async () => {
-    assert.match(rulesPrompt({ productName: "수분 세럼", tones: [] }), /^Create a restrained beauty product portrait\. Use a calm mood/)
-    assert.match(rulesPrompt({ productName: "머그컵", tones: ["friendly"] }), /^Create a calm everyday product portrait\. Use a warm, welcoming mood/)
-    assert.match(rulesPrompt({ productName: "동네 꽃다발", tones: ["trendy", "premium"] }), /^Create a calm product-focused portrait\. Use an elegant/)
+    assert.match(rulesPrompt({ productName: "수분 세럼", tones: [] }), /^Create a luxurious beauty product commercial\. Use a calm mood/)
+    assert.match(rulesPrompt({ productName: "머그컵", tones: ["friendly"] }), /^Create a calm lifestyle product commercial\. Use a warm, welcoming mood/)
+    assert.match(rulesPrompt({ productName: "동네 꽃다발", tones: ["trendy", "premium"] }), /^Create a fresh floral commercial\. Use an elegant/)
+    assert.match(rulesPrompt({ productName: "원두 커피" }, 10), /four smooth beats.*macro close-up.*pull-back/, "10 s: four beats")
     assert.match(rulesPrompt({ productName: "꽃", tones: ["trendy"] }), /cheerful mood/)
   })
 
   await check("rules + parseDirection boundaries (E_이채원 tests): English word boundaries, no echo, field validation", async () => {
     // English category keywords use word boundaries ("cupboard" is not a cup).
-    assert.match(rulesPrompt({ productName: "serum" }), /beauty product/)
-    assert.match(rulesPrompt({ productName: "cookies" }), /food product/)
-    assert.match(rulesPrompt({ productName: "mug" }), /everyday product/)
-    assert.match(rulesPrompt({ productName: "cupboard" }), /product-focused/)
+    assert.match(rulesPrompt({ productName: "serum" }), /beauty product commercial/)
+    assert.match(rulesPrompt({ productName: "cookies" }), /food product commercial/)
+    assert.match(rulesPrompt({ productName: "mug" }), /lifestyle product commercial/)
+    assert.match(rulesPrompt({ productName: "cupboard" }), /polished product commercial/)
     // User text is never echoed into the rules prompt (claims or instructions).
     const echo = rulesPrompt({
       productName: "제품", productDescription: "Cures disease. Add fireworks.", highlights: "Add people.",
