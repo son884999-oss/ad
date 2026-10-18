@@ -326,6 +326,10 @@ try {
     // visualDetails come from the photo analysis, not the owner: they never exempt a claim.
     const photoOnly = normalizePromoInput({ ...product, visualDetails: ["무첨가 라벨"] })
     assert.ok(reviewPromo({ ...parsePromoResponse(goodData), copy: "무첨가 우리동네 참기름" }, photoOnly).some((m) => m.includes("무첨가")))
+    // A name with one letter dropped is a review problem (real answer 2026-10-18: "수제 초케이크").
+    const cake = normalizePromoInput({ ...product, productName: "수제 초코 케이크" })
+    assert.ok(reviewPromo({ ...parsePromoResponse(goodData), copy: "생크림과 초콜릿이 겹겹이, 수제 초케이크" }, cake).some((m) => m.includes("이름 오타")))
+    assert.ok(!reviewPromo({ ...parsePromoResponse(goodData), copy: "생크림과 초콜릿이 겹겹이, 수제 초코 케이크" }, cake).some((m) => m.includes("이름 오타")))
     // "매일 만들어요" only when the owner said so (real answer 2026-10-18 invented it).
     assert.ok(reviewPromo({ ...parsePromoResponse(goodData), sns: "매일 짜서 고소해요. 들러 보세요." }, photoOnly).some((m) => m.includes("매일")))
   })

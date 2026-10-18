@@ -287,6 +287,15 @@ export function reviewPromo(result, product) {
   const repeated = [...stems].filter(([stem, count]) => count >= (input.includes(stem) ? 4 : 3) && twiceInOnePart(stem)).map(([stem]) => stem)
   if (repeated.length) problems.push(`같은 꾸밈말 반복: ${repeated.join(", ")} — 세 번째부터는 다른 감각(식감·향·온도·모양)으로 바꿀 것`)
 
+  // The product or shop name with one letter dropped (real answer 2026-10-18: "수제 초케이크" for 수제 초코 케이크).
+  const compact = output.replace(/\s+/g, "")
+  const misspelled = [product.productName, product.shopName].map((value) => (value ?? "").replace(/\s+/g, "")).filter((value) => value.length >= 4)
+    .filter((value) => [...value].some((_, i) => {
+      const variant = value.slice(0, i) + value.slice(i + 1)
+      return !value.includes(variant) && compact.includes(variant)
+    }))
+  if (misspelled.length) problems.push(`이름 오타: ${misspelled.join(", ")} — 제품·가게 이름은 한 글자도 빼지 말고 그대로 쓸 것`)
+
   const name = squeeze(product.productName)
   const description = squeeze(`${product.productDescription} ${product.highlights}`).replaceAll(name, "")
   if (description) {
