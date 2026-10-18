@@ -35,3 +35,8 @@ const code = readCode()
 export function premiumHeaders(): Record<string, string> {
   return code ? { "x-premium-code": code } : {}
 }
+
+/** A device opened with ?demo=<code> is the presenter's: 고급형 is its default. */
+export function hasPremiumCode() {
+  return Boolean(code)
+}

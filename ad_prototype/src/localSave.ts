@@ -26,7 +26,8 @@ export function outputFolder(name: string, now = new Date()) {
 
 /** Saves files (a Blob, or text) into the creation's folder. Best effort: never throws, never blocks the UI. */
 export async function saveToComputer(folder: string, files: { name: string; blob?: Blob | null; text?: string }[]) {
-  if (!available || !folder) return
+  // Only the local dev server (vite.config.ts) has this endpoint; a deployed build never calls it.
+  if (!import.meta.env.DEV || !available || !folder) return
   try {
     const payload = []
     for (const file of files) {

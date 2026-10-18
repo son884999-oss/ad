@@ -18,6 +18,7 @@ import { isMobileDevice } from "./DesktopStage"
 import { loadRecords, saveRecords } from "./recordsStore"
 import { analyzePhotoOnce, generatePromoText, isAiUnavailable, type PhotoCheck, type PhotoSuggestion, type PromoTextResult } from "./ai"
 import { useAiVideo, type AiVideoController, type SavedAiVideo } from "./useAiVideo"
+import { hasPremiumCode } from "./premiumAccess"
 import { AiVideoPlayer, AiVideoStatus, PremiumSteps, saveRealVideo, shareRealVideo, showsRealVideo, type PremiumStepState } from "./AiVideoPanel"
 import { isVideoUnavailable, prepareAiVideoFile, toVideoDetails } from "./video"
 import { buildPosterContent, loadPosterFonts, POSTER_THEMES, posterThemeFor, renderPosterToCanvas } from "./poster"
@@ -1612,7 +1613,9 @@ function CreateFlow({
       }
     })
   }
-  const sceneNotice = details.videoMode === "premium" && sceneState?.forImage === imageUrl
+  // The presenter's device (opened with ?demo=<code>, src/premiumAccess.ts) starts on 고급형; others on 기본형.
+  const videoMode = details.videoMode ?? (hasPremiumCode() ? "premium" : "basic")
+  const sceneNotice = videoMode === "premium" && sceneState?.forImage === imageUrl
     ? sceneState.status === "making"
       ? "고급형 배경을 만들고 있어요 · 약 1분. 다 되면 포스터와 영상이 바뀌어요."
       : sceneState.status === "ready"
@@ -1623,7 +1626,7 @@ function CreateFlow({
     : ""
   // 고급형 progress in three named steps, shown from the start until the finished film is ready.
   const premiumSteps = (() => {
-    if (details.videoMode !== "premium" || (!["starting", "generating", "completed"].includes(aiVideo.state.phase) && sceneState?.status !== "making")) return null
+    if (videoMode !== "premium" || (!["starting", "generating", "completed"].includes(aiVideo.state.phase) && sceneState?.status !== "making")) return null
     const ownScene = sceneState?.forImage === imageUrl ? sceneState.status : undefined
     const scene: PremiumStepState = ownScene === "making" ? "working" : ownScene === "ready" ? "done" : ownScene ? "skipped" : "waiting"
     const camera: PremiumStepState = aiVideo.state.phase === "completed" ? "done" : aiVideo.state.phase === "starting" || aiVideo.state.phase === "generating" ? "working" : "waiting"
@@ -1679,7 +1682,7 @@ function CreateFlow({
   const posterLayout: PosterLayoutKey = posterRatio === "1:1" && details.posterLayout === "split" ? "vertical" : details.posterLayout ?? "vertical"
   const posterTheme: PosterThemeKey = details.posterTheme || posterThemeFor(tones)
   // 고급형: the poster is drawn from the new advertising scene once it is back (the product is unchanged).
-  const sceneUrl = details.videoMode === "premium" && sceneImage?.forImage === imageUrl ? sceneImage.url : ""
+  const sceneUrl = videoMode === "premium" && sceneImage?.forImage === imageUrl ? sceneImage.url : ""
   const posterKey = JSON.stringify([posterContent, posterTheme, posterRatio, posterLayout, photoBox?.image === imageUrl ? photoBox.box : null, sceneUrl.length])
   const posterDrawnTextRef = useRef("")
 
@@ -2188,7 +2191,7 @@ function CreateFlow({
           extra={showVideo || showPoster ? (
             <VideoModeToggle
               withVideo={showVideo}
-              value={details.videoMode ?? "basic"}
+              value={videoMode}
               premiumAvailable={!isVideoUnavailable()}
               easyMode={easyMode}
               onChange={(videoMode) => setDetails({ ...details, videoMode })}
@@ -2618,8 +2621,8 @@ function CreateFlow({
                   // Only 고급형 pays: the new advertising scene first (poster + video), then the AI video made from it.
                   // The AI video on screen belongs to an earlier photo or to 고급형: a new 기본형 creation, or 고급형
                   // with another photo, starts clean (the record that holds it keeps it).
-                  if (details.videoMode !== "premium" || aiVideoForImageRef.current !== imageUrl) aiVideo.reset()
-                  if (details.videoMode === "premium" && (showPoster || showVideo)) startPremium()
+                  if (videoMode !== "premium" || aiVideoForImageRef.current !== imageUrl) aiVideo.reset()
+                  if (videoMode === "premium" && (showPoster || showVideo)) startPremium()
                   setGenerating(true)
                   setStep(3)
                 }}
