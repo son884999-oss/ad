@@ -8,12 +8,21 @@
 //                     "VIDEO_NO_CREDITS" | "VIDEO_AUTH_FAILED" | "VIDEO_TIMEOUT" | ... }
 import { createJsonHandler } from "./_lib/http.js"
 import { getHiggsfieldConfig } from "./_lib/higgsfield.js"
+import { checkPremiumAccess, withDailyPaid } from "./_lib/paid.js"
 import { normalizeVideoInput, startVideo } from "./_lib/video.js"
 
 export default createJsonHandler({
   // Each call is one paid clip: at most 3 per minute per address.
   bucket: "video-start",
   perMinute: 3,
-  prepare: getHiggsfieldConfig,
-  run: (body, config) => startVideo(normalizeVideoInput(body), config),
+  // Paid switch first, then the demo access code (when set) and today's cap (api/_lib/paid.js).
+  prepare: (req) => {
+    const config = getHiggsfieldConfig()
+    checkPremiumAccess(req)
+    return config
+  },
+  run: (body, config) => {
+    const input = normalizeVideoInput(body)
+    return withDailyPaid("video", () => startVideo(input, config))
+  },
 })

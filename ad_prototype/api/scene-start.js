@@ -4,12 +4,21 @@
 // paid generation is switched off, no network call). See api/_lib/scene.js.
 import { createJsonHandler } from "./_lib/http.js"
 import { getHiggsfieldConfig } from "./_lib/higgsfield.js"
+import { checkPremiumAccess, withDailyPaid } from "./_lib/paid.js"
 import { normalizeSceneInput, startScene } from "./_lib/scene.js"
 
 export default createJsonHandler({
   // Each call is one paid picture: at most 3 per minute per address.
   bucket: "scene-start",
   perMinute: 3,
-  prepare: getHiggsfieldConfig,
-  run: (body, config) => startScene(normalizeSceneInput(body), config),
+  // Paid switch first, then the demo access code (when set) and today's cap (api/_lib/paid.js).
+  prepare: (req) => {
+    const config = getHiggsfieldConfig()
+    checkPremiumAccess(req)
+    return config
+  },
+  run: (body, config) => {
+    const input = normalizeSceneInput(body)
+    return withDailyPaid("scene", () => startScene(input, config))
+  },
 })

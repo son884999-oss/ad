@@ -49,4 +49,45 @@ await check("video-start caps at 3 per minute; promo-text at 20", async () => {
   assert.match(await fs.readFile(new URL("../api/video-start.js", import.meta.url), "utf8"), /perMinute: 3/)
   assert.match(await fs.readFile(new URL("../api/promo-text.js", import.meta.url), "utf8"), /perMinute: 20/)
 })
-console.log(`PASS: verify-api-guard ${results.length} checks (origin, rate limit)`)
+await check("PREMIUM_ACCESS_CODE: without the right x-premium-code a paid start answers like paid-off (503 VIDEO_NOT_CONFIGURED)", async () => {
+  const { checkPremiumAccess } = await import("../api/_lib/paid.js")
+  const req = (code) => ({ headers: code === undefined ? {} : { "x-premium-code": code } })
+  delete process.env.PREMIUM_ACCESS_CODE
+  checkPremiumAccess(req()) // no code set: open
+  process.env.PREMIUM_ACCESS_CODE = "dalbit-demo-7"
+  try {
+    for (const sent of [undefined, "", "dalbit-demo-8", "dalbit-demo-77"]) {
+      assert.throws(() => checkPremiumAccess(req(sent)), (error) => error.status === 503 && error.code === "VIDEO_NOT_CONFIGURED")
+    }
+    checkPremiumAccess(req("dalbit-demo-7"))
+    checkPremiumAccess(req(" dalbit-demo-7 "))
+  } finally {
+    delete process.env.PREMIUM_ACCESS_CODE
+  }
+})
+await check("DAILY_PAID_LIMIT (default 5): the 6th paid start of a kind today gets 429 VIDEO_DAILY_LIMIT; a failed start gives its place back", async () => {
+  const { withDailyPaid, resetPaidCounters, dailyPaidLimit } = await import("../api/_lib/paid.js")
+  resetPaidCounters()
+  delete process.env.DAILY_PAID_LIMIT
+  assert.equal(dailyPaidLimit(), 5)
+  await assert.rejects(withDailyPaid("video", async () => { throw new Error("provider down") }), /provider down/)
+  for (let i = 0; i < 5; i += 1) assert.deepEqual(await withDailyPaid("video", async () => ({ requestId: `r${i}` })), { requestId: `r${i}` })
+  await assert.rejects(withDailyPaid("video", async () => ({})), (error) => error.status === 429 && error.code === "VIDEO_DAILY_LIMIT")
+  assert.deepEqual(await withDailyPaid("scene", async () => ({ requestId: "s" })), { requestId: "s" }, "each kind has its own count")
+  process.env.DAILY_PAID_LIMIT = "0"
+  resetPaidCounters()
+  await assert.rejects(withDailyPaid("scene", async () => ({})), (error) => error.code === "VIDEO_DAILY_LIMIT", "0 turns paid jobs off")
+  process.env.DAILY_PAID_LIMIT = "abc"
+  assert.equal(dailyPaidLimit(), 5, "a bad value falls back to 5")
+  delete process.env.DAILY_PAID_LIMIT
+  resetPaidCounters()
+})
+await check("scene-start and video-start use both guards", async () => {
+  const fs = await import("node:fs/promises")
+  for (const [file, kind] of [["video-start.js", "video"], ["scene-start.js", "scene"]]) {
+    const source = await fs.readFile(new URL(`../api/${file}`, import.meta.url), "utf8")
+    assert.match(source, /checkPremiumAccess\(req\)/, file)
+    assert.match(source, new RegExp(`withDailyPaid\\("${kind}"`), file)
+  }
+})
+console.log(`PASS: verify-api-guard ${results.length} checks (origin, rate limit, demo access code, daily paid cap)`)

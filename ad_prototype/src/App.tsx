@@ -18,7 +18,7 @@ import { isMobileDevice } from "./DesktopStage"
 import { loadRecords, saveRecords } from "./recordsStore"
 import { analyzePhotoOnce, generatePromoText, isAiUnavailable, type PhotoCheck, type PhotoSuggestion, type PromoTextResult } from "./ai"
 import { useAiVideo, type AiVideoController, type SavedAiVideo } from "./useAiVideo"
-import { AiVideoPlayer, AiVideoStatus, saveRealVideo, shareRealVideo, showsRealVideo } from "./AiVideoPanel"
+import { AiVideoPlayer, AiVideoStatus, PremiumSteps, saveRealVideo, shareRealVideo, showsRealVideo, type PremiumStepState } from "./AiVideoPanel"
 import { isVideoUnavailable, prepareAiVideoFile, toVideoDetails } from "./video"
 import { buildPosterContent, loadPosterFonts, POSTER_THEMES, posterThemeFor, renderPosterToCanvas } from "./poster"
 import { photoPalette } from "./poster/photoColor"
@@ -1621,6 +1621,15 @@ function CreateFlow({
           ? "고급형(AI 배경)이 지금 꺼져 있어서 원래 사진으로 만들었어요."
           : "배경을 바꾸지 못해서 원래 사진으로 만들었어요."
     : ""
+  // 고급형 progress in three named steps, shown from the start until the finished film is ready.
+  const premiumSteps = (() => {
+    if (details.videoMode !== "premium" || (!["starting", "generating", "completed"].includes(aiVideo.state.phase) && sceneState?.status !== "making")) return null
+    const ownScene = sceneState?.forImage === imageUrl ? sceneState.status : undefined
+    const scene: PremiumStepState = ownScene === "making" ? "working" : ownScene === "ready" ? "done" : ownScene ? "skipped" : "waiting"
+    const camera: PremiumStepState = aiVideo.state.phase === "completed" ? "done" : aiVideo.state.phase === "starting" || aiVideo.state.phase === "generating" ? "working" : "waiting"
+    const edit: PremiumStepState = realVideoFile ? "done" : showsRealVideo(aiVideo.state) ? "working" : "waiting"
+    return edit === "done" ? null : { scene, camera, edit }
+  })()
   // Preview = the file that will be saved: the captioned AI clip (고급형) or the 6-second motion video (기본형).
   const previewVideoFile = showsRealVideo(aiVideo.state) ? realVideoFile : sampleVideoFile
   const [previewVideoUrl, setPreviewVideoUrl] = useState("")
@@ -2850,6 +2859,7 @@ function CreateFlow({
                     </strong>}
                   </div>
                 </ResultPreview>
+                {premiumSteps && <PremiumSteps {...premiumSteps} easyMode={easyMode} />}
                 <AiVideoStatus state={aiVideo.state} easyMode={easyMode} onRetry={aiVideo.retry} onResume={aiVideo.resume} />
                 <ResultActionBar
                   label={easyMode ? (videoStatus === "preparing" ? "그만하기" : saveLabel) : videoStatus === "preparing" ? "준비 취소" : "다운로드"}

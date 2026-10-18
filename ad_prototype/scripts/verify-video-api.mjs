@@ -72,7 +72,7 @@ const startBody = {
 const statusReq = (id = REQ_ID, method = "GET") => request(method, undefined, { headers: {}, url: `/api/video-status?id=${encodeURIComponent(id)}` })
 const envKeys = ["VIDEO_ENABLED", "HF_CREDENTIALS", "HF_VIDEO_MODEL", "HF_VIDEO_DURATION", "GEMINI_API_KEY", "GEMINI_MODEL"]
 // Handlers run against a stubbed fetch; VIDEO_ENABLED=1 is the server switch for paid jobs (see higgsfield.js).
-const clearEnv = () => { for (const key of envKeys) delete process.env[key]; process.env.VIDEO_ENABLED = "1" }
+const clearEnv = () => { for (const key of envKeys) delete process.env[key]; process.env.VIDEO_ENABLED = "1"; process.env.DAILY_PAID_LIMIT = "1000" /* the cap has its own checks (verify:guard) */ }
 
 try {
   clearEnv()

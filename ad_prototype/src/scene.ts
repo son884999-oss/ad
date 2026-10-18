@@ -1,6 +1,7 @@
 // 고급형 "배경 바꾸기" in the browser: sends the 9:16 frame of the photo to /api/scene-start (one paid picture)
 // and polls /api/scene-status until the new advertising scene is back (about a minute). The same photo and
 // product name always send the same idempotency key, so asking twice never pays twice.
+import { premiumHeaders } from "./premiumAccess"
 import { storyFramePhoto } from "./videoFrame"
 
 export type SceneResult = { url: string } | { error: string }
@@ -31,7 +32,7 @@ export async function makeScene(
   try {
     const response = await fetch("/api/scene-start", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...premiumHeaders() },
       body: JSON.stringify({ image, details, idempotencyKey }),
       signal,
     })

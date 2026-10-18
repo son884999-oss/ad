@@ -135,7 +135,7 @@ export function createJsonHandler({ prepare, run, bucket = "api", perMinute = 20
       }
       checkOrigin(req)
       checkRateLimit(req, bucket, perMinute)
-      const context = prepare ? prepare() : undefined
+      const context = prepare ? prepare(req) : undefined
       const body = await readJsonBody(req)
       sendJson(res, 200, await run(body, context))
     } catch (error) {

@@ -19,6 +19,7 @@ const FAILURE_TEXT: Record<string, string> = {
   VIDEO_BLOCKED: "사진이나 내용 때문에 진짜 영상을 만들 수 없었어요. 다른 사진으로 해 보세요.",
   VIDEO_BUSY: "지금은 영상 만들기가 붐벼요. 잠시 뒤 다시 만들어 주세요.",
   VIDEO_NO_CREDITS: "영상 만들기 이용권이 부족해요. 관리자에게 알려 주세요.",
+  VIDEO_DAILY_LIMIT: "오늘 만들 수 있는 AI 영상을 다 만들었어요. 내일 다시 만들 수 있어요. 예시 영상은 그대로 쓸 수 있어요.",
 }
 
 export function AiVideoPlayer({
@@ -54,6 +55,33 @@ export function AiVideoPlayer({
       onPause={() => onPlayingChange(false)}
       onError={onBroken}
     />
+  )
+}
+
+export type PremiumStepState = "waiting" | "working" | "done" | "skipped"
+
+/**
+ * 고급형 progress as three named steps (AI 배경 → AI 카메라 → 편집), the pattern AI generation products use for
+ * long waits: the owner sees what is happening and that each part is real work, not a spinner.
+ */
+export function PremiumSteps({ scene, camera, edit, easyMode }: { scene: PremiumStepState; camera: PremiumStepState; edit: PremiumStepState; easyMode: boolean }) {
+  const t = (text: string) => uiText(text, easyMode)
+  const steps: [string, string, PremiumStepState][] = [
+    ["AI가 광고 배경을 만들어요", "약 1분", scene],
+    ["AI 카메라가 영상을 찍어요", "1~3분", camera],
+    ["자막·편집·소리를 입혀요", "약 10초", edit],
+  ]
+  const mark = { waiting: "", working: "진행 중", done: "완료", skipped: "원래 사진 사용" }
+  return (
+    <ol className="premium-steps" aria-label={t("고급형 만드는 과정")}>
+      {steps.map(([label, time, state], index) => (
+        <li key={label} className={`premium-steps__item is-${state}`} aria-current={state === "working" ? "step" : undefined}>
+          <span className="premium-steps__dot" aria-hidden="true">{state === "done" ? "✓" : index + 1}</span>
+          <span className="premium-steps__label">{t(label)}</span>
+          <span className="premium-steps__meta">{state === "waiting" ? t(time) : t(mark[state])}</span>
+        </li>
+      ))}
+    </ol>
   )
 }
 

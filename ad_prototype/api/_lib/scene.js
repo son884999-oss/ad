@@ -46,6 +46,8 @@ export function scenePrompt(details) {
     // Owner's goal (2026-10-18): a frame that looks like a top-tier commercial, not a catalogue shot.
     "Lit like a high-end TV commercial: a soft key light, a warm rim light tracing the product's silhouette against a slightly darker backdrop, gentle reflections on the surface, rich depth and fine texture detail.",
     "Add no fruit, food, flowers or other props that are not part of the product; never change what the product is.",
+    // Two real runs (2026-10-18) put dark-red jam streaks into a cake's cream layers.
+    "Keep the inside of the product exactly as in the photo: the same layers, fillings and colours; add no jam, fruit, sauce or new filling.",
     "Do not add any text, letters, words, logos, labels or watermarks anywhere.",
   ].join(" ")
 }

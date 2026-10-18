@@ -1,6 +1,7 @@
 // Browser side of the real (Higgsfield) video. Talks only to our /api/video-* functions; the
 // Higgsfield key stays on the server. Starting a job costs money, so nothing here ever retries a
 // start on its own: one call to startAiVideo() = at most one paid generation.
+import { premiumHeaders } from "./premiumAccess"
 import { downscalePhoto } from "./ai"
 import { storyFramePhoto } from "./videoFrame"
 import { type VideoCaption } from "./videoCaption"
@@ -77,7 +78,7 @@ export async function startAiVideo(
   try {
     const response = await fetch("/api/video-start", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...premiumHeaders() },
       body: JSON.stringify({ image, details, idempotencyKey }),
       signal: request.signal,
     })
