@@ -11,11 +11,14 @@ export const PRESERVATION =
   "Preserve the reference background, lighting direction, product shape, proportions and colors. Keep any text or logo exactly as it appears in the photo; where the photo has no text, add none: no letters, labels, logos or brand names on the product or anywhere else. The product itself never moves, bends or changes; only the camera and the light move. Every object visible now is the only object that ever appears; avoid jump cuts, morphing, new objects and unsupported product benefits."
 
 /**
- * The camera as a commercial: timed beats in one continuous take (a low dolly-in, a small arc with a rack focus,
- * a settled hero frame), so a 5-second clip already feels edited. 10 seconds adds a macro pass over the texture
- * and a pull-back. The arc stays small (a full orbit is what warps the product), and the last frame leaves the
- * lower third clear for the caption drawn later.
+ * The camera as a commercial: timed beats in one continuous take (a dolly-in, a slight crane with a focus pull, a
+ * settled hero frame), so a 5-second clip already feels edited. 10 seconds adds a macro pass over the texture and
+ * a pull-back. The last frame leaves the lower third clear for the caption drawn later.
  */
+// A real paid run (2026-10-18) with an 8° arc showed the cake's unseen side, and the model invented it: pale sponge,
+// no shavings. The camera now only moves toward, up and down, never around: only what the photo shows is shown.
+const FACE_ONLY = "Camera moves are smooth and cinematic, like a motion-control rig, but never orbit, arc, pan around or circle the product: only the side visible in the photo is ever seen, and the product itself never rotates or changes."
+
 export function cameraFor(duration = 5) {
   const hero = "the product sharp in the upper middle of the frame, no taller than half the frame, and the lower third calm and uncluttered for text"
   if (duration >= 10) {
@@ -23,17 +26,17 @@ export function cameraFor(duration = 5) {
       `Shoot one continuous ${duration}-second commercial take in four smooth beats.`,
       "0-2 s: a slow dolly-in at eye level from a wide establishing frame.",
       "2-5 s: a macro close-up gliding slowly across the most appealing surface texture, shallow depth of field.",
-      "5-8 s: a gentle arc of no more than 10 degrees around the product while the focus settles from its top detail to the whole product.",
+      "5-8 s: a slow crane down to eye level while the focus settles from its top detail to the whole product, the same face of the product toward camera.",
       `8-10 s: an elegant pull-back that settles into a still hero frame, ${hero}.`,
-      "Camera moves are smooth and cinematic, like a motion-control rig; the product itself never rotates.",
+      FACE_ONLY,
     ].join(" ")
   }
   return [
     `Shoot one continuous ${duration}-second commercial take in three smooth beats.`,
     "0-2 s: a slow dolly-in at eye level toward the product.",
-    "2-4 s: a gentle arc of no more than 8 degrees with a soft focus pull that lands on the product's most appealing detail.",
+    "2-4 s: a slight crane down with a soft focus pull that lands on the product's most appealing detail, the same face of the product toward camera.",
     `4-5 s: the camera eases to a stop on a still hero frame, ${hero}.`,
-    "Camera moves are smooth and cinematic, like a motion-control rig; the product itself never rotates.",
+    FACE_ONLY,
   ].join(" ")
 }
 
@@ -42,7 +45,7 @@ export function cameraFor(duration = 5) {
  * modes image-to-video guides list for product shots (warped labels, melting, flicker, colour shift).
  */
 export const NEGATIVE_PROMPT =
-  "deformed product, duplicated product, new text, letters, words, brand name, logo on the product, added label, captions, titles, watermark, people, hands, shaky camera, whip pan, jump cut, morphing, warped label, distorted logo, garbled text, extra product, melting, flicker, color shift, rotating product, objects sliding, moving garnish, drifting props, steam on cold food, dust, floating particles, lens flare, light stand, softbox, studio equipment in frame, layer warping"
+  "deformed product, duplicated product, new text, letters, words, brand name, logo on the product, added label, captions, titles, watermark, people, hands, shaky camera, whip pan, jump cut, morphing, warped label, distorted logo, garbled text, extra product, melting, flicker, color shift, rotating product, camera orbit, arc shot, revealing the back or other side, changing product, objects sliding, moving garnish, drifting props, steam on cold food, dust, floating particles, lens flare, light stand, softbox, studio equipment in frame, layer warping"
 
 // Ported from E_이채원/src/rules.js; a few Korean shop words (케이크, 떡, 디저트 …) added for local shops,
 // and food is checked before beauty so "생크림 케이크" is food, not a cream cosmetic.

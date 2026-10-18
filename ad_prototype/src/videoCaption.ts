@@ -153,6 +153,7 @@ const SERIF = '"Noto Serif KR", "Nanum Myeongjo", serif'
 const serif = (weight: number, size: number) => `${weight} ${size}px ${SERIF}`
 const CREAM = "#fff7ea"
 const GOLD = "#f0cf98"
+const INK = "#2a1d14"
 
 /** Loads the caption fonts before the first frame is drawn (a frame drawn earlier would use the fallback). */
 export async function loadCaptionFonts(texts: string[]) {
@@ -170,7 +171,7 @@ export async function loadCaptionFonts(texts: string[]) {
  * label behind a short rule, the mood line in a serif, the product name in cream with the price in gold, and the
  * invitation in a thin outlined pill. A soft shade under the text keeps it readable without hiding the picture.
  */
-export function drawElegantCaption(ctx: CanvasRenderingContext2D, seconds: number, caption: VideoCaption & { mood?: string; label?: string }) {
+export function drawElegantCaption(ctx: CanvasRenderingContext2D, seconds: number, caption: VideoCaption & { mood?: string; label?: string }, clipSeconds = Infinity) {
   const { width, height } = ctx.canvas
   const textWidth = width - SIDE * 2
   const bottom = height - BOTTOM_SAFE
@@ -211,8 +212,22 @@ export function drawElegantCaption(ctx: CanvasRenderingContext2D, seconds: numbe
       ctx.beginPath()
       ctx.roundRect(SIDE, y - 58, pillWidth, 84, 42)
       ctx.stroke()
+      // On the end hold the outline fills cream, left to right, and the words turn dark: the one thing to do.
+      const fill = Math.min(Math.max((seconds - clipSeconds) / 0.5, 0), 1)
       ctx.fillStyle = CREAM
       ctx.fillText(line, SIDE + 38, y - 2)
+      if (fill > 0) {
+        ctx.save()
+        ctx.beginPath()
+        ctx.rect(SIDE, y - 60, pillWidth * fill, 88)
+        ctx.clip()
+        ctx.beginPath()
+        ctx.roundRect(SIDE, y - 58, pillWidth, 84, 42)
+        ctx.fill()
+        ctx.fillStyle = INK
+        ctx.fillText(line, SIDE + 38, y - 2)
+        ctx.restore()
+      }
     })
     y -= 128
   }
@@ -244,16 +259,28 @@ export function drawElegantCaption(ctx: CanvasRenderingContext2D, seconds: numbe
   }
   const moodStep = Math.round(moodSize * 1.28)
   const moodBaseline = y
-  fadeIn(0.3, () => {
-    ctx.font = serif(600, moodSize)
-    ctx.fillStyle = CREAM
-    moodLines.forEach((line, index) => ctx.fillText(line, SIDE, moodBaseline - (moodLines.length - 1 - index) * moodStep))
+  // The headline writes itself in, one letter after another (35 ms apart), each rising softly into place.
+  ctx.save()
+  ctx.font = serif(600, moodSize)
+  ctx.fillStyle = CREAM
+  ctx.shadowColor = "rgba(0,0,0,.35)"
+  ctx.shadowBlur = 14
+  let letter = 0
+  moodLines.forEach((line, index) => {
+    const baseline = moodBaseline - (moodLines.length - 1 - index) * moodStep
+    for (let i = 0; i < line.length; i += 1, letter += 1) {
+      const value = appear(seconds, 0.3 + letter * 0.035)
+      if (value <= 0 || line[i] === " ") continue
+      ctx.globalAlpha = value
+      ctx.fillText(line[i], SIDE + ctx.measureText(line.slice(0, i)).width, baseline + (1 - value) * 18)
+    }
   })
+  ctx.restore()
   const labelBaseline = moodBaseline - (moodLines.length - 1) * moodStep - moodSize - 40
   if (label) {
     fadeIn(0, () => {
       ctx.fillStyle = GOLD
-      ctx.fillRect(SIDE, labelBaseline - 12, 44, 3)
+      ctx.fillRect(SIDE, labelBaseline - 12, 44 * appear(seconds, 0), 3)
       ctx.font = font(600, 36)
       ctx.fillStyle = CREAM
       if ("letterSpacing" in ctx) ctx.letterSpacing = "5px"
