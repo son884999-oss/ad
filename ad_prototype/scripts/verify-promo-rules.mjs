@@ -262,6 +262,18 @@ try {
     }
   })
 
+  await check("videoHeadline fallback ends on a complete line: comma part, then the product name, never mid-sentence", async () => {
+    const cake = { productName: "수제 초코 생크림 케이크" }
+    const longCandidates = ["한 입 베어 물면 생크림이 소복이 흘러내리는 케이크", "초콜릿 층과 생크림이 번갈아 녹는 케이크", "초콜릿을 좋아하신다면 꼭 먹어야 할 케이크"]
+    const base = { ...goodData, copyCandidates: longCandidates, videoHeadline: "" }
+    let r = await run(cake, [JSON.stringify({ ...base, copy: "한 입 베어 물면 생크림이 소복이 흘러내리는 초코 생크림 케이크" })])
+    assert.equal(r.videoHeadline, "수제 초코 생크림 케이크", "no comma part → the product name, not '한 입 베어 물면 생크림이'")
+    r = await run(cake, [JSON.stringify({ ...base, copy: "한 입에 초콜릿 향이 가득, 수제 초코 생크림 케이크" })])
+    assert.equal(r.videoHeadline, "한 입에 초콜릿 향이 가득")
+    r = await run(cake, [JSON.stringify({ ...base, copyCandidates: [...longCandidates.slice(0, 2), "초코 생크림 케이크 한 조각"], copy: "한 입 베어 물면 생크림이 소복이 흘러내리는 초코 생크림 케이크" })])
+    assert.equal(r.videoHeadline, "초코 생크림 케이크 한 조각", "a whole short candidate first")
+  })
+
   await check("headlineFromCopy: word boundary within 16 chars, no trailing punctuation, hard cut for one long word", async () => {
     assert.equal(headlineFromCopy("토스트 위에서 딸기 알갱이가 톡, 우리밭 딸기잼"), "토스트 위에서 딸기 알갱이가")
     assert.equal(headlineFromCopy("고소한 참기름!"), "고소한 참기름")
@@ -273,11 +285,12 @@ try {
     }
   })
 
-  await check("videoHeadline: derived headline with a banned word → \"\"", async () => {
-    // A cliché left in the chosen copy (fewest problems) must not reach the video caption.
+  await check("videoHeadline: a copy with a banned word is never the caption → the product name", async () => {
+    // A cliché left in the chosen copy (fewest problems) must not reach the video caption; the product name
+    // (what the app showed for an empty headline anyway) takes its place.
     const r = await run(product, [JSON.stringify({ ...badData, videoHeadline: undefined }), bad])
     assert.equal(r.copy, trimCliches(badData.copy))
-    assert.equal(r.videoHeadline, "")
+    assert.equal(r.videoHeadline, "우리동네 참기름")
   })
 
   await check("cta: ≤14 chars kept; missing, too long or banned → \"\"", async () => {

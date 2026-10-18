@@ -171,10 +171,50 @@ export async function loadCaptionFonts(texts: string[]) {
  * label behind a short rule, the mood line in a serif, the product name in cream with the price in gold, and the
  * invitation in a thin outlined pill. A soft shade under the text keeps it readable without hiding the picture.
  */
+// Two scratch canvases for the frosted band, made once and reused every frame.
+let frostSmall: HTMLCanvasElement | null = null
+let frostBand: HTMLCanvasElement | null = null
+
+/**
+ * Frosts the picture from `top` down (soft edge of `feather` px): the generator sometimes paints made-up letters on a
+ * table edge in the lower third (concept film, 2026-10-18), and the caption sits there. A 1/12 downscale drawn back
+ * up blurs them away on every browser (canvas `filter` is missing on older Safari) at a tiny cost per frame.
+ */
+function frostBelow(ctx: CanvasRenderingContext2D, top: number, feather: number) {
+  const { width, height } = ctx.canvas
+  const bandHeight = height - top
+  frostSmall ??= document.createElement("canvas")
+  frostBand ??= document.createElement("canvas")
+  frostSmall.width = Math.ceil(width / 12)
+  frostSmall.height = Math.ceil(bandHeight / 12)
+  frostBand.width = width
+  frostBand.height = bandHeight
+  const small = frostSmall.getContext("2d")
+  const band = frostBand.getContext("2d")
+  if (!small || !band) return
+  small.imageSmoothingEnabled = true
+  small.drawImage(ctx.canvas, 0, top, width, bandHeight, 0, 0, frostSmall.width, frostSmall.height)
+  band.imageSmoothingEnabled = true
+  band.imageSmoothingQuality = "high"
+  band.globalCompositeOperation = "source-over"
+  band.drawImage(frostSmall, 0, 0, width, bandHeight)
+  const mask = band.createLinearGradient(0, 0, 0, feather)
+  mask.addColorStop(0, "rgba(0,0,0,0)")
+  mask.addColorStop(1, "rgba(0,0,0,1)")
+  band.globalCompositeOperation = "destination-in"
+  band.fillStyle = mask
+  band.fillRect(0, 0, width, bandHeight)
+  band.globalCompositeOperation = "source-over"
+  ctx.drawImage(frostBand, 0, top)
+}
+
 export function drawElegantCaption(ctx: CanvasRenderingContext2D, seconds: number, caption: VideoCaption & { mood?: string; label?: string }, clipSeconds = Infinity) {
   const { width, height } = ctx.canvas
   const textWidth = width - SIDE * 2
   const bottom = height - BOTTOM_SAFE
+  // Frosted from just above the product-name row (fully frosted at its baseline) to the bottom: the product, which the
+  // prompt keeps in the upper middle, stays sharp; the made-up letters seen at ~75% of the height are gone.
+  frostBelow(ctx, bottom - 290, 120)
   const shade = ctx.createLinearGradient(0, bottom - 720, 0, height)
   shade.addColorStop(0, "rgba(16,11,8,0)")
   shade.addColorStop(0.3, "rgba(16,11,8,.5)")

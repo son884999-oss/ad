@@ -205,7 +205,18 @@ function finishPromo(result, product) {
   const trim = (text) => trimCliches(text, input)
   // Short lines (candidates, video headline) are dropped rather than trimmed: what is left is often too bare.
   const copyCandidates = result.copyCandidates.filter((line) => allowed(line)).slice(0, CANDIDATE_MAX)
-  const videoHeadline = allowed(result.videoHeadline) || allowed(headlineFromCopy(result.copy))
+  // A cut copy can end mid-sentence ("한 입 베어 물면 생크림이", 2026-10-18 showcase), so complete lines come first:
+  // a whole candidate or copy within 16, the copy's first comma part, the product name; the word cut only last.
+  const whole = (text) => {
+    const line = String(text ?? "").replace(TRAILING_PUNCTUATION, "").trim()
+    return line && charCount(line) >= 4 && charCount(line) <= HEADLINE_MAX_LENGTH ? allowed(line) : ""
+  }
+  const firstPart = String(result.copy).split(/[,·]/)[0]
+  const videoHeadline = allowed(result.videoHeadline)
+    || [...copyCandidates, result.copy].map(whole).find(Boolean)
+    || (charCount(firstPart.trim()) >= 6 ? whole(firstPart) : "")
+    || whole(product.productName)
+    || allowed(headlineFromCopy(result.copy))
   const { hashtags } = result
   return { copy: trim(result.copy), sns: trim(result.sns), intro: trim(result.intro), hashtags, copyCandidates, videoHeadline, cta: allowed(result.cta) }
 }

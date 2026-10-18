@@ -148,7 +148,8 @@ try {
     assert.deepEqual(Object.keys(r.json), ["copy", "sns", "intro", "hashtags", "copyCandidates", "videoHeadline", "cta"])
     assert.deepEqual(r.json.hashtags, ["딸기잼", "수제잼", "토스트", "아침메뉴"])
     assert.deepEqual(r.json.copyCandidates, ["a", "b", "c"])
-    assert.equal(r.json.videoHeadline, "토스트 위에서 딸기 알갱이가", "no headline from the model → cut from copy at a word boundary")
+    // No headline, candidates too short, copy and its comma part over 16 → the product name, never a cut sentence.
+    assert.equal(r.json.videoHeadline, "우리밭 딸기잼", "no headline from the model → a complete line")
     assert.equal(r.json.cta, "")
     assert.equal(sent.length - before, 1, "no rewrite needed")
     const body = JSON.parse(sent.at(-1).init.body)
