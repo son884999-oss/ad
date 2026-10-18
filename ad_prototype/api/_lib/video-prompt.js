@@ -167,7 +167,7 @@ export const CONCEPTS = [
     ],
   },
   {
-    pattern: /에이드|주스|탄산|사이다|콜라|맥주|아이스|스무디|음료|\b(ade|juice|soda|beer|iced|smoothie|drink)\b/i,
+    pattern: /에이드|주스|탄산|사이다|콜라|맥주|아이스(?!크림)|스무디|음료|\b(ade|juice|soda|beer|iced|smoothie|drink)\b/i,
     worlds: [
       "A burst of ice cubes and sparkling water splashes across the foreground and the scene transforms into a cool mountain stream in bright sunlight, droplets glittering in slow motion around the product",
       "A wave of crystal-clear water rolls across the lens and the background transforms into a fresh green valley with a waterfall, cool mist drifting past the product",
@@ -181,10 +181,18 @@ export const CONCEPTS = [
     ],
   },
   {
-    pattern: /쿠키|과자|빵|케이크|떡|디저트|잼|과일|\b(cookie|cookies|bread|cake|dessert|jam|pastry)\b/i,
+    // Cream foods (생크림·크림치즈 …) must land here, before the beauty world that matches "크림".
+    pattern: /쿠키|과자|빵|케이크|떡|디저트|잼|과일|베이글|롤케이크|생크림|크림치즈|휘핑|아이스크림|\b(cookie|cookies|bread|cake|dessert|jam|pastry|bagel)\b/i,
     worlds: [
       "A soft cloud of flour bursts across the frame in slow motion and the background transforms into a sunlit artisan bakery at golden hour, warm light pouring over the product",
       "Pastel petals and sugar sparkles drift across the lens and the scene transforms into an elegant patisserie window glowing in evening light behind the product",
+    ],
+  },
+  {
+    // Other food (the 기본형 table's food words) before beauty, so no dish gets the cosmetics forest.
+    pattern: /식품|김치|반찬|도시락|\b(food|snack)\b/i,
+    worlds: [
+      "A soft golden light sweeps across the frame and the background transforms into a cozy wooden kitchen at dawn, fresh ingredients glowing in the warm light behind the product",
     ],
   },
   {

@@ -64,14 +64,14 @@ export type PremiumStepState = "waiting" | "working" | "done" | "skipped"
  * 고급형 progress as named steps (포스터 배경 when a poster is made → 영상 속 세계 → 편집), the pattern AI generation products use for
  * long waits: the owner sees what is happening and that each part is real work, not a spinner.
  */
-export function PremiumSteps({ scene, camera, edit, easyMode }: { scene: PremiumStepState | null; camera: PremiumStepState; edit: PremiumStepState; easyMode: boolean }) {
+export function PremiumSteps({ scene, camera, edit, easyMode }: { scene: PremiumStepState | null; camera: PremiumStepState | null; edit: PremiumStepState | null; easyMode: boolean }) {
   const t = (text: string) => uiText(text, easyMode)
-  const steps: [string, string, PremiumStepState][] = [
-    // The scene is for the poster only (no poster chosen → no step); the film changes its own world.
-    ...(scene ? [["AI가 포스터 배경을 만들어요", "약 1분", scene] as [string, string, PremiumStepState]] : []),
+  // The scene is for the poster only (no poster chosen → no step); the film steps only when a video is made.
+  const steps = ([
+    ["AI가 포스터 배경을 만들어요", "약 1분", scene],
     ["AI가 영상 속 세계를 바꿔요", "1~3분", camera],
     ["자막·편집·소리를 입혀요", "약 10초", edit],
-  ]
+  ] as [string, string, PremiumStepState | null][]).filter((step): step is [string, string, PremiumStepState] => step[2] !== null)
   const mark = { waiting: "", working: "진행 중", done: "완료", skipped: "원래 사진 사용" }
   return (
     <ol className="premium-steps" aria-label={t("고급형 만드는 과정")}>

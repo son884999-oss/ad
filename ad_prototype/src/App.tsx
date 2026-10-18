@@ -1629,9 +1629,11 @@ function CreateFlow({
     const ownScene = sceneState?.forImage === imageUrl ? sceneState.status : undefined
     // The scene is for the poster only: no poster, no scene step.
     const scene: PremiumStepState | null = ownScene === "making" ? "working" : ownScene === "ready" ? "done" : ownScene ? "skipped" : null
-    const camera: PremiumStepState = aiVideo.state.phase === "completed" ? "done" : aiVideo.state.phase === "starting" || aiVideo.state.phase === "generating" ? "working" : "waiting"
-    const edit: PremiumStepState = realVideoFile ? "done" : showsRealVideo(aiVideo.state) ? "working" : "waiting"
-    return edit === "done" ? null : { scene, camera, edit }
+    // No video chosen → no film steps (nothing would ever start them).
+    const camera: PremiumStepState | null = !showVideo ? null : aiVideo.state.phase === "completed" ? "done" : aiVideo.state.phase === "starting" || aiVideo.state.phase === "generating" ? "working" : "waiting"
+    const edit: PremiumStepState | null = !showVideo ? null : realVideoFile ? "done" : showsRealVideo(aiVideo.state) ? "working" : "waiting"
+    // The film and the poster scene run side by side: hide only when neither is still running.
+    return (edit === null || edit === "done") && scene !== "working" ? null : { scene, camera, edit }
   })()
   // Preview = the file that will be saved: the captioned AI clip (고급형) or the 6-second motion video (기본형).
   const previewVideoFile = showsRealVideo(aiVideo.state) ? realVideoFile : sampleVideoFile

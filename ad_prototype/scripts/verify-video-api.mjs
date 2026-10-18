@@ -11,7 +11,7 @@ import videoStart from "../api/video-start.js"
 import videoStatus from "../api/video-status.js"
 import videoCancel from "../api/video-cancel.js"
 import { CONCEPT_NEGATIVE_PROMPT, conceptPrompt, parseDirection, rulesPrompt } from "../api/_lib/video-prompt.js"
-import { normalizeVideoInput } from "../api/_lib/video.js"
+import { normalizeVideoInput, randomFromKey } from "../api/_lib/video.js"
 
 const base = process.argv[2] || "http://127.0.0.1:5173/"
 const results = []
@@ -371,6 +371,14 @@ try {
     assert.match(conceptPrompt({ productName: "핸드메이드 지갑" }, 5, () => 0), /cinematic studio set/)
     assert.notEqual(conceptPrompt({ productName: "초코 브라우니" }, 5, () => 0), conceptPrompt({ productName: "초코 브라우니" }, 5, () => 0.99), "more than one preset")
     assert.match(conceptPrompt({ productName: "원두 커피" }, 10, () => 0), /^A 10-second/)
+    // Cream foods and dishes never get the cosmetics forest; 아이스크림 is not a cold drink.
+    for (const food of ["크림치즈 베이글", "생크림 롤케이크", "김치", "반찬 도시락", "아이스크림"]) {
+      assert.doesNotMatch(conceptPrompt({ productName: food }, 5, () => 0), /misty forest|mountain stream/, food)
+    }
+    // A retry with the same payment key sends the same prompt (else the provider answers 422 for the reused key).
+    const sameKey = (key) => conceptPrompt({ productName: "초코 브라우니" }, 5, randomFromKey(key))
+    assert.equal(sameKey("retry-key-1"), sameKey("retry-key-1"))
+    assert.ok(new Set(Array.from({ length: 12 }, (_, i) => sameKey(`key-${i}`))).size > 1, "different creations still vary")
     // Without style the portrait prompt is unchanged.
     assert.equal(normalizeVideoInput({ ...startBody, details: { productName: "x" } }).details.style, "portrait")
     assert.equal(normalizeVideoInput({ ...startBody, details: { productName: "x", style: "concept" } }).details.style, "concept")

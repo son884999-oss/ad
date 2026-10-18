@@ -47,6 +47,13 @@ export function normalizeVideoInput(body) {
   }
 }
 
+/** A number in [0, 1) fixed by the key (FNV-1a): random across creations, the same on every retry of one. */
+export function randomFromKey(key) {
+  let hash = 0x811c9dc5
+  for (const char of String(key)) hash = Math.imul(hash ^ char.charCodeAt(0), 0x01000193) >>> 0
+  return () => hash / 2 ** 32
+}
+
 function optionalGemini() {
   try {
     return getGeminiConfig()
@@ -59,7 +66,8 @@ function optionalGemini() {
 export async function startVideo({ image, details, idempotencyKey }, config) {
   const concept = details.style === "concept"
   const [{ videoPrompt }, imageUrl] = await Promise.all([
-    concept ? { videoPrompt: conceptPrompt(details, config.duration) } : buildVideoPrompt(details, image, { duration: config.duration, gemini: optionalGemini(), timeoutMs: 6_000 }),
+    // The world is picked from the payment key, so a retry with the same key sends the same request (no 422 conflict).
+    concept ? { videoPrompt: conceptPrompt(details, config.duration, randomFromKey(idempotencyKey)) } : buildVideoPrompt(details, image, { duration: config.duration, gemini: optionalGemini(), timeoutMs: 6_000 }),
     uploadImage(config, { mimeType: image.mimeType, bytes: Buffer.from(image.data, "base64") }),
   ])
   const input = buildVideoInput({ model: config.model, imageUrl, prompt: videoPrompt, duration: config.duration, resolution: config.resolution, negativePrompt: concept ? CONCEPT_NEGATIVE_PROMPT : NEGATIVE_PROMPT })

@@ -2,7 +2,9 @@
 // Kling 2.5 Turbo at list price). Runs the same server code as /api/video-start and /api/video-status.
 // Without --yes-spend it only prints what it would do and makes no network request.
 //
-//   node scripts/live-video-test.mjs --yes-spend [photo.jpg|png|webp] [--name "제품 이름"] [--out clip.mp4]
+//   node scripts/live-video-test.mjs --yes-spend [photo.jpg|png|webp] [--name "제품 이름"] [--out clip.mp4] [--concept]
+//
+// --concept sends the 고급형 film (style "concept", api/_lib/video-prompt.js conceptPrompt) instead of the push-in.
 //
 // Reads HF_CREDENTIALS (and optional HF_VIDEO_MODEL / HF_VIDEO_DURATION / HF_VIDEO_RESOLUTION / GEMINI_*) from the
 // environment or .env.local. Never prints credentials. Never retries a submit.
@@ -17,6 +19,7 @@ const flag = (name) => {
   return index === -1 ? undefined : args.splice(index, 2)[1]
 }
 const spend = args.includes("--yes-spend")
+const concept = args.includes("--concept")
 const name = flag("--name") ?? "수제 커피"
 const out = flag("--out")
 const photoPath = resolve(args.find((arg) => !arg.startsWith("--")) ?? "public/assets/reference-fresh/coffee.webp")
@@ -49,14 +52,14 @@ if (!mimeType) {
   console.error("사진은 .jpg/.jpeg/.png/.webp만 쓸 수 있어요:", photoPath)
   process.exit(1)
 }
-console.log(`model=${config.model} duration=${config.duration}s photo=${photoPath} name=${name}`)
+console.log(`model=${config.model} duration=${config.duration}s photo=${photoPath} name=${name} style=${concept ? "concept" : "portrait"}`)
 if (!spend) {
   console.log("DRY RUN: 실제 요청을 보내지 않았어요. 유료 생성 1회를 하려면 --yes-spend 를 붙여 주세요.")
   process.exit(0)
 }
 
 const photo = await readFile(photoPath)
-const input = normalizeVideoInput({ image: { mimeType, data: photo.toString("base64") }, details: { productName: name } })
+const input = normalizeVideoInput({ image: { mimeType, data: photo.toString("base64") }, details: { productName: name, ...(concept ? { style: "concept" } : {}) } })
 console.log("1회 생성 요청을 보내요…")
 let started
 try {
