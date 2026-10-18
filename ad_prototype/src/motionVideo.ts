@@ -30,7 +30,8 @@ export type MotionEffect = "steam" | "sparkle" | "petals" | "glow" | "sheen"
  */
 export function motionEffectFor(text: string): MotionEffect {
   if (/꽃|플라워|부케|화분|\b(flower|flowers|bouquet)\b/i.test(text)) return "petals"
-  if (/쿠키|과자|식품|음료|커피|라떼|녹차|홍차|밀크티|초콜릿|빵|케이크|떡|디저트|잼|국밥|국수|라면|냉면|찌개|전골|김치|반찬|도시락|떡볶이|\b(cookie|food|snack|coffee|latte|tea|chocolate|bread|cake|dessert|soup)\b/i.test(text)) return "steam"
+  // Steam only for hot dishes and drinks; cakes, bread and cookies get the light sweep (round 1: steam on a cake).
+  if (/커피|라떼|녹차|홍차|밀크티|국밥|국수|라면|찌개|전골|떡볶이|\b(coffee|latte|tea|soup)\b/i.test(text)) return "steam"
   if (/화장품|세럼|로션|크림|스킨케어|립스틱|향수|샴푸|비누|\b(cosmetic|serum|lotion|skincare|lipstick|perfume|shampoo|soap)\b/i.test(text)) return "sparkle"
   if (/머그|컵|생활용품|텀블러|수건|주방|그릇|\b(mug|cup|tumbler|towel|kitchen|bowl)\b/i.test(text)) return "glow"
   return "sheen"

@@ -22,7 +22,7 @@ const SCENES = [
   },
   {
     pattern: /쿠키|과자|식품|음료|커피|라떼|녹차|홍차|초콜릿|빵|케이크|떡|디저트|잼|국밥|국수|라면|냉면|찌개|전골|김치|반찬|도시락|떡볶이|\b(cookie|food|snack|coffee|latte|tea|chocolate|bread|cake|dessert|soup)\b/i,
-    scene: "a premium food advertisement set: the product on a white marble surface, a soft warm cream studio backdrop, warm soft key light from the left with gentle shadows, a few fresh matching ingredients placed nearby, shallow depth of field",
+    scene: "a premium food advertisement set: the product on a white marble surface, a soft warm cream studio backdrop, warm soft key light from the left with gentle shadows, only a few crumbs or shavings of the product itself, shallow depth of field",
   },
   {
     pattern: /화장품|세럼|로션|크림|스킨케어|립스틱|향수|샴푸|비누|\b(cosmetic|serum|lotion|skincare|lipstick|perfume|shampoo|soap)\b/i,
@@ -42,7 +42,8 @@ export function scenePrompt(details) {
   return [
     "Keep the product exactly as it is in the photo: the same shape, size, colours, surface details and any printed text or logo, unchanged.",
     `Replace only the surroundings with this advertising scene: ${scene}.`,
-    "Photorealistic commercial product photography, the product sharp and centred in the lower middle of a vertical frame with calm empty space above it, light consistent across product and scene.",
+    "Photorealistic commercial product photography, vertical frame: the product sharp and centred about 40% from the top, filling about half the frame height; the lower third is a calm, plain, softly lit surface with no objects (text goes there later); light consistent across product and scene.",
+    "Add no fruit, food, flowers or other props that are not part of the product; never change what the product is.",
     "Do not add any text, letters, words, logos, labels or watermarks anywhere.",
   ].join(" ")
 }

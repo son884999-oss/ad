@@ -8,7 +8,7 @@ import { TONE_NAMES } from "./tones.js"
 export const PRESERVATION =
   // "Keep the label readable" made Kling paint a made-up brand on a plain cup (2026-10-17 live test): the prompt now
   // only keeps text that is already in the photo and forbids adding any.
-  "Preserve the reference composition and background, product shape, proportions and colors. Keep any text or logo exactly as it appears in the photo; where the photo has no text, add none: no letters, labels, logos or brand names on the product or anywhere else. Keep the product stationary; avoid rapid motion, cuts, morphing, new objects, invented effects and unsupported product benefits."
+  "Preserve the reference composition and background, product shape, proportions and colors. Keep any text or logo exactly as it appears in the photo; where the photo has no text, add none: no letters, labels, logos or brand names on the product or anywhere else. Keep the product stationary; the composition stays exactly as it is and every element visible now is the only thing that ever appears; avoid rapid motion, cuts, morphing, new objects, invented effects and unsupported product benefits."
 
 /** E's CAMERA sentence, with the clip length filled in (E fixed it at 10 seconds). */
 export function cameraFor(duration = 5) {
@@ -21,15 +21,22 @@ export function cameraFor(duration = 5) {
  * modes image-to-video guides list for product shots (warped labels, melting, flicker, colour shift).
  */
 export const NEGATIVE_PROMPT =
-  "deformed product, duplicated product, new text, letters, words, brand name, logo on the product, added label, captions, titles, watermark, people, hands, shaky camera, fast motion, morphing, warped label, distorted logo, garbled text, extra product, melting, flicker, color shift, rotating product"
+  "deformed product, duplicated product, new text, letters, words, brand name, logo on the product, added label, captions, titles, watermark, people, hands, shaky camera, fast motion, morphing, warped label, distorted logo, garbled text, extra product, melting, flicker, color shift, rotating product, objects sliding, moving garnish, drifting props, steam on cold food"
 
 // Ported from E_이채원/src/rules.js; a few Korean shop words (케이크, 떡, 디저트 …) added for local shops,
 // and food is checked before beauty so "생크림 케이크" is food, not a cream cosmetic.
 const categories = [
   {
-    pattern: /쿠키|과자|식품|음료|커피|초콜릿|빵|케이크|떡|디저트|잼|녹차|홍차|김치|반찬|도시락|과일|\b(cookie|cookies|food|snack|coffee|chocolate|bread|drink|cake|dessert|jam|tea)\b/i,
+    // Hot dishes and drinks: steam is real here.
+    pattern: /커피|라떼|녹차|홍차|국밥|국수|라면|찌개|전골|떡볶이|\b(coffee|latte|tea|soup)\b/i,
     concept: "Create an inviting food product portrait.",
-    emphasis: "Keep the reference setting and emphasize only the visible surface texture and packaging details. Only gentle steam or a soft sheen on the surface may move.",
+    emphasis: "Keep the reference setting and emphasize only the visible surface texture. Only gentle steam rising from the hot food may move; the plate, garnish and every object stay exactly where they are.",
+  },
+  {
+    // Cakes, bread, cookies and other cold or room-temperature food: no steam (round 1), a soft sheen only.
+    pattern: /쿠키|과자|식품|음료|초콜릿|빵|케이크|떡|디저트|잼|김치|반찬|도시락|과일|\b(cookie|cookies|food|snack|chocolate|bread|drink|cake|dessert|jam)\b/i,
+    concept: "Create an inviting food product portrait.",
+    emphasis: "Keep the reference setting and emphasize only the visible surface texture. Only a soft sheen of light glides across the surface; the plate, garnish and every object stay exactly where they are.",
   },
   {
     pattern: /화장품|세럼|로션|크림|스킨케어|립스틱|향수|\b(cosmetic|cosmetics|serum|lotion|skincare|lipstick|moisturizer|perfume)\b/i,

@@ -33,13 +33,18 @@ export function buildPosterContent(details: Details, headline = "", headlineFirs
   const description = details.description.trim()
   const features = details.features.trim()
   const keywords = (details.keywords ?? "").split(",").map((item) => item.trim()).filter(Boolean)
-  const line = headline.replace(/\s+/g, " ").trim()
+  // A first line that repeats the shop and product names shown above it keeps only its own part
+  // ("입안 가득 퍼지는 달콤함, 달빛제과 수제 초코 케이크" → "입안 가득 퍼지는 달콤함").
+  const line = [shopName, title].filter(Boolean).reduce((text, part) => text.split(part).join(" "), headline)
+    .replace(/[,·\s]+$/, "").replace(/^[,·\s]+/, "").replace(/\s+/g, " ").trim() || headline.replace(/\s+/g, " ").trim()
   const formBody = [description, features].find((value) => value && !same(value, title)) ?? ""
   const body = (headlineFirst && line && !same(line, title) ? line : "") || formBody || (line && !same(line, title) ? line : "")
   const price = details.priceInfo?.trim() ?? ""
   // A price is the most useful short line on a poster, so it leads the highlight line.
-  const point = keywords.length || price
-    ? [price, ...keywords].filter(Boolean).slice(0, 3).join("  ·  ")
+  // What makes it special (features, short) before bare ingredient keywords.
+  const special = features && features.length <= 24 && !same(features, title) && features !== formBody ? features : ""
+  const point = keywords.length || price || special
+    ? [price, special, ...(special ? [] : keywords)].filter(Boolean).slice(0, 3).join("  ·  ")
     : formBody && body !== formBody
       ? formBody
       : description && features && body === description && !same(features, title)

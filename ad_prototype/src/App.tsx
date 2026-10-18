@@ -1520,7 +1520,10 @@ function CreateFlow({
     }
   }
 
-  const posterContent = buildPosterContent(details, chosenHeadline || body, Boolean(chosenHeadline))
+  const posterContent = {
+    ...buildPosterContent(details, chosenHeadline || body, Boolean(chosenHeadline)),
+    callToAction: activePromo?.cta || (details.shopName?.trim() ? `${details.shopName.trim()}에서 만나보세요` : ""),
+  }
   const videoCaption = (() => {
     const name = details.name?.trim() ?? ""
     const shop = details.shopName?.trim() ?? ""
@@ -1639,8 +1642,9 @@ function CreateFlow({
     void saveToComputer(outputFolderName, [{ name: "입력내용.json", text: JSON.stringify({ type, channel, ...inputs }, null, 2) }])
   }, [outputFolderName]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
-    if (outputFolderName && showCopy && copyText) void saveToComputer(outputFolderName, [{ name: "홍보글.txt", text: copyText }])
-  }, [outputFolderName, copyText, showCopy])
+    // The text the owner copies, hashtags included.
+    if (outputFolderName && showCopy && finalText) void saveToComputer(outputFolderName, [{ name: "홍보글.txt", text: finalText }])
+  }, [outputFolderName, finalText, showCopy])
   useEffect(() => {
     if (outputFolderName && posterPreviewUrl) void saveToComputer(outputFolderName, [{ name: "포스터.png", blob: posterPreviewFileRef.current }])
   }, [outputFolderName, posterPreviewUrl])

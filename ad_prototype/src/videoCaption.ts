@@ -177,41 +177,41 @@ export function drawElegantCaption(ctx: CanvasRenderingContext2D, seconds: numbe
     ctx.restore()
   }
   // Line 1: the spaced label; line 2: the mood line (or the headline); line 3: the product name; line 4: the invitation.
-  const label = (caption.label ?? [caption.eyebrow, caption.subline].filter(Boolean).join("  /  ")).toUpperCase()
   const mood = caption.mood || caption.headline
   const product = caption.subline && caption.subline !== mood ? caption.subline : ""
+  const label = (caption.label ?? (product ? caption.eyebrow ?? "" : [caption.eyebrow, caption.subline].filter(Boolean).join("  /  "))).toUpperCase()
   let y = bottom - 40
   const invite = caption.cta ? `${caption.cta}  →` : ""
   if (invite) {
-    fadeIn(2.6, () => {
-      ctx.font = font(500, 36)
-      ctx.fillStyle = "rgba(255,255,255,.88)"
+    fadeIn(2.0, () => {
+      ctx.font = font(600, 44)
+      ctx.fillStyle = "#ffffff"
       ctx.fillText(wrap(ctx, invite, textWidth, 1)[0], SIDE, y)
     })
-    y -= 90
+    y -= 96
   }
   if (product) {
-    fadeIn(1.8, () => {
+    fadeIn(1.2, () => {
       ctx.font = font(600, 52)
       ctx.fillStyle = "#ffffff"
       ctx.fillText(wrap(ctx, product, textWidth, 1)[0], SIDE, y)
     })
     y -= 92
   }
-  ctx.font = font(300, 84)
+  ctx.font = font(400, 84)
   const moodLines = wrap(ctx, mood, textWidth, 2)
   const moodBaseline = y
-  fadeIn(0.9, () => {
-    ctx.font = font(300, 84)
+  fadeIn(0.3, () => {
+    ctx.font = font(400, 84)
     ctx.fillStyle = "#ffffff"
     moodLines.forEach((line, index) => ctx.fillText(line, SIDE, moodBaseline - (moodLines.length - 1 - index) * 100))
   })
   const labelBaseline = moodBaseline - (moodLines.length - 1) * 100 - 84 - 34
   if (label) {
-    fadeIn(0.5, () => {
-      ctx.font = font(500, 28)
-      if ("letterSpacing" in ctx) ctx.letterSpacing = "6px"
-      ctx.fillStyle = "rgba(255,255,255,.8)"
+    fadeIn(0, () => {
+      ctx.font = font(600, 34)
+      if ("letterSpacing" in ctx) ctx.letterSpacing = "5px"
+      ctx.fillStyle = "rgba(255,255,255,.92)"
       ctx.fillText(wrap(ctx, label, textWidth, 1)[0], SIDE, labelBaseline)
       if ("letterSpacing" in ctx) ctx.letterSpacing = "0px"
     })

@@ -69,6 +69,8 @@ export type PosterContent = {
   productDescription?: string
   keySellingPoint?: string
   targetAudience?: string
+  /** What to do next ("달빛제과에서 만나보세요"); shown as a pill when there is no price to close on. */
+  callToAction?: string
 }
 
 export const POSTER_FONT = '"Pretendard Variable", Pretendard, "Noto Sans KR", sans-serif'
@@ -294,11 +296,15 @@ function renderFullBleedPoster({ ctx, image, content, theme, width, height }: Re
   const titleLineHeight = title.size * 1.12
   ctx.font = font(500, 44)
   const descriptionLines = productDescription ? wrapText(ctx, productDescription, textWidth, 2) : []
-  const audience = targetAudience ? `${targetAudience}에게 추천해요` : ""
+  // No price to close on: the poster ends with what to do (a white pill), not with who it suits.
+  const cta = !price && content.callToAction ? content.callToAction.trim() : ""
+  const audience = cta ? "" : targetAudience ? `${targetAudience}에게 추천해요` : ""
   const priceSize = 76
   let y = height - bottomSafe
   const priceY = price ? y : 0
   if (price) y -= priceSize + 30
+  const ctaY = cta ? y - 76 : 0
+  if (cta) y -= 76 + 34
   const audienceY = !price && audience ? y : 0
   if (!price && audience) y -= 34 + 28
   const descriptionY = descriptionLines.length ? y - (descriptionLines.length - 1) * 56 : 0
@@ -345,6 +351,11 @@ function renderFullBleedPoster({ ctx, image, content, theme, width, height }: Re
     const priceColor = readableOn(DARK, ["#ffc79e", "#ffd9bd", "#ffffff"])
     drawLines(ctx, [price], { x: side, y: priceY, font: font(800, priceSize), color: priceColor, lineHeight: priceSize })
     drawn.push(price)
+  } else if (cta) {
+    ctx.font = font(800, 36)
+    const [line] = wrapText(ctx, cta, textWidth - 56, 1)
+    drawPill(ctx, line, side, ctaY, { size: 36, background: "#ffffff", color: readableOn("#ffffff", [theme.accent, theme.ink, DARK]) })
+    drawn.push(line)
   } else if (audience) {
     ctx.font = font(600, 34)
     const [line] = wrapText(ctx, audience, textWidth, 1)

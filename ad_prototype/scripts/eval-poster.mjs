@@ -1,4 +1,4 @@
-// 포스터 평가 묶음: 3 photos × 3 ratios rendered with the app's own renderer (through the Vite dev server),
+// 포스터 평가 묶음: 4 fixtures (3 photos) × 3 ratios rendered with the app's own renderer (through the Vite dev server),
 // saved as PNG and measured while drawing:
 //   - text contrast: the pixels under each text line are read just before the text is drawn (10th percentile)
 //   - safe zone: text inside a 40px margin; Story (9:16) keeps the top 250px and bottom 340px clear
@@ -17,6 +17,8 @@ const fixtures = [
   { photo: "coffee.webp", content: { eyebrow: "골목커피  ·  성수역 3번 출구", productName: "수제 크림 커피", productDescription: "아침마다 크림을 새로 만들어요", keySellingPoint: "5,500원  ·  직접 만든 크림", targetAudience: "출근길 직장인" } },
   { photo: "cake.webp", content: { eyebrow: "달빛제과", productName: "수제 딸기 초코 케이크", productDescription: "생크림과 딸기를 층층이 올렸어요", keySellingPoint: "조각 6,500원", targetAudience: "기념일을 챙기는 분" } },
   { photo: "store.webp", content: { eyebrow: "작은꽃집  ·  망원동", productName: "작은꽃집", productDescription: "제철 꽃으로 그날 만드는 꽃다발", keySellingPoint: "꽃다발 25,000원부터", targetAudience: "" } },
+  // No price: the poster closes with a call to action pill instead.
+  { photo: "cake.webp", name: "cake-noprice", content: { eyebrow: "달빛제과", productName: "수제 초코 케이크", productDescription: "매일 아침 직접 굽는 케이크", keySellingPoint: "", targetAudience: "기념일을 챙기는 분", callToAction: "달빛제과에서 만나보세요" } },
 ]
 const ratios = ["4:5", "1:1", "9:16"]
 // --layout vertical (사진 크게, default) | editorial (사진 먼저) | split (나란히)
@@ -45,7 +47,7 @@ const results = await page.evaluate(async ({ fixtures, ratios, layout }) => {
   const lum = ([r, g, b]) => { const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4 }; return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b) }
   const ratio = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p); return (x + 0.05) / (y + 0.05) }
   const rows = []
-  for (const { photo, content } of fixtures) {
+  for (const { photo, name, content } of fixtures) {
     const image = await load(`/assets/reference-fresh/${photo}`)
     await renderer.loadPosterFonts(Object.values(content))
     for (const ratioKey of ratios) {
@@ -99,7 +101,7 @@ const results = await page.evaluate(async ({ fixtures, ratios, layout }) => {
       const penalties = Math.min(1, issues.filter((i) => i.startsWith("대비")).length) * 10 + Math.min(1, issues.filter((i) => i.startsWith("안전")).length) * 10 + (photoArea < 0.25 ? 10 : 0) + (titleLines > 2 ? 5 : 0)
       if (photoArea < 0.25) issues.push(`사진 면적 ${(photoArea * 100).toFixed(0)}%`)
       if (titleLines > 2) issues.push(`제목 ${titleLines}줄`)
-      rows.push({ name: `${photo.replace(/\..*/, "")}-${ratioKey.replace(":", "x")}`, score: 100 - penalties, photoArea, lines: texts.length, minContrast: Math.min(...texts.map((t) => t.contrast)), issues, png: canvas.toDataURL("image/png").split(",")[1] })
+      rows.push({ name: `${name || photo.replace(/\..*/, "")}-${ratioKey.replace(":", "x")}`, score: 100 - penalties, photoArea, lines: texts.length, minContrast: Math.min(...texts.map((t) => t.contrast)), issues, png: canvas.toDataURL("image/png").split(",")[1] })
     }
   }
   return rows
