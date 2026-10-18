@@ -140,7 +140,7 @@ function aiApiDevServer(): Plugin {
         return
       }
       const env = loadEnv(server.config.mode, process.cwd(), '')
-      for (const key of ['GEMINI_API_KEY', 'GEMINI_API_KEY_2', 'GEMINI_MODEL', 'HF_CREDENTIALS', 'HF_VIDEO_MODEL', 'HF_VIDEO_DURATION', 'HF_VIDEO_RESOLUTION']) {
+      for (const key of ['COPA_API_KEY', 'COPA_MODEL', 'COPA_BASE_URL', 'GEMINI_API_KEY', 'GEMINI_API_KEY_2', 'GEMINI_MODEL', 'HF_CREDENTIALS', 'HF_VIDEO_MODEL', 'HF_VIDEO_DURATION', 'HF_VIDEO_RESOLUTION']) {
         if (env[key] && !process.env[key]) process.env[key] = env[key]
       }
       server.middlewares.use(async (req, res, next) => {

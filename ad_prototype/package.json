@@ -36,7 +36,8 @@
     "eval:promo": "node scripts/eval-promo.mjs",
     "audit:screens": "node scripts/audit-mobile-screens.mjs",
     "eval:poster": "node scripts/eval-poster.mjs",
-    "eval:video": "node scripts/eval-video.mjs"
+    "eval:video": "node scripts/eval-video.mjs",
+    "check:copa": "node scripts/check-copa.mjs"
   },
   "dependencies": {
     "react": "^19.0.0",

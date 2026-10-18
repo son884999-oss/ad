@@ -200,7 +200,7 @@ try {
     assert.equal((await call(promoText, request("POST", promoBody))).json.error, "AI_REQUEST_FAILED")
   })
 
-  await check("GEMINI_API_KEY_2: used only after the first key answers 429, then first for a while; ₩100/day cap", async () => {
+  await check("GEMINI_API_KEY_2: used only after the first key fails; ₩100/day cap", async () => {
     process.env.GEMINI_API_KEY_2 = "backup-key"
     const ledger = join(tmpdir(), `hongboitda-key2-${process.pid}.json`)
     process.env.GEMINI_KEY2_LEDGER = ledger
@@ -213,7 +213,7 @@ try {
       assert.deepEqual(sent.map((s) => s.init.headers["x-goog-api-key"]), ["test-key", "backup-key"])
       sent.length = 0
       assert.equal((await call(promoText, request("POST", promoBody))).status, 200)
-      assert.deepEqual(sent.map((s) => s.init.headers["x-goog-api-key"]), ["backup-key"], "the spent key is skipped")
+      assert.deepEqual(sent.map((s) => s.init.headers["x-goog-api-key"]), ["test-key", "backup-key"], "the free key is always tried first")
       // Each answer adds its estimated cost: 2000 in × $0.5 + 1000 out × $3 per 1M → $0.004 → ₩6 each.
       const spent = backupSpentToday()
       assert.ok(spent > 10 && spent < 14, `ledger ${spent}`)
@@ -226,6 +226,55 @@ try {
       delete process.env.GEMINI_API_KEY_2
       delete process.env.GEMINI_KEY2_LEDGER
       rmSync(ledger, { force: true })
+    }
+  })
+
+  await check("COPA_API_KEY: free Gemini → Claude → paid Gemini (owner's order), photo sent as a data URL; COPA alone works", async () => {
+    process.env.COPA_API_KEY = "copa-key"
+    const copaReply = (text) => new Response(JSON.stringify({ choices: [{ finish_reason: "stop", message: { content: text } }] }), { status: 200 })
+    const isCopa = (url) => String(url).startsWith("https://copa.codyssey.kr/v1/chat/completions")
+    try {
+      // Gemini answers → COPA is never called.
+      reply = () => geminiReply(goodPromo)
+      sent.length = 0
+      assert.equal((await call(promoText, request("POST", promoBody))).status, 200)
+      assert.ok(sent.every((s) => !isCopa(s.url)), "no COPA call while Gemini works")
+      // Gemini limited → COPA answers, with the Bearer key and the default model.
+      reply = (url) => isCopa(url) ? copaReply(goodPromo) : new Response("{}", { status: 429 })
+      sent.length = 0
+      assert.equal((await call(promoText, request("POST", promoBody))).status, 200)
+      assert.deepEqual(sent.map((s) => isCopa(s.url)), [false, true], "Gemini first, then COPA")
+      const copaSent = sent.at(-1)
+      assert.equal(copaSent.init.headers.Authorization, "Bearer copa-key")
+      assert.equal(JSON.parse(copaSent.init.body).model, "claude-haiku-4")
+      // The photo goes as an OpenAI image_url data URL.
+      reply = (url) => isCopa(url) ? copaReply(JSON.stringify({ productName: "딸기잼" })) : new Response("{}", { status: 503 })
+      sent.length = 0
+      await call(analyzePhoto, request("POST", photoBody))
+      const content = JSON.parse(sent.at(-1).init.body).messages[1].content
+      assert.ok(content.some((part) => part.type === "image_url" && part.image_url.url.startsWith("data:image/jpeg;base64,")))
+      // Both limited → the app's usual AI_RATE_LIMITED.
+      reply = () => new Response("{}", { status: 429 })
+      assert.equal((await call(promoText, request("POST", promoBody))).json.error, "AI_RATE_LIMITED")
+      // With the paid key too: free key → COPA → paid key, the paid key last.
+      process.env.GEMINI_API_KEY_2 = "backup-key"
+      process.env.GEMINI_KEY2_LEDGER = join(tmpdir(), `hongboitda-key2-copa-${process.pid}.json`)
+      reply = (url, init) => !isCopa(url) && init.headers["x-goog-api-key"] === "backup-key" ? geminiReply(goodPromo) : new Response("{}", { status: 429 })
+      sent.length = 0
+      assert.equal((await call(promoText, request("POST", promoBody))).status, 200)
+      assert.deepEqual(sent.map((s) => isCopa(s.url) ? "copa" : s.init.headers["x-goog-api-key"]), ["test-key", "copa", "backup-key"])
+      rmSync(process.env.GEMINI_KEY2_LEDGER, { force: true })
+      delete process.env.GEMINI_API_KEY_2
+      delete process.env.GEMINI_KEY2_LEDGER
+      // No Gemini key: COPA alone answers.
+      delete process.env.GEMINI_API_KEY
+      reply = (url) => isCopa(url) ? copaReply(goodPromo) : new Response("{}", { status: 500 })
+      sent.length = 0
+      assert.equal((await call(promoText, request("POST", promoBody))).status, 200)
+      assert.ok(sent.every((s) => isCopa(s.url)))
+    } finally {
+      delete process.env.COPA_API_KEY
+      process.env.GEMINI_API_KEY = "test-key"
     }
   })
 

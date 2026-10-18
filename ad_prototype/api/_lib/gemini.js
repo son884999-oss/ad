@@ -4,25 +4,29 @@
 // The key is read from process.env on the server only and is never logged or returned.
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs"
 import { dirname, join } from "node:path"
+import { copaJson, getCopaConfig } from "./copa.js"
 import { ApiError } from "./http.js"
 
 const ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models"
 
 /**
- * Reads GEMINI_API_KEY / GEMINI_MODEL, and the optional GEMINI_API_KEY_2: a second free key that is used only
- * when the first one hits its limit (429). Missing or malformed config → 503 AI_NOT_CONFIGURED.
+ * Reads GEMINI_API_KEY / GEMINI_MODEL, the optional COPA_API_KEY (Claude, api/_lib/copa.js) and the optional
+ * GEMINI_API_KEY_2 (paid, ₩100/day). Order in generateJson: free key → COPA → paid key.
+ * Neither Gemini nor COPA configured → 503 AI_NOT_CONFIGURED.
  */
 export function getGeminiConfig() {
+  const copa = getCopaConfig()
   const apiKey = process.env.GEMINI_API_KEY?.trim()
   const backupKey = process.env.GEMINI_API_KEY_2?.trim() || undefined
   const model = process.env.GEMINI_MODEL?.trim().replace(/^models\//, "")
-  if (!apiKey || !model || !/^[a-zA-Z0-9._-]+$/.test(model)) throw new ApiError(503, "AI_NOT_CONFIGURED")
-  return backupKey && backupKey !== apiKey ? { apiKey, model, backupKey } : { apiKey, model }
+  const gemini = apiKey && model && /^[a-zA-Z0-9._-]+$/.test(model)
+  if (!gemini) {
+    if (copa) return { copa }
+    throw new ApiError(503, "AI_NOT_CONFIGURED")
+  }
+  const config = backupKey && backupKey !== apiKey ? { apiKey, model, backupKey } : { apiKey, model }
+  return copa ? { ...config, copa } : config
 }
-
-// After the first key answers 429, the second key goes first for a while (no wasted call on a spent key).
-const BACKUP_FIRST_MS = 10 * 60_000
-let primaryLimitedAt = 0
 
 /**
  * The second key may be a paid key: it spends at most ₩100 a day (owner's rule, 2026-10-18). Each answer's cost
@@ -115,27 +119,41 @@ export function buildGenerationConfig({ model, temperature, maxOutputTokens, res
  * The schema only shapes the answer: callers still validate every field.
  */
 export async function generateJson({ config, systemInstruction, parts, timeoutMs = 15_000, temperature = 0.7, maxOutputTokens = 1024, responseJsonSchema }) {
-  const backupFirst = config.backupKey && Date.now() - primaryLimitedAt < BACKUP_FIRST_MS
-  const keys = config.backupKey ? (backupFirst ? [config.backupKey, config.apiKey] : [config.apiKey, config.backupKey]) : [config.apiKey]
-  let response
-  for (const apiKey of keys) {
-    const backup = apiKey === config.backupKey
-    // The second key's daily ₩ cap: skipped (as if limited) once one more call would not fit.
-    if (backup && !backupAllowed()) {
-      response ??= new Response("{}", { status: 429 })
-      continue
+  const request = { systemInstruction, parts, timeoutMs, temperature, maxOutputTokens, responseJsonSchema }
+  // Owner's order (2026-10-18): free Gemini key → COPA (Claude, monthly token cap) → paid Gemini key (₩100/day).
+  // Any failure (limit, error, timeout, bad answer) moves on to the next; the last error is the answer.
+  const steps = [
+    config.apiKey && (() => geminiOnce(config.apiKey, config.model, request)),
+    config.copa && (() => copaJson(config.copa, request)),
+    config.backupKey && (() => geminiBackup(config, request)),
+  ].filter(Boolean)
+  let lastError = new ApiError(503, "AI_NOT_CONFIGURED")
+  for (const step of steps) {
+    try {
+      return await step()
+    } catch (error) {
+      lastError = error
     }
-    response = await requestOnce({ apiKey, model: config.model, systemInstruction, parts, timeoutMs, temperature, maxOutputTokens, responseJsonSchema })
-    if (backup && response.ok) {
-      const usage = await response.clone().json().then((data) => data?.usageMetadata, () => undefined)
-      addToLedger(costKrw(config.model, usage))
-    }
-    if (response.status !== 429) break
-    if (config.backupKey && apiKey === config.apiKey) primaryLimitedAt = Date.now()
   }
+  throw lastError
+}
+
+/** One Gemini call with one key; `onOk` sees the raw answer before it is read. */
+async function geminiOnce(apiKey, model, request, onOk) {
+  const response = await requestOnce({ apiKey, model, ...request })
   if (response.status === 429) throw new ApiError(429, "AI_RATE_LIMITED")
   if (!response.ok) throw new ApiError(502, "AI_REQUEST_FAILED")
+  if (onOk) await onOk(response)
   return readAnswer(response)
+}
+
+/** The second (paid) key: skipped, as if limited, once one more call would not fit in today's ₩ cap. */
+async function geminiBackup(config, request) {
+  if (!backupAllowed()) throw new ApiError(429, "AI_RATE_LIMITED")
+  return geminiOnce(config.backupKey, config.model, request, async (response) => {
+    const usage = await response.clone().json().then((data) => data?.usageMetadata, () => undefined)
+    addToLedger(costKrw(config.model, usage))
+  })
 }
 
 /** One generateContent request with one key; returns the raw response. */
