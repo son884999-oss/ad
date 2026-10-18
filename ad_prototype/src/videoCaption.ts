@@ -160,7 +160,7 @@ export async function loadCaptionFonts(texts: string[]) {
   if (typeof document === "undefined" || !document.fonts?.load) return
   const sample = texts.filter(Boolean).join(" ") || "가"
   try {
-    await Promise.all([serif(600, 78), serif(600, 64), font(500, 46), font(600, 40), font(700, 46)].map((value) => document.fonts.load(value, sample)))
+    await Promise.all([serif(600, 94), serif(600, 72), font(500, 52), font(600, 44), font(800, 56)].map((value) => document.fonts.load(value, sample)))
   } catch {
     // Fallback fonts are fine.
   }
@@ -203,14 +203,14 @@ export function drawElegantCaption(ctx: CanvasRenderingContext2D, seconds: numbe
   const invite = caption.cta ? `${caption.cta}  →` : ""
   if (invite) {
     fadeIn(2.0, () => {
-      ctx.font = font(600, 40)
+      ctx.font = font(600, 44)
       const line = wrap(ctx, invite, textWidth - 76, 1)[0]
       const pillWidth = ctx.measureText(line).width + 76
       ctx.shadowBlur = 0
       ctx.strokeStyle = "rgba(255,247,234,.9)"
       ctx.lineWidth = 2.5
       ctx.beginPath()
-      ctx.roundRect(SIDE, y - 58, pillWidth, 84, 42)
+      ctx.roundRect(SIDE, y - 62, pillWidth, 92, 46)
       ctx.stroke()
       // On the end hold the outline fills cream, left to right, and the words turn dark: the one thing to do.
       const fill = Math.min(Math.max((seconds - clipSeconds) / 0.5, 0), 1)
@@ -219,41 +219,41 @@ export function drawElegantCaption(ctx: CanvasRenderingContext2D, seconds: numbe
       if (fill > 0) {
         ctx.save()
         ctx.beginPath()
-        ctx.rect(SIDE, y - 60, pillWidth * fill, 88)
+        ctx.rect(SIDE, y - 64, pillWidth * fill, 96)
         ctx.clip()
         ctx.beginPath()
-        ctx.roundRect(SIDE, y - 58, pillWidth, 84, 42)
+        ctx.roundRect(SIDE, y - 62, pillWidth, 92, 46)
         ctx.fill()
         ctx.fillStyle = INK
         ctx.fillText(line, SIDE + 38, y - 2)
         ctx.restore()
       }
     })
-    y -= 128
+    y -= 140
   }
   if (name || price) {
     fadeIn(1.2, () => {
-      ctx.font = font(500, 46)
+      ctx.font = font(500, 52)
       const shown = wrap(ctx, name, textWidth, 1)[0] ?? ""
       ctx.fillStyle = CREAM
       ctx.fillText(shown, SIDE, y)
       if (price) {
         const gap = shown ? ctx.measureText(shown + "   ").width : 0
-        ctx.font = font(700, 46)
+        ctx.font = font(800, 56)
         ctx.fillStyle = GOLD
         ctx.fillText(wrap(ctx, price, Math.max(textWidth - gap, 120), 1)[0], SIDE + gap, y)
       }
     })
-    y -= 104
+    y -= 118
   }
-  // 78px serif; a second line holding a single word ("진한 / 초콜릿") is pulled back onto one line at up to 64px.
-  let moodSize = 78
+  // 94px serif; a second line holding a single word ("진한 / 초콜릿") is pulled back onto one line at 72px or more.
+  let moodSize = 94
   ctx.font = serif(600, moodSize)
   let moodLines = wrap(ctx, mood, textWidth, 2)
   if (moodLines.length === 2 && !/\s/.test(moodLines[1].trim())) {
-    ctx.font = serif(600, 64)
+    ctx.font = serif(600, 72)
     if (ctx.measureText(mood).width <= textWidth) {
-      moodSize = Math.min(78, Math.floor((64 * textWidth) / ctx.measureText(mood).width))
+      moodSize = Math.min(94, Math.floor((72 * textWidth) / ctx.measureText(mood).width))
       moodLines = [mood]
     }
   }

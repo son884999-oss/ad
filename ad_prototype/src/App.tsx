@@ -1557,7 +1557,10 @@ function CreateFlow({
     const shop = details.shopName?.trim() ?? ""
     // The label above already names the shop, so the invitation names the place when there is one.
     const place = details.location?.trim() ?? ""
-    const premiumCaption: VideoCaption = { ...sampleCaption, cta: place ? `${place} 매장에서 만나보세요` : shop ? `${shop}에서 만나보세요` : sampleCaption.cta }
+    // One message across the campaign: the film opens on the poster's line when it fits one caption line.
+    const posterLine = posterContent.productDescription?.trim() ?? ""
+    const headline = posterLine && posterLine.length <= 16 && posterLine !== details.name?.trim() ? posterLine : sampleCaption.headline
+    const premiumCaption: VideoCaption = { ...sampleCaption, headline, cta: place ? `${place} 매장에서 만나보세요` : shop ? `${shop}에서 만나보세요` : sampleCaption.cta }
     void prepareAiVideoFile(aiVideo.state.videoUrl, shop || details.name?.trim() || "", premiumCaption, channelTheme.rgb, "elegant")
       .then((file) => { if (live) setRealVideoFile(file) })
       .catch(() => undefined)

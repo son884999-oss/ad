@@ -17,6 +17,8 @@ const MIME_CANDIDATES = ["video/mp4;codecs=avc1.42E01E", "video/mp4;codecs=avc1"
 
 /** Seconds the 고급형 film holds its last frame for the invitation. */
 export const END_HOLD_SECONDS = 1.6
+/** Share of the AI clip the 고급형 film uses before the hold. */
+const CLIP_USED = 0.88
 const INTRO_SECONDS = 0.7
 
 // The edit: the real clip is cut into three shots — wide, a close-up on the top detail, wide again for the hero
@@ -145,7 +147,10 @@ export async function captionVideo(clip: Blob, caption: VideoCaption, accent?: s
     canvas.height = 1920
     const ctx = canvas.getContext("2d")
     if (!ctx || !("captureStream" in canvas)) return null
-    const clipSeconds = Number.isFinite(video.duration) && video.duration > 0 ? video.duration : 5
+    // 고급형 leaves the clip at 88 %: Kling's last half second is where stray things drift in (a light stand in a
+    // real run), and that frame would be frozen for the whole end hold.
+    const duration = Number.isFinite(video.duration) && video.duration > 0 ? video.duration : 5
+    const clipSeconds = elegant ? duration * CLIP_USED : duration
     const vignette = ctx.createRadialGradient(540, 820, 520, 540, 960, 1250)
     vignette.addColorStop(0, "rgba(0,0,0,0)")
     vignette.addColorStop(1, "rgba(0,0,0,.34)")
@@ -191,6 +196,10 @@ export async function captionVideo(clip: Blob, caption: VideoCaption, accent?: s
     let frame = 0
     let endedAt = 0
     const loop = () => {
+      if (!endedAt && elegant && video.currentTime >= clipSeconds) {
+        video.pause()
+        endedAt = performance.now()
+      }
       if (!endedAt) {
         draw(video.currentTime)
         frame = requestAnimationFrame(loop)
