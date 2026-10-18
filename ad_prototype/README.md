@@ -27,6 +27,7 @@ pnpm build        # dist/
 | 변수 | 용도 | 비워 두면 |
 |---|---|---|
 | `GEMINI_API_KEY`, `GEMINI_MODEL` | 사진 분석(자동 채우기·사진 검사), 홍보 글, 영상 연출 문장 | 템플릿 결과로 동작 |
+| `GEMINI_API_KEY_2` (선택) | 첫 키가 하루 한도(429)에 걸렸을 때만 쓰는 두 번째 키. 하루 예상 사용액이 100원이 되면 더 쓰지 않음 | 첫 키 한도에서 멈춤 |
 | `HF_CREDENTIALS` | Higgsfield 실제 영상 생성 (`KEY_ID:KEY_SECRET`) | 브라우저에서 만든 예시 영상 |
 | `HF_VIDEO_MODEL`, `HF_VIDEO_DURATION`, `HF_VIDEO_RESOLUTION` | 영상 모델·길이·해상도 (선택) | MVP 기본값 사용 |
 

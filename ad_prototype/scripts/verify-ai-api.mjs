@@ -4,7 +4,10 @@
 // /api/* with page.route. Usage: node scripts/verify-ai-api.mjs [baseUrl]
 import assert from "node:assert/strict"
 import { Readable } from "node:stream"
-import { resolve } from "node:path"
+import { join, resolve } from "node:path"
+import { tmpdir } from "node:os"
+import { rmSync, writeFileSync } from "node:fs"
+import { backupSpentToday } from "../api/_lib/gemini.js"
 import { chromium } from "playwright"
 import analyzePhoto from "../api/analyze-photo.js"
 import promoText from "../api/promo-text.js"
@@ -195,6 +198,35 @@ try {
     assert.equal((await call(promoText, request("POST", promoBody))).json.error, "AI_RATE_LIMITED")
     reply = () => { throw new TypeError("fetch failed") }
     assert.equal((await call(promoText, request("POST", promoBody))).json.error, "AI_REQUEST_FAILED")
+  })
+
+  await check("GEMINI_API_KEY_2: used only after the first key answers 429, then first for a while; ₩100/day cap", async () => {
+    process.env.GEMINI_API_KEY_2 = "backup-key"
+    const ledger = join(tmpdir(), `hongboitda-key2-${process.pid}.json`)
+    process.env.GEMINI_KEY2_LEDGER = ledger
+    const usage = { usageMetadata: { promptTokenCount: 2000, candidatesTokenCount: 500, thoughtsTokenCount: 500 } }
+    try {
+      reply = (url, init) => init.headers["x-goog-api-key"] === "test-key" ? new Response("{}", { status: 429 }) : geminiReply(goodPromo, usage)
+      sent.length = 0
+      const first = await call(promoText, request("POST", promoBody))
+      assert.equal(first.status, 200)
+      assert.deepEqual(sent.map((s) => s.init.headers["x-goog-api-key"]), ["test-key", "backup-key"])
+      sent.length = 0
+      assert.equal((await call(promoText, request("POST", promoBody))).status, 200)
+      assert.deepEqual(sent.map((s) => s.init.headers["x-goog-api-key"]), ["backup-key"], "the spent key is skipped")
+      // Each answer adds its estimated cost: 2000 in × $0.5 + 1000 out × $3 per 1M → $0.004 → ₩6 each.
+      const spent = backupSpentToday()
+      assert.ok(spent > 10 && spent < 14, `ledger ${spent}`)
+      // Near the cap the second key is not called at all and the first key's 429 is the answer.
+      writeFileSync(ledger, JSON.stringify({ day: new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Seoul" }), krw: 95 }))
+      sent.length = 0
+      assert.equal((await call(promoText, request("POST", promoBody))).json.error, "AI_RATE_LIMITED")
+      assert.deepEqual(sent.map((s) => s.init.headers["x-goog-api-key"]), ["test-key"], "no call past ₩100")
+    } finally {
+      delete process.env.GEMINI_API_KEY_2
+      delete process.env.GEMINI_KEY2_LEDGER
+      rmSync(ledger, { force: true })
+    }
   })
 
   await check("promo-text input validation → 400 INVALID_INPUT", async () => {

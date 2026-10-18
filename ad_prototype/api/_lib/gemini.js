@@ -2,16 +2,87 @@
 // Adapted from E_이채원/src/gemini.js: generateContent over REST with the x-goog-api-key header,
 // responseMimeType application/json, request timeouts, validated JSON output and error codes.
 // The key is read from process.env on the server only and is never logged or returned.
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs"
+import { dirname, join } from "node:path"
 import { ApiError } from "./http.js"
 
 const ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models"
 
-/** Reads GEMINI_API_KEY / GEMINI_MODEL. Missing or malformed config → 503 AI_NOT_CONFIGURED. */
+/**
+ * Reads GEMINI_API_KEY / GEMINI_MODEL, and the optional GEMINI_API_KEY_2: a second free key that is used only
+ * when the first one hits its limit (429). Missing or malformed config → 503 AI_NOT_CONFIGURED.
+ */
 export function getGeminiConfig() {
   const apiKey = process.env.GEMINI_API_KEY?.trim()
+  const backupKey = process.env.GEMINI_API_KEY_2?.trim() || undefined
   const model = process.env.GEMINI_MODEL?.trim().replace(/^models\//, "")
   if (!apiKey || !model || !/^[a-zA-Z0-9._-]+$/.test(model)) throw new ApiError(503, "AI_NOT_CONFIGURED")
-  return { apiKey, model }
+  return backupKey && backupKey !== apiKey ? { apiKey, model, backupKey } : { apiKey, model }
+}
+
+// After the first key answers 429, the second key goes first for a while (no wasted call on a spent key).
+const BACKUP_FIRST_MS = 10 * 60_000
+let primaryLimitedAt = 0
+
+/**
+ * The second key may be a paid key: it spends at most ₩100 a day (owner's rule, 2026-10-18). Each answer's cost
+ * is estimated from its usageMetadata at list prices rounded up (USD per 1M tokens, ₩1,500 per dollar) and added
+ * to a daily ledger: outputs/.gemini-key2-usage.json locally (gitignored), memory where the disk is read-only.
+ * A call is only made while one more worst-case call (₩10) still fits.
+ */
+export const BACKUP_DAILY_LIMIT_KRW = 100
+const BACKUP_CALL_RESERVE_KRW = 10
+const KRW_PER_USD = 1500
+const ledgerPath = () => process.env.GEMINI_KEY2_LEDGER || join(process.cwd(), "outputs", ".gemini-key2-usage.json")
+let memoryLedger = { day: "", krw: 0 }
+
+function pricesFor(model) {
+  if (/pro/.test(model)) return { input: 2.5, output: 15 }
+  if (/lite/.test(model)) return { input: 0.1, output: 0.4 }
+  return { input: 0.5, output: 3 }
+}
+
+function today() {
+  return new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Seoul" })
+}
+
+function readLedger() {
+  let ledger = memoryLedger
+  try {
+    ledger = JSON.parse(readFileSync(ledgerPath(), "utf8"))
+  } catch {
+    // No file yet, or no disk: the memory copy counts.
+  }
+  return ledger.day === today() && Number.isFinite(ledger.krw) ? ledger : { day: today(), krw: 0 }
+}
+
+function addToLedger(krw) {
+  const ledger = readLedger()
+  memoryLedger = { day: ledger.day, krw: Math.round((ledger.krw + krw) * 100) / 100 }
+  try {
+    mkdirSync(dirname(ledgerPath()), { recursive: true })
+    writeFileSync(ledgerPath(), JSON.stringify(memoryLedger))
+  } catch {
+    // Read-only disk: the memory copy still counts for this instance.
+  }
+}
+
+/** ₩ spent today on the second key (estimate). */
+export function backupSpentToday() {
+  return readLedger().krw
+}
+
+function backupAllowed() {
+  return backupSpentToday() + BACKUP_CALL_RESERVE_KRW <= BACKUP_DAILY_LIMIT_KRW
+}
+
+function costKrw(model, usage) {
+  const { input, output } = pricesFor(model)
+  const inTokens = Number(usage?.promptTokenCount) || 0
+  const outTokens = (Number(usage?.candidatesTokenCount) || 0) + (Number(usage?.thoughtsTokenCount) || 0)
+  // No usage reported: count the reserve so the cap can never be passed silently.
+  if (!inTokens && !outTokens) return BACKUP_CALL_RESERVE_KRW
+  return ((inTokens * input + outTokens * output) / 1_000_000) * KRW_PER_USD
 }
 
 /**
@@ -44,24 +115,53 @@ export function buildGenerationConfig({ model, temperature, maxOutputTokens, res
  * The schema only shapes the answer: callers still validate every field.
  */
 export async function generateJson({ config, systemInstruction, parts, timeoutMs = 15_000, temperature = 0.7, maxOutputTokens = 1024, responseJsonSchema }) {
+  const backupFirst = config.backupKey && Date.now() - primaryLimitedAt < BACKUP_FIRST_MS
+  const keys = config.backupKey ? (backupFirst ? [config.backupKey, config.apiKey] : [config.apiKey, config.backupKey]) : [config.apiKey]
+  let response
+  for (const apiKey of keys) {
+    const backup = apiKey === config.backupKey
+    // The second key's daily ₩ cap: skipped (as if limited) once one more call would not fit.
+    if (backup && !backupAllowed()) {
+      response ??= new Response("{}", { status: 429 })
+      continue
+    }
+    response = await requestOnce({ apiKey, model: config.model, systemInstruction, parts, timeoutMs, temperature, maxOutputTokens, responseJsonSchema })
+    if (backup && response.ok) {
+      const usage = await response.clone().json().then((data) => data?.usageMetadata, () => undefined)
+      addToLedger(costKrw(config.model, usage))
+    }
+    if (response.status !== 429) break
+    if (config.backupKey && apiKey === config.apiKey) primaryLimitedAt = Date.now()
+  }
+  if (response.status === 429) throw new ApiError(429, "AI_RATE_LIMITED")
+  if (!response.ok) throw new ApiError(502, "AI_REQUEST_FAILED")
+  return readAnswer(response)
+}
+
+/** One generateContent request with one key; returns the raw response. */
+async function requestOnce({ apiKey, model, systemInstruction, parts, timeoutMs, temperature, maxOutputTokens, responseJsonSchema }) {
+
   let response
   try {
-    response = await fetch(`${ENDPOINT}/${config.model}:generateContent`, {
+    response = await fetch(`${ENDPOINT}/${model}:generateContent`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "x-goog-api-key": config.apiKey },
+      headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
       signal: AbortSignal.timeout(Math.max(1_000, timeoutMs)),
       body: JSON.stringify({
         systemInstruction: { parts: [{ text: systemInstruction }] },
         contents: [{ role: "user", parts }],
-        generationConfig: buildGenerationConfig({ model: config.model, temperature, maxOutputTokens, responseJsonSchema }),
+        generationConfig: buildGenerationConfig({ model, temperature, maxOutputTokens, responseJsonSchema }),
       }),
     })
   } catch (error) {
     const name = error && typeof error === "object" ? error.name : ""
     throw new ApiError(name === "TimeoutError" || name === "AbortError" ? 504 : 502, name === "TimeoutError" || name === "AbortError" ? "AI_TIMEOUT" : "AI_REQUEST_FAILED")
   }
-  if (response.status === 429) throw new ApiError(429, "AI_RATE_LIMITED")
-  if (!response.ok) throw new ApiError(502, "AI_REQUEST_FAILED")
+  return response
+}
+
+/** Reads and validates the model's JSON answer. */
+async function readAnswer(response) {
 
   let result
   try {

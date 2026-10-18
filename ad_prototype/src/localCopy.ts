@@ -116,8 +116,16 @@ export function localCopy(input: LocalCopyInput, channel: string) {
     input.contact?.trim() ? `문의 · ${input.contact.trim()}` : "",
   ].filter(Boolean).join("\n")
   const audience = input.audience.trim() ? `${input.audience.trim()}께 추천해요.` : ""
-  // A chosen 분위기 has its own closing; otherwise the place decides.
-  const closing = input.tones.length ? toneLines[input.tones[0]] : channelClosing[channel] ?? channelClosing.download
+  // With a shop or a place the text ends on a concrete invitation from the owner's own facts
+  // ("망원동 달빛제과에서 조각 6,500원에 만나 보세요."); a price that does not end in 원 ("…부터") stays in its line.
+  // Channels whose readers ask first (채팅, 영업시간) keep their line after it. Otherwise the tone or the place decides.
+  const place = [input.location?.trim(), shop].filter(Boolean).join(" ")
+  const price = input.priceInfo?.trim() ?? ""
+  const offer = place ? `${place}에서 ${/원$/.test(price) && price.length <= 16 ? `${price}에 ` : ""}만나 보세요.` : ""
+  const asksFirst = channel === "naver_place" || channel === "daangn" || channel === "kakao"
+  const closing = offer
+    ? [offer, asksFirst ? channelClosing[channel] : ""].filter(Boolean).join(" ")
+    : input.tones.length ? toneLines[input.tones[0]] : channelClosing[channel] ?? channelClosing.download
   return [channelOpening[channel] ?? "", title, [description, features, filler].filter(Boolean).join(" "), facts, audience, closing]
     .filter(Boolean)
     .join("\n\n")
