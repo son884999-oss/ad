@@ -10,7 +10,8 @@ import { chromium } from "playwright"
 import videoStart from "../api/video-start.js"
 import videoStatus from "../api/video-status.js"
 import videoCancel from "../api/video-cancel.js"
-import { parseDirection, rulesPrompt } from "../api/_lib/video-prompt.js"
+import { CONCEPT_NEGATIVE_PROMPT, conceptPrompt, parseDirection, rulesPrompt } from "../api/_lib/video-prompt.js"
+import { normalizeVideoInput } from "../api/_lib/video.js"
 
 const base = process.argv[2] || "http://127.0.0.1:5173/"
 const results = []
@@ -341,6 +342,38 @@ try {
     assert.equal(sent[0].url, `https://api.higgsfield.ai/requests/${REQ_ID}/cancel`)
     assert.equal(sent[0].init.method, "POST")
     assert.equal(headerOf(sent[0].init, "authorization"), `Key ${CREDS}`)
+  })
+
+  await check("고급형 concept film (style: concept): a bold change of world from the original photo, preset prompt, no Gemini call", async () => {
+    // Owner's reference (쵸이셀): the cheapest Kling with only the first image turned a plain shot into a forest.
+    process.env.GEMINI_API_KEY = "test-gemini-key"
+    process.env.GEMINI_MODEL = "gemini-2.5-flash-lite"
+    try {
+      sent.length = 0
+      const r = await call(videoStart, request("POST", { ...startBody, details: { productName: "수제 초코 케이크", tones: ["premium"], style: "concept" } }))
+      assert.equal(r.status, 200, JSON.stringify(r.json))
+      assert.equal(sent.length, 3, "upload, PUT, ONE submit: no Gemini refinement for a preset")
+      const input = JSON.parse(sent[2].init.body)
+      assert.match(input.prompt, /^A 5-second cinematic, photorealistic commercial that starts on the product exactly as in the photo\./)
+      assert.match(input.prompt, /chocolate/, "chocolate gets a chocolate world")
+      assert.match(input.prompt, /pulls back smoothly to a hero frame.*lower third of the frame calm for text/)
+      assert.match(input.prompt, /Elegant, luxurious mood\./)
+      assert.match(input.prompt, /Do not add any text, letters or logos anywhere\./)
+      assert.equal(input.negative_prompt, CONCEPT_NEGATIVE_PROMPT)
+      assert.doesNotMatch(input.negative_prompt, /new objects|drifting props/, "new scenery is welcome in a concept film")
+    } finally {
+      delete process.env.GEMINI_API_KEY
+      delete process.env.GEMINI_MODEL
+    }
+    // Presets by product type, picked at random; anything else gets the general studio world.
+    assert.match(conceptPrompt({ productName: "올인원 샴푸" }, 5, () => 0), /green leaf sweeps across the foreground.*misty forest/)
+    assert.match(conceptPrompt({ productName: "레몬 에이드" }, 5, () => 0), /ice cubes and sparkling water/)
+    assert.match(conceptPrompt({ productName: "핸드메이드 지갑" }, 5, () => 0), /cinematic studio set/)
+    assert.notEqual(conceptPrompt({ productName: "초코 브라우니" }, 5, () => 0), conceptPrompt({ productName: "초코 브라우니" }, 5, () => 0.99), "more than one preset")
+    assert.match(conceptPrompt({ productName: "원두 커피" }, 10, () => 0), /^A 10-second/)
+    // Without style the portrait prompt is unchanged.
+    assert.equal(normalizeVideoInput({ ...startBody, details: { productName: "x" } }).details.style, "portrait")
+    assert.equal(normalizeVideoInput({ ...startBody, details: { productName: "x", style: "concept" } }).details.style, "concept")
   })
 
   await check("rules prompt: category + tone mapping (E_이채원 rules)", async () => {

@@ -1589,10 +1589,12 @@ function CreateFlow({
   const startPremium = () => {
     const forImage = imageUrl
     const box = photoBox?.image === imageUrl ? photoBox.box : null
-    const videoDetails = toVideoDetails(details)
+    // 고급형 film: one clip from the ORIGINAL photo that changes the world around the product (owner's reference:
+    // 쵸이셀). It starts at once; the AI scene is made alongside for the poster only.
+    if (showVideo) { aiVideoForImageRef.current = forImage; aiVideo.start({ imageUrl: forImage, details: { ...toVideoDetails(details), style: "concept" }, box }) }
+    if (!showPoster) return
     if (sceneImage?.forImage === forImage) {
       setSceneState({ forImage, status: "ready" })
-      if (showVideo) { aiVideoForImageRef.current = forImage; aiVideo.start({ imageUrl: sceneImage.url, details: videoDetails, box: null }) }
       return
     }
     sceneControllerRef.current?.abort()
@@ -1600,16 +1602,13 @@ function CreateFlow({
     sceneControllerRef.current = controller
     setSceneState({ forImage, status: "making" })
     void makeScene(forImage, { productName: details.name?.trim() ?? "", productDescription: details.description, highlights: details.features }, box, controller.signal).then((result) => {
-      // Cancelled, or the photo changed meanwhile: never start a paid video for it.
       if (controller.signal.aborted || currentImageRef.current !== forImage) return
       if ("url" in result) {
         setSceneImage({ forImage, url: result.url })
         setSceneState({ forImage, status: "ready" })
-        if (showVideo) { aiVideoForImageRef.current = forImage; aiVideo.start({ imageUrl: result.url, details: videoDetails, box: null }) }
       } else {
         // Switched off on the server (no paid generation) is not a failure: say so plainly.
         setSceneState({ forImage, status: result.error === "VIDEO_NOT_CONFIGURED" ? "off" : "failed" })
-        if (showVideo) { aiVideoForImageRef.current = forImage; aiVideo.start({ imageUrl: forImage, details: videoDetails, box }) }
       }
     })
   }
@@ -1617,7 +1616,7 @@ function CreateFlow({
   const videoMode = details.videoMode ?? (hasPremiumCode() ? "premium" : "basic")
   const sceneNotice = videoMode === "premium" && sceneState?.forImage === imageUrl
     ? sceneState.status === "making"
-      ? "고급형 배경을 만들고 있어요 · 약 1분. 다 되면 포스터와 영상이 바뀌어요."
+      ? "고급형 포스터 배경을 만들고 있어요 · 약 1분. 다 되면 포스터가 바뀌어요."
       : sceneState.status === "ready"
         ? "AI가 배경을 바꿨어요. 제품은 그대로예요."
         : sceneState.status === "off"
@@ -1628,7 +1627,8 @@ function CreateFlow({
   const premiumSteps = (() => {
     if (videoMode !== "premium" || (!["starting", "generating", "completed"].includes(aiVideo.state.phase) && sceneState?.status !== "making")) return null
     const ownScene = sceneState?.forImage === imageUrl ? sceneState.status : undefined
-    const scene: PremiumStepState = ownScene === "making" ? "working" : ownScene === "ready" ? "done" : ownScene ? "skipped" : "waiting"
+    // The scene is for the poster only: no poster, no scene step.
+    const scene: PremiumStepState | null = ownScene === "making" ? "working" : ownScene === "ready" ? "done" : ownScene ? "skipped" : null
     const camera: PremiumStepState = aiVideo.state.phase === "completed" ? "done" : aiVideo.state.phase === "starting" || aiVideo.state.phase === "generating" ? "working" : "waiting"
     const edit: PremiumStepState = realVideoFile ? "done" : showsRealVideo(aiVideo.state) ? "working" : "waiting"
     return edit === "done" ? null : { scene, camera, edit }

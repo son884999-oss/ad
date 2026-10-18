@@ -6,7 +6,7 @@ import { ApiError, cleanText, sendJson } from "./http.js"
 import { getGeminiConfig } from "./gemini.js"
 import { readImageInput } from "./photo.js"
 import { cleanTones } from "./tones.js"
-import { buildVideoPrompt, NEGATIVE_PROMPT } from "./video-prompt.js"
+import { buildVideoPrompt, CONCEPT_NEGATIVE_PROMPT, conceptPrompt, NEGATIVE_PROMPT } from "./video-prompt.js"
 import {
   REQUEST_ID_PATTERN,
   buildVideoInput,
@@ -40,6 +40,8 @@ export function normalizeVideoInput(body) {
       targetAudience: cleanText(details.targetAudience, 100),
       tones: cleanTones(details.tones),
       shopName: cleanText(details.shopName, 50),
+      // 고급형: a bold change of world from the original photo (api/_lib/video-prompt.js conceptPrompt).
+      style: details.style === "concept" ? "concept" : "portrait",
     },
     idempotencyKey,
   }
@@ -55,11 +57,12 @@ function optionalGemini() {
 
 /** prompt (≤ 6 s Gemini, else rules) → upload → submit. Returns without waiting for the video. */
 export async function startVideo({ image, details, idempotencyKey }, config) {
+  const concept = details.style === "concept"
   const [{ videoPrompt }, imageUrl] = await Promise.all([
-    buildVideoPrompt(details, image, { duration: config.duration, gemini: optionalGemini(), timeoutMs: 6_000 }),
+    concept ? { videoPrompt: conceptPrompt(details, config.duration) } : buildVideoPrompt(details, image, { duration: config.duration, gemini: optionalGemini(), timeoutMs: 6_000 }),
     uploadImage(config, { mimeType: image.mimeType, bytes: Buffer.from(image.data, "base64") }),
   ])
-  const input = buildVideoInput({ model: config.model, imageUrl, prompt: videoPrompt, duration: config.duration, resolution: config.resolution, negativePrompt: NEGATIVE_PROMPT })
+  const input = buildVideoInput({ model: config.model, imageUrl, prompt: videoPrompt, duration: config.duration, resolution: config.resolution, negativePrompt: concept ? CONCEPT_NEGATIVE_PROMPT : NEGATIVE_PROMPT })
   const requestId = await submitVideo(config, input, idempotencyKey)
   return { requestId, videoPrompt, duration: config.duration }
 }

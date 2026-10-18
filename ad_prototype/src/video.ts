@@ -15,6 +15,8 @@ export type AiVideoDetails = {
   targetAudience?: string
   tones?: string[]
   shopName?: string
+  /** 고급형: a bold change of world from the original photo (api/_lib/video-prompt.js conceptPrompt). */
+  style?: "concept"
 }
 
 export type StartResult =

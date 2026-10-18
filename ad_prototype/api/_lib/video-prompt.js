@@ -151,3 +151,88 @@ export async function buildVideoPrompt(details, image, { duration = 5, gemini = 
     return fallback
   }
 }
+
+// ── 고급형 "concept" film ───────────────────────────────────────────────────────────────────────────────────────
+// The owner's reference (쵸이셀 리디자인) came from the cheapest Kling with only the first image and "a natural mood":
+// the model itself swept a leaf across the lens and turned the plain background into a sunlit forest. So 고급형 asks
+// for that transformation directly: one clip from the ORIGINAL photo, a bold change of world per product type
+// (a few presets, one picked at random), then a pull-back to a hero frame. Some change to the product is accepted
+// for the spectacle (owner's call, 2026-10-18); text and people are still kept out.
+export const CONCEPTS = [
+  {
+    pattern: /초콜릿|초코|브라우니|가나슈|\b(chocolate|brownie)\b/i,
+    worlds: [
+      "A glossy wave of molten chocolate sweeps across the foreground and the plain background transforms into a cinematic chocolate river valley; rich chocolate rises and swirls in slow motion around the product's base",
+      "Dark chocolate shavings whirl past the lens like a storm and the scene transforms into a warm candle-lit chocolate workshop, a molten chocolate fall glowing softly behind the product",
+    ],
+  },
+  {
+    pattern: /에이드|주스|탄산|사이다|콜라|맥주|아이스|스무디|음료|\b(ade|juice|soda|beer|iced|smoothie|drink)\b/i,
+    worlds: [
+      "A burst of ice cubes and sparkling water splashes across the foreground and the scene transforms into a cool mountain stream in bright sunlight, droplets glittering in slow motion around the product",
+      "A wave of crystal-clear water rolls across the lens and the background transforms into a fresh green valley with a waterfall, cool mist drifting past the product",
+    ],
+  },
+  {
+    pattern: /커피|라떼|녹차|홍차|국밥|국수|라면|찌개|전골|떡볶이|\b(coffee|latte|tea|soup)\b/i,
+    worlds: [
+      "Warm steam swirls across the lens and the scene transforms into a misty morning café full of sunbeams; roasted beans tumble in slow motion behind the product",
+      "A soft golden light sweeps across the frame and the background transforms into a cozy wooden kitchen at dawn, steam curling up beside the product",
+    ],
+  },
+  {
+    pattern: /쿠키|과자|빵|케이크|떡|디저트|잼|과일|\b(cookie|cookies|bread|cake|dessert|jam|pastry)\b/i,
+    worlds: [
+      "A soft cloud of flour bursts across the frame in slow motion and the background transforms into a sunlit artisan bakery at golden hour, warm light pouring over the product",
+      "Pastel petals and sugar sparkles drift across the lens and the scene transforms into an elegant patisserie window glowing in evening light behind the product",
+    ],
+  },
+  {
+    pattern: /화장품|세럼|로션|크림|스킨케어|립스틱|향수|샴푸|비누|\b(cosmetic|cosmetics|serum|lotion|skincare|lipstick|perfume|shampoo|soap)\b/i,
+    worlds: [
+      "A fresh green leaf sweeps across the foreground and the plain background transforms into a sunlit misty forest with moss, ferns and a calm pool; the product stands on a mossy stone as sun rays break through",
+      "Clear water ripples rise around the product and the scene transforms into a serene mountain spring at sunrise, soft mist and floating petals around it",
+    ],
+  },
+  {
+    pattern: /꽃|플라워|부케|화분|\b(flower|flowers|bouquet)\b/i,
+    worlds: [
+      "A flurry of petals sweeps across the frame and the scene transforms into a blooming garden at golden hour, petals drifting slowly around the product",
+    ],
+  },
+  {
+    pattern: /머그|컵|생활용품|텀블러|수건|주방|그릇|\b(mug|cup|tumbler|towel|household|kitchen|bowl)\b/i,
+    worlds: [
+      "Soft linen curtains drift across the lens and the scene transforms into a bright, sunny living room with gentle leaf shadows moving over the product",
+    ],
+  },
+]
+const GENERAL_WORLDS = [
+  "A sweep of light passes across the frame and the plain background transforms into a cinematic studio set with dramatic rim light and drifting haze around the product",
+]
+
+/** Words to avoid in a concept film: no text, people or duplicates; new scenery is welcome here. */
+export const CONCEPT_NEGATIVE_PROMPT =
+  "text, letters, words, captions, titles, watermark, brand name, logo changes, garbled text, people, hands, faces, duplicated product, extra product, cartoon, low quality, flicker, shaky camera"
+
+// The new world sets its own light, so the mood names only the feeling (moodFor ties light to the photo).
+function conceptMood(tones) {
+  if (tones.includes("premium")) return "Elegant, luxurious mood."
+  if (tones.includes("trendy")) return "Bright, energetic mood."
+  if (tones.includes("friendly")) return "Warm, inviting mood."
+  return "Rich, cinematic mood."
+}
+
+/** The concept film prompt: one transformation picked at random (`random` for the checks), then the hero frame. */
+export function conceptPrompt(details, duration = 5, random = Math.random) {
+  const text = `${details.productName} ${details.productDescription ?? ""} ${details.highlights ?? ""}`
+  const worlds = CONCEPTS.find(({ pattern }) => pattern.test(text))?.worlds ?? GENERAL_WORLDS
+  const world = worlds[Math.min(worlds.length - 1, Math.floor(random() * worlds.length))]
+  return [
+    `A ${duration}-second cinematic, photorealistic commercial that starts on the product exactly as in the photo.`,
+    `${world}.`,
+    "Then the camera pulls back smoothly to a hero frame: the product upright in the upper middle, facing the camera, with the lower third of the frame calm for text.",
+    conceptMood(details.tones ?? []),
+    "Keep the product's shape, colours and label recognisable. Do not add any text, letters or logos anywhere.",
+  ].join(" ")
+}
