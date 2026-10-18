@@ -11,12 +11,12 @@ description: 홍보잇다(ad_prototype) 결과물 품질 기준 — 소상공인
 
 ## 1. 포스터 (`src/poster/posterRenderer.ts`)
 
-기준 그림은 홈 화면 예시 두 장이다. 사용자가 "이것보다 못하면 안 된다"고 정한 하한선이다.
+기준 그림은 사용자가 "이것보다 못하면 안 된다"고 정한 하한선이다.
 
 | 화면 이름 | 코드 (`compositionKey`) | 렌더 함수 | 기준 그림 |
 |---|---|---|---|
 | 사진 크게 (기본) | `vertical` | `renderFullBleedPoster` | `public/assets/reference-fresh/poster-coffee.webp` |
-| 사진 먼저 | `editorial` | `renderPanelPoster` | `public/assets/reference-fresh/poster-example.webp` |
+| 사진 먼저 | `editorial` | `renderPanelPoster` | **`ad_prototype/docs/기준그림/사진먼저_라테_4x5.webp`** (2026-10-18 사용자가 "가장 예쁘다"고 고정. 골목커피 하트 카페라테, 시연 결과 JSON 문구) · 예전 기준 `public/assets/reference-fresh/poster-example.webp` |
 | 나란히 | `split` | D_고혜숙 원본 | — |
 
 - **사진이 주인공.** "사진 크게"는 사진이 화면을 꽉 채우고 아래 어두운 그라데이션 위에 흰 큰 제목·설명·큰 가격을 얹는다. "사진 먼저"는 위 사진이 크림색 판으로 이어지고 가운데 정렬. 사진이 작게 들어간 카드형은 "초라하다"는 평을 받아 버렸다.

@@ -888,3 +888,15 @@ html[data-view=mobile] .easy-offer { top:calc(64px * var(--s) + 34px); }
 .reference-app .result-motion-preview .motion-preview-video { height:min(62dvh,560px);width:auto;aspect-ratio:9 / 16; }
 /* The AI clip carries its own caption in the lower left: the "AI 생성 영상" badge sits top-right, clear of it */
 .result-motion-preview .ai-badge { top:12px;bottom:auto; }
+/* 고급형 "특별 연출" switch under the 기본형/고급형 choice (same switch look as 쉬운 화면 in the menu). */
+.video-special { display:grid;grid-template-columns:1fr auto;align-items:center;gap:12px;width:100%;min-height:calc(56px * var(--s));margin-top:8px;padding:10px 14px;border:1px solid #9a8c81;border-radius:var(--radius-control,10px);background:#fff;color:var(--color-ink);text-align:left; }
+.video-special strong { display:block;font-size:calc(17px * var(--s));font-weight:800; }
+.video-special small { display:block;font-size:max(14px,calc(14px * var(--s)));font-weight:600;color:#5e534c;line-height:1.35;text-wrap:balance;word-break:keep-all; }
+.video-special > i { position:relative;width:48px;height:28px;border-radius:14px;background:#9a8c81;transition:background .2s; }
+.video-special > i::after { content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 1px 3px #0003;transition:transform .2s; }
+.video-special[aria-checked=true] { border-color:var(--color-brand);background:var(--color-brand-soft); }
+.video-special[aria-checked=true] > i { background:#b44d1d; }
+.video-special[aria-checked=true] > i::after { transform:translateX(20px); }
+.easy-mode .video-special { min-height:calc(64px * var(--s)); }
+.easy-mode .video-special strong { font-size:calc(20px * var(--s)); }
+@media (prefers-reduced-motion: reduce) { .video-special > i,.video-special > i::after { transition:none; } }

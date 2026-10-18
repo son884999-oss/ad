@@ -454,19 +454,34 @@ function renderPanelPoster({ ctx, image, content, theme, width, height }: Render
 
   // Info row at the bottom: the selling point on the left, who it is for on the right.
   if (hasRow) {
+    ctx.font = font(700, 34)
+    // Both on one line only when both fit whole; otherwise two centred lines (the panel above ends at rowY - 110,
+    // so the second line has room) instead of cutting "초콜릿을 좋아하는 모든…".
+    const stacked = Boolean(left && right) && ctx.measureText(left).width + ctx.measureText(right).width + 48 > textWidth
+    const dashY = stacked ? rowY - 82 : rowY - 62
     ctx.save()
     ctx.strokeStyle = `${sub}55`
     ctx.lineWidth = 2
     ctx.setLineDash([10, 10])
     ctx.beginPath()
-    ctx.moveTo(side, rowY - 62)
-    ctx.lineTo(width - side, rowY - 62)
+    ctx.moveTo(side, dashY)
+    ctx.lineTo(width - side, dashY)
     ctx.stroke()
     ctx.restore()
-    ctx.font = font(700, 34)
-    if (left && right) {
-      const [l] = wrapText(ctx, left, textWidth * 0.56, 1)
-      const [r] = wrapText(ctx, right, textWidth * 0.4, 1)
+    if (stacked) {
+      ctx.font = font(700, 32)
+      ctx.textAlign = "center"
+      const [l] = wrapText(ctx, left, textWidth, 1)
+      const [r] = wrapText(ctx, right, textWidth, 1)
+      ctx.fillStyle = ink
+      ctx.fillText(l, center, rowY - 34)
+      ctx.fillStyle = sub
+      ctx.fillText(r, center, rowY + 10)
+      drawn.push(l, r)
+    } else if (left && right) {
+      // Both fit whole (checked above): no fixed 56/40 split, which cut a 443 px right side at 374 px.
+      const l = left
+      const r = right
       ctx.fillStyle = ink
       ctx.textAlign = "left"
       ctx.fillText(l, side, rowY)

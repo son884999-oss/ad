@@ -519,6 +519,49 @@ try {
     await page.close()
   })
 
+  await check("browser: 특별 연출 shows on 정보 입력 only for 고급형; off → no concept style, on → concept film", async () => {
+    const toInput = async (page, premium) => {
+      await page.goto(base)
+      await page.getByRole("button", { name: "홍보물 만들기", exact: true }).first().click()
+      await page.locator("#product-photo").setInputFiles(photo)
+      if (premium) await page.getByRole("radio", { name: /고급형/ }).click()
+      await page.getByRole("button", { name: "다음으로", exact: true }).click()
+      await page.getByLabel("제품 이름", { exact: true }).fill("수제 초코 생크림 케이크")
+    }
+    // 기본형: no switch on the input step.
+    let { page, errors, counts } = await newPage()
+    await toInput(page, false)
+    assert.equal(await page.locator("#field-special-film").count(), 0, "기본형 has no 특별 연출")
+    await page.close()
+    for (const special of [false, true]) {
+      ;({ page, errors, counts } = await newPage())
+      const sent = await stubVideoFlow(page, counts, [{ status: "queued" }])
+      await toInput(page, true)
+      const toggle = page.locator("#field-special-film")
+      assert.equal(await toggle.getAttribute("aria-checked"), "false", "off by default")
+      if (special) {
+        await toggle.click()
+        assert.equal(await toggle.getAttribute("aria-checked"), "true")
+      }
+      await page.getByRole("button", { name: "홍보물 만들기", exact: true }).click()
+      // Off: the scene comes first (503 here → failed), then the film from the photo; on: the film at once.
+      for (let waited = 0; counts.start < 1 && waited < 20_000; waited += 200) await page.waitForTimeout(200)
+      assert.equal(counts.start, 1, "one paid start")
+      assert.equal(sent()?.details?.style, special ? "concept" : undefined, special ? "특별 → concept film" : "off → the safe push-in")
+      assert.deepEqual(errors, [])
+      await page.close()
+    }
+    // 기본형 motion: a cream cake gets the light sweep, not the cosmetics sparkle.
+    ;({ page } = await newPage())
+    await page.goto(base)
+    const effects = await page.evaluate(async () => {
+      const { motionEffectFor } = await import("/src/motionVideo.ts")
+      return ["수제 초코 생크림 케이크", "크림치즈 베이글", "수분 크림", "하트 카페라테"].map(motionEffectFor)
+    })
+    assert.deepEqual(effects, ["sheen", "sheen", "sparkle", "steam"])
+    await page.close()
+  })
+
   await check("browser: 기본형 (the default) never asks for the paid AI video", async () => {
     const { page, errors, counts } = await newPage()
     await stubVideoFlow(page, counts, [{ status: "queued" }])

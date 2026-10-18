@@ -108,6 +108,8 @@ type GeneratedRecord = {
     posterTheme?: PosterThemeKey | ""
     /** 기본형 = the free motion video made in the browser; 고급형 = the paid AI video (Higgsfield). */
     videoMode?: "basic" | "premium"
+    /** 고급형 "특별": the bold concept film (the world changes, the product may change a little). Off = safe push-in. */
+    specialFilm?: boolean
   }
 
   userHashtags: Record<Channel, string>
@@ -166,6 +168,20 @@ function VideoModeToggle({ value, premiumAvailable, easyMode, onChange, withVide
         ))}
       </div>
     </fieldset>
+  )
+}
+
+/** 고급형 "특별 연출" on the 정보 입력 step: off = the safe push-in (default), on = the bold concept film. */
+function SpecialFilmToggle({ value, easyMode, onChange }: { value: boolean; easyMode: boolean; onChange: (value: boolean) => void }) {
+  const t = (text: string) => uiText(text, easyMode)
+  return (
+    <button type="button" id="field-special-film" className="video-special" role="switch" aria-checked={value} onClick={() => onChange(!value)}>
+      <span>
+        <strong>{t("고급형 특별 연출")}</strong>
+        <small>{t(value ? "켜짐 · 배경이 다른 세계로 바뀌어요. 제품 모양이 조금 달라질 수 있어요" : "꺼짐 · 제품은 그대로, 카메라가 천천히 다가가요")}</small>
+      </span>
+      <i aria-hidden="true" />
+    </button>
   )
 }
 
@@ -1589,12 +1605,21 @@ function CreateFlow({
   const startPremium = () => {
     const forImage = imageUrl
     const box = photoBox?.image === imageUrl ? photoBox.box : null
-    // 고급형 film: one clip from the ORIGINAL photo that changes the world around the product (owner's reference:
-    // 쵸이셀). It starts at once; the AI scene is made alongside for the poster only.
-    if (showVideo) { aiVideoForImageRef.current = forImage; aiVideo.start({ imageUrl: forImage, details: { ...toVideoDetails(details), style: "concept" }, box }) }
-    if (!showPoster) return
+    // Two 고급형 films (owner's call, 2026-10-18):
+    // - 특별 on: one clip from the ORIGINAL photo that changes the world around the product (owner's reference:
+    //   쵸이셀). Bold, and the product may change a little. It starts at once; the scene is for the poster only.
+    // - 특별 off (default): the scene picture first, then a slow push-in on it. The product stays exactly as it is
+    //   (the showcase films, outputs/시연_최고결과물_2026-10-18).
+    const special = Boolean(details.specialFilm) && showVideo
+    const startFilm = (from: string, fromBox: typeof box) => {
+      aiVideoForImageRef.current = forImage
+      aiVideo.start({ imageUrl: from, details: special ? { ...toVideoDetails(details), style: "concept" } : toVideoDetails(details), box: fromBox })
+    }
+    if (special) startFilm(forImage, box)
+    if (special && !showPoster) return
     if (sceneImage?.forImage === forImage) {
       setSceneState({ forImage, status: "ready" })
+      if (showVideo && !special) startFilm(sceneImage.url, null)
       return
     }
     sceneControllerRef.current?.abort()
@@ -1602,26 +1627,32 @@ function CreateFlow({
     sceneControllerRef.current = controller
     setSceneState({ forImage, status: "making" })
     void makeScene(forImage, { productName: details.name?.trim() ?? "", productDescription: details.description, highlights: details.features }, box, controller.signal).then((result) => {
+      // Cancelled, or the photo changed meanwhile: never start a paid video for it.
       if (controller.signal.aborted || currentImageRef.current !== forImage) return
       if ("url" in result) {
         setSceneImage({ forImage, url: result.url })
         setSceneState({ forImage, status: "ready" })
+        if (showVideo && !special) startFilm(result.url, null)
       } else {
         // Switched off on the server (no paid generation) is not a failure: say so plainly.
         setSceneState({ forImage, status: result.error === "VIDEO_NOT_CONFIGURED" ? "off" : "failed" })
+        if (showVideo && !special) startFilm(forImage, box)
       }
     })
   }
+  const specialFilm = Boolean(details.specialFilm) && showVideo
   // The presenter's device (opened with ?demo=<code>, src/premiumAccess.ts) starts on 고급형; others on 기본형.
   const videoMode = details.videoMode ?? (hasPremiumCode() ? "premium" : "basic")
   const sceneNotice = videoMode === "premium" && sceneState?.forImage === imageUrl
     ? sceneState.status === "making"
-      ? "고급형 포스터 배경을 만들고 있어요 · 약 1분. 다 되면 포스터가 바뀌어요."
+      ? specialFilm
+        ? "고급형 포스터 배경을 만들고 있어요 · 약 1분. 다 되면 포스터가 바뀌어요."
+        : "고급형 배경을 만들고 있어요 · 약 1분. 다 되면 포스터와 영상이 바뀌어요."
       : sceneState.status === "ready"
-        ? "AI가 배경을 바꿨어요. 제품은 그대로예요."
+        ? specialFilm ? "AI가 포스터 배경을 바꿨어요." : "AI가 배경을 바꿨어요. 제품은 그대로예요."
         : sceneState.status === "off"
           ? "고급형(AI 배경)이 지금 꺼져 있어서 원래 사진으로 만들었어요."
-          : "배경을 바꾸지 못해서 원래 사진으로 만들었어요."
+          : specialFilm ? "포스터 배경을 바꾸지 못해서 원래 사진으로 만들었어요." : "배경을 바꾸지 못해서 원래 사진으로 만들었어요."
     : ""
   // 고급형 progress in three named steps, shown from the start until the finished film is ready.
   const premiumSteps = (() => {
@@ -1633,7 +1664,7 @@ function CreateFlow({
     const camera: PremiumStepState | null = !showVideo ? null : aiVideo.state.phase === "completed" ? "done" : aiVideo.state.phase === "starting" || aiVideo.state.phase === "generating" ? "working" : "waiting"
     const edit: PremiumStepState | null = !showVideo ? null : realVideoFile ? "done" : showsRealVideo(aiVideo.state) ? "working" : "waiting"
     // The film and the poster scene run side by side: hide only when neither is still running.
-    return (edit === null || edit === "done") && scene !== "working" ? null : { scene, camera, edit }
+    return (edit === null || edit === "done") && scene !== "working" ? null : { scene, camera, edit, special: specialFilm }
   })()
   // Preview = the file that will be saved: the captioned AI clip (고급형) or the 6-second motion video (기본형).
   const previewVideoFile = showsRealVideo(aiVideo.state) ? realVideoFile : sampleVideoFile
@@ -2332,6 +2363,10 @@ function CreateFlow({
                 })}
               </div>
             </fieldset>
+            {/* 고급형 chosen under the photo (with a video): the bold concept film is opt-in here; 기본형 never shows it. */}
+            {videoMode === "premium" && showVideo && !isVideoUnavailable() && (
+              <SpecialFilmToggle value={Boolean(details.specialFilm)} easyMode={easyMode} onChange={(specialFilm) => updateDetails({ ...details, specialFilm })} />
+            )}
             <details className="details-more" open={Boolean(details.description || details.features || details.keywords || details.audience || details.location || details.priceInfo || details.contact) || undefined}>
               <summary>
                 <span>{t("더 자세히 알려주기")}</span>

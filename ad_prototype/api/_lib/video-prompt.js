@@ -36,7 +36,7 @@ export const NEGATIVE_PROMPT =
 const categories = [
   {
     // Hot dishes and drinks: steam is real here.
-    pattern: /커피|라떼|녹차|홍차|국밥|국수|라면|찌개|전골|떡볶이|\b(coffee|latte|tea|soup)\b/i,
+    pattern: /커피|라떼|라테|녹차|홍차|국밥|국수|라면|찌개|전골|떡볶이|\b(coffee|latte|tea|soup)\b/i,
     concept: "Create a cinematic food product commercial.",
     emphasis: "Hero moment: soft steam curls up through a warm backlight while a glint of light travels across the surface; the plate, garnish and every object stay exactly where they are.",
   },
@@ -174,7 +174,7 @@ export const CONCEPTS = [
     ],
   },
   {
-    pattern: /커피|라떼|녹차|홍차|국밥|국수|라면|찌개|전골|떡볶이|\b(coffee|latte|tea|soup)\b/i,
+    pattern: /커피|라떼|라테|녹차|홍차|국밥|국수|라면|찌개|전골|떡볶이|\b(coffee|latte|tea|soup)\b/i,
     worlds: [
       "Warm steam swirls across the lens and the scene transforms into a misty morning café full of sunbeams; roasted beans tumble in slow motion behind the product",
       "A soft golden light sweeps across the frame and the background transforms into a cozy wooden kitchen at dawn, steam curling up beside the product",

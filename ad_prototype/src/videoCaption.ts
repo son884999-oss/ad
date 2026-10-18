@@ -49,6 +49,24 @@ export function wrap(ctx: CanvasRenderingContext2D, text: string, maxWidth: numb
   return kept
 }
 
+/**
+ * Two lines of even length instead of a full first line and one word left alone ("햇빛 아래 피어나는 / 하트",
+ * 2026-10-18 showcase): the word break that makes the longer line shortest. One line, or no clean break, as wrap().
+ */
+export function balancedLines(ctx: CanvasRenderingContext2D, text: string, maxWidth: number) {
+  const greedy = wrap(ctx, text, maxWidth, 2)
+  const words = text.trim().split(/\s+/)
+  if (greedy.length !== 2 || words.length < 2 || greedy[1].endsWith("…")) return greedy
+  let best: string[] | null = null
+  let bestWidth = Infinity
+  for (let cut = 1; cut < words.length; cut += 1) {
+    const lines = [words.slice(0, cut).join(" "), words.slice(cut).join(" ")]
+    const widest = Math.max(...lines.map((line) => ctx.measureText(line).width))
+    if (widest <= maxWidth && widest < bestWidth) [best, bestWidth] = [lines, widest]
+  }
+  return best ?? greedy
+}
+
 /** 0 → 1 over 0.45 s starting at `from` seconds. */
 const appear = (seconds: number, from: number) => Math.min(Math.max((seconds - from) / 0.45, 0), 1)
 
@@ -62,7 +80,7 @@ export function drawVideoCaption(ctx: CanvasRenderingContext2D, seconds: number,
 
   // Measure bottom-up so the fade sits exactly behind the text block.
   ctx.font = font(800, 104)
-  const headline = wrap(ctx, caption.headline, textWidth, 2)
+  const headline = balancedLines(ctx, caption.headline, textWidth)
   ctx.font = font(600, 46)
   const subline = caption.subline ? wrap(ctx, caption.subline, textWidth, 1) : []
   let y = height - BOTTOM_SAFE
