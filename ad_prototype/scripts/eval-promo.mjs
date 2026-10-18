@@ -57,7 +57,7 @@ console.log(`fixtures ok (${products.length}), scorer catches a bad answer (${ba
 if (live) {
   const env = await readFile(new URL("../.env.local", import.meta.url), "utf8").catch(() => "")
   for (const line of env.split(/\r?\n/)) {
-    const match = /^\s*(GEMINI_API_KEY|GEMINI_API_KEY_2|GEMINI_MODEL)\s*=\s*(.*?)\s*$/.exec(line)
+    const match = /^\s*(GEMINI_API_KEY|GEMINI_API_KEY_2|GEMINI_MODEL|GEMINI_MODEL_2)\s*=\s*(.*?)\s*$/.exec(line)
     if (match && match[2] && !process.env[match[1]]) process.env[match[1]] = match[2]
   }
   const config = getGeminiConfig()

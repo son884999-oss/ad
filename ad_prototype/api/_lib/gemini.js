@@ -19,12 +19,16 @@ export function getGeminiConfig() {
   const apiKey = process.env.GEMINI_API_KEY?.trim()
   const backupKey = process.env.GEMINI_API_KEY_2?.trim() || undefined
   const model = process.env.GEMINI_MODEL?.trim().replace(/^models\//, "")
+  // A new Google project may not get the older models (404 "no longer available to new users"): the second key can
+  // have its own model. Unset or malformed → the first key's model.
+  const model2 = process.env.GEMINI_MODEL_2?.trim().replace(/^models\//, "")
+  const backupModel = model2 && /^[a-zA-Z0-9._-]+$/.test(model2) ? model2 : model
   const gemini = apiKey && model && /^[a-zA-Z0-9._-]+$/.test(model)
   if (!gemini) {
     if (copa) return { copa }
     throw new ApiError(503, "AI_NOT_CONFIGURED")
   }
-  const config = backupKey && backupKey !== apiKey ? { apiKey, model, backupKey } : { apiKey, model }
+  const config = backupKey && backupKey !== apiKey ? { apiKey, model, backupKey, backupModel } : { apiKey, model }
   return copa ? { ...config, copa } : config
 }
 
@@ -150,9 +154,10 @@ async function geminiOnce(apiKey, model, request, onOk) {
 /** The second (paid) key: skipped, as if limited, once one more call would not fit in today's ₩ cap. */
 async function geminiBackup(config, request) {
   if (!backupAllowed()) throw new ApiError(429, "AI_RATE_LIMITED")
-  return geminiOnce(config.backupKey, config.model, request, async (response) => {
+  const model = config.backupModel ?? config.model
+  return geminiOnce(config.backupKey, model, request, async (response) => {
     const usage = await response.clone().json().then((data) => data?.usageMetadata, () => undefined)
-    addToLedger(costKrw(config.model, usage))
+    addToLedger(costKrw(model, usage))
   })
 }
 
