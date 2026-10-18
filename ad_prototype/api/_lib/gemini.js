@@ -11,7 +11,7 @@ const ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models"
 
 /**
  * Reads GEMINI_API_KEY / GEMINI_MODEL, the optional COPA_API_KEY (Claude, api/_lib/copa.js) and the optional
- * GEMINI_API_KEY_2 (paid, ₩100/day). Order in generateJson: COPA → free key → paid key.
+ * GEMINI_API_KEY_2 (paid, ₩500/day). Order in generateJson: COPA → free key → paid key.
  * Neither Gemini nor COPA configured → 503 AI_NOT_CONFIGURED.
  */
 export function getGeminiConfig() {
@@ -33,12 +33,12 @@ export function getGeminiConfig() {
 }
 
 /**
- * The second key may be a paid key: it spends at most ₩100 a day (owner's rule, 2026-10-18). Each answer's cost
+ * The second key may be a paid key: it spends at most ₩500 a day (owner's rule: ₩100 on 2026-10-18, raised to ₩500 the same day). Each answer's cost
  * is estimated from its usageMetadata at list prices rounded up (USD per 1M tokens, ₩1,500 per dollar) and added
  * to a daily ledger: outputs/.gemini-key2-usage.json locally (gitignored), memory where the disk is read-only.
  * A call is only made while one more worst-case call (₩10) still fits.
  */
-export const BACKUP_DAILY_LIMIT_KRW = 100
+export const BACKUP_DAILY_LIMIT_KRW = 500
 const BACKUP_CALL_RESERVE_KRW = 10
 const KRW_PER_USD = 1500
 const ledgerPath = () => process.env.GEMINI_KEY2_LEDGER || join(process.cwd(), "outputs", ".gemini-key2-usage.json")
@@ -125,7 +125,7 @@ export function buildGenerationConfig({ model, temperature, maxOutputTokens, res
 export async function generateJson({ config, systemInstruction, parts, timeoutMs = 15_000, temperature = 0.7, maxOutputTokens = 1024, responseJsonSchema }) {
   const request = { systemInstruction, parts, timeoutMs, temperature, maxOutputTokens, responseJsonSchema }
   // Owner's order (2026-10-18): COPA (Claude, the institution's monthly tokens; it wrote the more concrete copy in a
-  // side-by-side test) → free Gemini key → paid Gemini key (₩100/day).
+  // side-by-side test) → free Gemini key → paid Gemini key (₩500/day).
   // Any failure (limit, error, timeout, bad answer) moves on to the next; the last error is the answer.
   const steps = [
     config.copa && (() => copaJson(config.copa, request)),

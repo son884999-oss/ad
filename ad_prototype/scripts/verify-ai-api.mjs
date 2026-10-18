@@ -7,7 +7,7 @@ import { Readable } from "node:stream"
 import { join, resolve } from "node:path"
 import { tmpdir } from "node:os"
 import { rmSync, writeFileSync } from "node:fs"
-import { backupSpentToday } from "../api/_lib/gemini.js"
+import { BACKUP_DAILY_LIMIT_KRW, backupSpentToday } from "../api/_lib/gemini.js"
 import { chromium } from "playwright"
 import analyzePhoto from "../api/analyze-photo.js"
 import promoText from "../api/promo-text.js"
@@ -201,7 +201,7 @@ try {
     assert.equal((await call(promoText, request("POST", promoBody))).json.error, "AI_REQUEST_FAILED")
   })
 
-  await check("GEMINI_API_KEY_2: used only after the first key fails; ₩100/day cap", async () => {
+  await check("GEMINI_API_KEY_2: used only after the first key fails; ₩500/day cap", async () => {
     process.env.GEMINI_API_KEY_2 = "backup-key"
     const ledger = join(tmpdir(), `hongboitda-key2-${process.pid}.json`)
     process.env.GEMINI_KEY2_LEDGER = ledger
@@ -219,10 +219,10 @@ try {
       const spent = backupSpentToday()
       assert.ok(spent > 10 && spent < 14, `ledger ${spent}`)
       // Near the cap the second key is not called at all and the first key's 429 is the answer.
-      writeFileSync(ledger, JSON.stringify({ day: new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Seoul" }), krw: 95 }))
+      writeFileSync(ledger, JSON.stringify({ day: new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Seoul" }), krw: BACKUP_DAILY_LIMIT_KRW - 5 }))
       sent.length = 0
       assert.equal((await call(promoText, request("POST", promoBody))).json.error, "AI_RATE_LIMITED")
-      assert.deepEqual(sent.map((s) => s.init.headers["x-goog-api-key"]), ["test-key"], "no call past ₩100")
+      assert.deepEqual(sent.map((s) => s.init.headers["x-goog-api-key"]), ["test-key"], "no call past the daily cap")
     } finally {
       delete process.env.GEMINI_API_KEY_2
       delete process.env.GEMINI_KEY2_LEDGER
