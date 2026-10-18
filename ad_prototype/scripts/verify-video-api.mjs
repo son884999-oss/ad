@@ -556,9 +556,9 @@ try {
     await page.goto(base)
     const effects = await page.evaluate(async () => {
       const { motionEffectFor } = await import("/src/motionVideo.ts")
-      return ["수제 초코 생크림 케이크", "크림치즈 베이글", "수분 크림", "하트 카페라테"].map(motionEffectFor)
+      return ["수제 초코 생크림 케이크", "크림치즈 베이글", "수분 크림", "하트 카페라테", "수제 마카롱 녹차 필링", "녹차 라떼", "떡볶이"].map(motionEffectFor)
     })
-    assert.deepEqual(effects, ["sheen", "sheen", "sparkle", "steam"])
+    assert.deepEqual(effects, ["sheen", "sheen", "sparkle", "steam", "sheen", "steam", "steam"])
     await page.close()
   })
 

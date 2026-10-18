@@ -30,10 +30,12 @@ export type MotionEffect = "steam" | "sparkle" | "petals" | "glow" | "sheen"
  */
 export function motionEffectFor(text: string): MotionEffect {
   if (/꽃|플라워|부케|화분|\b(flower|flowers|bouquet)\b/i.test(text)) return "petals"
+  // A baked or cold dessert is never steamed, even with a flavour word ("녹차 필링" on a 마카롱, 2026-10-18 phone photo).
+  if (/케이크|마카롱|쿠키|베이글|타르트|머핀|브라우니|아이스크림|디저트|\b(cake|macaron|cookie|bagel|tart|muffin|brownie|dessert)\b/i.test(text)) return "sheen"
   // Steam only for hot dishes and drinks; cakes, bread and cookies get the light sweep (round 1: steam on a cake).
   if (/커피|라떼|라테|녹차|홍차|밀크티|국밥|국수|라면|찌개|전골|떡볶이|\b(coffee|latte|tea|soup)\b/i.test(text)) return "steam"
   // Cold or room-temperature food before beauty: "생크림 케이크" has "크림" but is no cosmetic (2026-10-18 showcase).
-  if (/케이크|빵|쿠키|과자|디저트|떡|초콜릿|초코|베이글|생크림|크림치즈|아이스크림|식품|반찬|김치|도시락|\b(cake|bread|cookie|dessert|chocolate|bagel|food)\b/i.test(text)) return "sheen"
+  if (/빵|과자|떡|초콜릿|초코|생크림|크림치즈|식품|반찬|김치|도시락|\b(bread|chocolate|food)\b/i.test(text)) return "sheen"
   if (/화장품|세럼|로션|크림|스킨케어|립스틱|향수|샴푸|비누|\b(cosmetic|serum|lotion|skincare|lipstick|perfume|shampoo|soap)\b/i.test(text)) return "sparkle"
   if (/머그|컵|생활용품|텀블러|수건|주방|그릇|\b(mug|cup|tumbler|towel|kitchen|bowl)\b/i.test(text)) return "glow"
   return "sheen"

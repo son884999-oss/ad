@@ -21,7 +21,7 @@ const SCENES = [
     scene: "a bright florist studio set: a pale linen surface, soft daylight from a large window, a few loose petals and fresh greenery nearby, airy pastel backdrop",
   },
   {
-    pattern: /쿠키|과자|식품|음료|커피|라떼|라테|녹차|홍차|초콜릿|빵|케이크|떡|디저트|잼|국밥|국수|라면|냉면|찌개|전골|김치|반찬|도시락|떡볶이|\b(cookie|food|snack|coffee|latte|tea|chocolate|bread|cake|dessert|soup)\b/i,
+    pattern: /쿠키|마카롱|과자|식품|음료|커피|라떼|라테|녹차|홍차|초콜릿|빵|케이크|떡|디저트|잼|국밥|국수|라면|냉면|찌개|전골|김치|반찬|도시락|떡볶이|\b(cookie|food|snack|coffee|latte|tea|chocolate|bread|cake|dessert|soup)\b/i,
     scene: "a premium food advertisement set: the product on a white marble surface, a soft warm cream studio backdrop, warm soft key light from the left with gentle shadows, only a few crumbs or shavings of the product itself, shallow depth of field",
   },
   {

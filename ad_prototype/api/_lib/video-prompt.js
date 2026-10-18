@@ -42,7 +42,7 @@ const categories = [
   },
   {
     // Cakes, bread, cookies and other cold or room-temperature food: no steam (round 1), a soft sheen only.
-    pattern: /쿠키|과자|식품|음료|초콜릿|빵|케이크|떡|디저트|잼|김치|반찬|도시락|과일|\b(cookie|cookies|food|snack|chocolate|bread|drink|cake|dessert|jam)\b/i,
+    pattern: /쿠키|마카롱|과자|식품|음료|초콜릿|빵|케이크|떡|디저트|잼|김치|반찬|도시락|과일|\b(cookie|cookies|food|snack|chocolate|bread|drink|cake|dessert|jam)\b/i,
     concept: "Create a cinematic food product commercial.",
     emphasis: "Hero moment: a warm light sweep glides across the surface, picking out the texture and layers with a soft glint; no steam, no dust or particles; the plate, garnish and every object stay exactly where they are.",
   },
@@ -182,7 +182,7 @@ export const CONCEPTS = [
   },
   {
     // Cream foods (생크림·크림치즈 …) must land here, before the beauty world that matches "크림".
-    pattern: /쿠키|과자|빵|케이크|떡|디저트|잼|과일|베이글|롤케이크|생크림|크림치즈|휘핑|아이스크림|\b(cookie|cookies|bread|cake|dessert|jam|pastry|bagel)\b/i,
+    pattern: /쿠키|마카롱|과자|빵|케이크|떡|디저트|잼|과일|베이글|롤케이크|생크림|크림치즈|휘핑|아이스크림|\b(cookie|cookies|bread|cake|dessert|jam|pastry|bagel)\b/i,
     worlds: [
       "A soft cloud of flour bursts across the frame in slow motion and the background transforms into a sunlit artisan bakery at golden hour, warm light pouring over the product",
       "Pastel petals and sugar sparkles drift across the lens and the scene transforms into an elegant patisserie window glowing in evening light behind the product",
