@@ -28,7 +28,7 @@ globalThis.fetch = async (url, init) => {
   sent.push({ url: String(url), init })
   return reply(url, init)
 }
-const picture = (extra = {}) => new Response(JSON.stringify({ candidates: [{ content: { parts: [{ inlineData: { mimeType: "image/jpeg", data: "QUJD" } }] } }], usageMetadata: { promptTokenCount: 600, candidatesTokenCount: 1300 }, ...extra }), { status: 200 })
+const picture = (extra = {}) => new Response(JSON.stringify({ candidates: [{ content: { parts: [{ inlineData: { mimeType: "image/jpeg", data: "QUJD" } }] } }], usageMetadata: { promptTokenCount: 1300, candidatesTokenCount: 1300, candidatesTokensDetails: [{ modality: "IMAGE", tokenCount: 1120 }, { modality: "TEXT", tokenCount: 180 }] }, ...extra }), { status: 200 })
 const image = { mimeType: "image/jpeg", data: Buffer.alloc(40, 9).toString("base64") }
 const config = { apiKey: "paid-key", model: "gemini-3.1-flash-image" }
 function request(method, body) {
@@ -70,7 +70,8 @@ try {
     assert.deepEqual(body.generationConfig, { responseModalities: ["IMAGE"], imageConfig: { aspectRatio: "9:16" } })
     assert.equal(body.contents[0].parts[0].inlineData.data, image.data)
     const spent = backupSpentToday() - before
-    assert.ok(spent > 55 && spent < 62, `charged ₩${spent}`)
+    // Official prices: 1,120 image tokens × $60/1M + 180 text × $3/1M + 1,300 input × $0.5/1M = $0.0688 → ₩103 at ₩1,500
+    assert.ok(spent > 101 && spent < 105, `charged ₩${spent}`)
   })
 
   await check("same idempotency key again → the same picture, no second call (no second charge)", async () => {

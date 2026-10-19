@@ -10,10 +10,27 @@ import { sceneFor } from "./scene.js"
 const ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models"
 export const BACKGROUND_MODEL = "gemini-3.1-flash-image"
 const IDEMPOTENCY_PATTERN = /^[A-Za-z0-9-]{16,64}$/
-// One picture: ~1,300–2,000 output tokens at $30 per 1M (image output), ₩1,500 per dollar → ₩60–90. A call is
-// made only while this much still fits under the cap (the bill showed less, 2026-10-18: ₩106 for 5 pictures).
-const PICTURE_RESERVE_KRW = 90
+// Official standard prices (ai.google.dev/gemini-api/docs/pricing, checked 2026-10-19): image output $60 per 1M
+// tokens (a 1K picture is 1,120 tokens = $0.067), text/thinking output $3 per 1M, input $0.50 per 1M (a photo is
+// 1,120 tokens). One picture ≈ $0.07 ≈ ₩100. The $30 rate is the batch tier, which we do not use. A call is made
+// only while the reserve still fits under the daily cap.
+const IMAGE_OUT_USD_PER_M = 60
+const TEXT_OUT_USD_PER_M = 3
+const INPUT_USD_PER_M = 0.5
+const PICTURE_RESERVE_KRW = 110
 const KRW_PER_USD = 1500
+
+/** ₩ for one answer from its usage. Without a per-modality breakdown every output token counts as image (upper bound). */
+export function pictureCostKrw(usage) {
+  const output = Number(usage?.candidatesTokenCount) || 0
+  const thoughts = Number(usage?.thoughtsTokenCount) || 0
+  const details = Array.isArray(usage?.candidatesTokensDetails) ? usage.candidatesTokensDetails : null
+  const imageTokens = details ? details.filter((d) => d?.modality === "IMAGE").reduce((sum, d) => sum + (Number(d?.tokenCount) || 0), 0) : output
+  const textTokens = Math.max(0, output - imageTokens) + thoughts
+  const input = Number(usage?.promptTokenCount) || 0
+  if (!output && !thoughts) return PICTURE_RESERVE_KRW
+  return ((imageTokens * IMAGE_OUT_USD_PER_M + textTokens * TEXT_OUT_USD_PER_M + input * INPUT_USD_PER_M) / 1_000_000) * KRW_PER_USD
+}
 
 /** GEMINI_API_KEY_2 (paid) or else GEMINI_API_KEY, and GEMINI_IMAGE_MODEL (default gemini-3.1-flash-image). */
 export function getBackgroundConfig() {
@@ -105,9 +122,8 @@ export async function makeBackground({ image, details, idempotencyKey }, config,
   if (!response.ok) throw new ApiError(502, "AI_REQUEST_FAILED")
   const data = await response.json().catch(() => null)
   const usage = data?.usageMetadata ?? {}
-  const outTokens = Number(usage.candidatesTokenCount) || 0
   // Charged when an answer came back, picture or not (the provider bills the call).
-  addToLedger(outTokens ? ((outTokens * 30 + (Number(usage.promptTokenCount) || 0) * 0.5) / 1_000_000) * KRW_PER_USD : PICTURE_RESERVE_KRW)
+  addToLedger(pictureCostKrw(usage))
   const picture = (data?.candidates?.[0]?.content?.parts ?? []).find((part) => part?.inlineData?.data)?.inlineData
   if (!picture || !/^image\/(png|jpeg|webp)$/.test(picture.mimeType ?? "")) throw new ApiError(502, "AI_BAD_RESPONSE")
   const result = { image: { mimeType: picture.mimeType, data: picture.data } }
