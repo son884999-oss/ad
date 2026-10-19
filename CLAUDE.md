@@ -5,7 +5,7 @@
 
 ## 먼저 볼 문서
 - **새 컴퓨터·새 세션이면 먼저: `ad_prototype/docs/시작안내.md`** — 설치, `.env.local` 다시 만들기, 넘어가지 않는 것, 지금 상태, 다음 할 일, 점검 명령.
-- 지금 방향과 결정: `ad_prototype/docs/진척사항_2026-10-19.md`(최신) · C안 결정 배경 `ad_prototype/docs/진척사항_2026-10-18.md` 6-00절 · 흐름도 `ad_prototype/docs/서비스흐름도/서비스흐름도.png`
+- 지금 방향과 결정: `ad_prototype/docs/진척사항_2026-10-20.md`(최신) · 전날 `ad_prototype/docs/진척사항_2026-10-19.md` · C안 결정 배경 `ad_prototype/docs/진척사항_2026-10-18.md` 6-00절 · 흐름도 `ad_prototype/docs/서비스흐름도/서비스흐름도.png`
 - **보류 목록: `ad_prototype/docs/나중에_할일.md`** — 사용자가 "[특급] 넣어 줘", "[결제] 하자", "나중에 할 일 ○○"라고 하면 이 문서의 해당 항목을 따른다.
 - 배포: `ad_prototype/docs/배포_체크리스트.md` · 회원가입 설정: `ad_prototype/docs/회원가입_설정안내.md` · 인수인계: `ad_prototype/인수인계서.md` 맨 위 절 · 미룬 일: `ad_prototype/docs/품질개선_로드맵.md`
 - 기술 문서: 팀 공유 `ad_prototype/docs/기술문서/`(2장), 교수님 제출 `ad_prototype/docs/기술설계서_통합본/`(6장, `통합본_만들기.mjs`로 다시 만듦)
