@@ -122,7 +122,7 @@
 
   <div class="key">
     <div class="k1"><b>디자인 · 연출 · 편집 · 음향 처리에는 생성형 AI API를 사용하지 않습니다</b><br>포스터, 영상, 자막, 배경음은 모두 사용자 단말의 브라우저에서 자체 개발 코드와 오픈소스로 처리합니다. 따라서 결과가 즉시 생성되고 서버 비용이 발생하지 않습니다.</div>
-    <div class="k2"><b>외부 AI는 두 가지 기능에만 사용합니다</b><br>① 문구 생성: 입력 항목 추천, 채널별 홍보 문구 작성<br>② 배경 변환: 사용자가 선택한 경우에만 수행합니다.</div>
+    <div class="k2"><b>외부 AI는 두 가지 기능에만 사용합니다</b><br>① 문구 생성: 사진을 분석해 정보 입력 칸 자동 채움, 채널별 홍보 문구 작성<br>② 배경 변환: 사용자가 선택한 경우에만 수행합니다.</div>
   </div>
 
   <div class="flow-head">
@@ -136,7 +136,7 @@
       <div class="cell in">① 제품 사진</div><div class="to">→</div>
       <div class="cell br">사진 품질 점검</div><div class="to">→</div>
       <div class="cell sv">사진 분석 <small>Claude · Gemini</small></div><div class="to">→</div>
-      <div class="cell out">입력 항목 자동 완성</div>
+      <div class="cell out">정보 입력 칸 자동 채움</div>
     </div>
     <div class="flow">
       <div class="cell in">② 배경 변환 여부</div><div class="to">→</div>
@@ -146,7 +146,7 @@
     </div>
     <div class="flow">
       <div class="cell in">③ 정보 입력</div><div class="to">→</div>
-      <div class="cell br">직접 입력 · 음성 입력</div><div class="to">→</div>
+      <div class="cell br">AI가 채운 내용 확인 · 수정 (직접 · 음성 입력)</div><div class="to">→</div>
       <div class="cell sv">홍보 문구 생성 및 검수 <small>Claude · Gemini</small></div><div class="to">→</div>
       <div class="cell out">채널별 홍보 문구</div>
     </div>
