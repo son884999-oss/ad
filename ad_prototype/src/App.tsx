@@ -1820,8 +1820,18 @@ function CreateFlow({
   useEffect(() => {
     const video = previewVideoRef.current
     if (!video) return
-    if (playing) void video.play().catch(() => setPlaying(false))
-    else video.pause()
+    // 재생하기 plays with sound (the owner heard nothing: the preview was always muted). A browser that refuses
+    // sound still plays it silent rather than not at all; pausing mutes again for the quiet still frame.
+    if (playing) {
+      video.muted = false
+      void video.play().catch(() => {
+        video.muted = true
+        return video.play()
+      }).catch(() => setPlaying(false))
+    } else {
+      video.pause()
+      video.muted = true
+    }
   }, [playing, previewVideoUrl])
   // A copy of every result on this computer (local dev server only, src/localSave.ts): one folder per creation,
   // filled as each file becomes ready; a restyled poster or another channel's text replaces the earlier one.
