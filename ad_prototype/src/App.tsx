@@ -1889,7 +1889,10 @@ function CreateFlow({
         aiMark: Boolean(activePromo) || Boolean(sceneUrl),
         // "색: 분위기대로" follows the product photo; a colour the user picked is kept as is.
         photoColors: details.posterTheme ? null : photoPalette(image),
-        focusBox: !sceneUrl && photoBox?.image === imageUrl ? photoBox.box : null,
+        // An AI background is drawn with the product about 25–60% from the top (api/_lib/background.js): the wide
+        // 사진 먼저 panel centres that band instead of the middle, so the top of the product is not cut
+        // ([사진먼저-잘림], 2026-10-19: macaron fully shown, cake shows more). Full width, so it never zooms in.
+        focusBox: sceneUrl ? (posterLayout === "editorial" ? [250, 0, 600, 1000] : null) : photoBox?.image === imageUrl ? photoBox.box : null,
       })
 
       if (!drawnText) throw new Error("canvas-unavailable")
