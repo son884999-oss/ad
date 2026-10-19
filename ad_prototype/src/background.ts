@@ -1,5 +1,5 @@
 // 배경 바꾸기 in the browser (plan C): after the owner chooses 바꾸기 in the photo popup, the photo (downscaled
-// like the analysis call) goes to /api/background once; the advertising picture comes back in about 15–30 s,
+// like the analysis call) goes to /api/background once; the advertising picture comes back in about 5–10 s,
 // usually while the owner is still typing. The same photo always sends the same idempotency key, so a retry or a
 // second tap is answered from the server's memory without paying again.
 import { downscalePhoto } from "./ai"

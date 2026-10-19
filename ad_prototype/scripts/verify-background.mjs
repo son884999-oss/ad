@@ -6,7 +6,7 @@ import { tmpdir } from "node:os"
 import { join, resolve } from "node:path"
 import { Readable } from "node:stream"
 import { chromium } from "playwright"
-import { backgroundPrompt, makeBackground } from "../api/_lib/background.js"
+import { BACKGROUND_MODEL, backgroundPrompt, makeBackground, pictureCostKrw } from "../api/_lib/background.js"
 import backgroundHandler from "../api/background.js"
 import { BACKUP_DAILY_LIMIT_KRW, backupSpentToday } from "../api/_lib/gemini.js"
 
@@ -30,7 +30,7 @@ globalThis.fetch = async (url, init) => {
 }
 const picture = (extra = {}) => new Response(JSON.stringify({ candidates: [{ content: { parts: [{ inlineData: { mimeType: "image/jpeg", data: "QUJD" } }] } }], usageMetadata: { promptTokenCount: 1300, candidatesTokenCount: 1300, candidatesTokensDetails: [{ modality: "IMAGE", tokenCount: 1120 }, { modality: "TEXT", tokenCount: 180 }] }, ...extra }), { status: 200 })
 const image = { mimeType: "image/jpeg", data: Buffer.alloc(40, 9).toString("base64") }
-const config = { apiKey: "paid-key", model: "gemini-3.1-flash-image" }
+const config = { apiKey: "paid-key", model: BACKGROUND_MODEL }
 function request(method, body) {
   const raw = body === undefined ? "" : JSON.stringify(body)
   const req = Readable.from(raw ? [Buffer.from(raw)] : [])
@@ -45,13 +45,14 @@ async function call(handler, req) {
 }
 
 try {
-  await check("prompt: product rules first (count, arrangement, colours, no completing a lone piece), no text, lower quarter clear", async () => {
+  await check("prompt: product rules first (count, arrangement, colours, no completing a lone piece), no text, close-up with the lowest fifth clear", async () => {
     const prompt = backgroundPrompt({})
     assert.match(prompt, /same number of items, the same arrangement/)
     assert.match(prompt, /a white item stays white/)
     assert.match(prompt, /a single shell, slice or piece stays exactly that/)
     assert.match(prompt, /Remove any watermark/)
-    assert.match(prompt, /lower quarter is a calm, plain surface/)
+    assert.match(prompt, /about 75% of the frame width/)
+    assert.match(prompt, /lowest fifth of the frame is a calm, plain surface/)
     // No name yet: the model picks the set from the photo; with a known food it gets the food set.
     assert.match(prompt, /food or drinks: a white marble surface/)
     assert.match(backgroundPrompt({ productName: "수제 마카롱" }), /premium food advertisement set/)
@@ -64,14 +65,18 @@ try {
     const r = await makeBackground({ image, details: {}, idempotencyKey: "" }, config)
     assert.deepEqual(r, { image: { mimeType: "image/jpeg", data: "QUJD" } })
     assert.equal(sent.length, 1)
-    assert.match(sent[0].url, /models\/gemini-3\.1-flash-image:generateContent$/)
+    assert.equal(BACKGROUND_MODEL, "gemini-3.1-flash-lite-image")
+    assert.match(sent[0].url, /models\/gemini-3\.1-flash-lite-image:generateContent$/)
     assert.equal(sent[0].init.headers["x-goog-api-key"], "paid-key")
     const body = JSON.parse(sent[0].init.body)
     assert.deepEqual(body.generationConfig, { responseModalities: ["IMAGE"], imageConfig: { aspectRatio: "9:16" } })
     assert.equal(body.contents[0].parts[0].inlineData.data, image.data)
     const spent = backupSpentToday() - before
-    // Official prices: 1,120 image tokens × $60/1M + 180 text × $3/1M + 1,300 input × $0.5/1M = $0.0688 → ₩103 at ₩1,500
-    assert.ok(spent > 101 && spent < 105, `charged ₩${spent}`)
+    // Official prices (Flash-Lite Image): 1,120 image tokens × $30/1M + 180 text × $3/1M + 1,300 input × $0.5/1M = $0.0348 → ₩52 at ₩1,500
+    assert.ok(spent > 51 && spent < 54, `charged ₩${spent}`)
+    // The same answer from 3.1 Flash Image (GEMINI_IMAGE_MODEL) costs twice the image part.
+    const flash = pictureCostKrw({ promptTokenCount: 1300, candidatesTokenCount: 1300, candidatesTokensDetails: [{ modality: "IMAGE", tokenCount: 1120 }, { modality: "TEXT", tokenCount: 180 }] }, "gemini-3.1-flash-image")
+    assert.ok(flash > 101 && flash < 105, `3.1 Flash charged ₩${flash}`)
   })
 
   await check("same idempotency key again → the same picture, no second call (no second charge)", async () => {

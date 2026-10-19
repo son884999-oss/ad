@@ -1683,7 +1683,7 @@ function CreateFlow({
     if (step !== 3) dropScene()
   }, [step])
 
-  // 배경 바꾸기: started the moment the owner answers 바꾸기, so it runs while they type (about 15–30 s). A new
+  // 배경 바꾸기: started the moment the owner answers 바꾸기, so it runs while they type (about 5–10 s with Flash-Lite Image). A new
   // photo cancels it and asks again; leaving a step does not (unlike the paid 고급형 video above).
   useEffect(() => () => bgControllerRef.current?.abort(), [])
   useEffect(() => {

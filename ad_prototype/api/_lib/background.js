@@ -8,31 +8,39 @@ import { readImageInput } from "./photo.js"
 import { sceneFor } from "./scene.js"
 
 const ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models"
-export const BACKGROUND_MODEL = "gemini-3.1-flash-image"
+// Flash-Lite Image since 2026-10-19 (owner's choice after a real comparison): half the price of 3.1 Flash Image,
+// about 5–6 s instead of 15–30 s, the product kept as well; with the close-up framing below it is as large.
+export const BACKGROUND_MODEL = "gemini-3.1-flash-lite-image"
 const IDEMPOTENCY_PATTERN = /^[A-Za-z0-9-]{16,64}$/
-// Official standard prices (ai.google.dev/gemini-api/docs/pricing, checked 2026-10-19): image output $60 per 1M
-// tokens (a 1K picture is 1,120 tokens = $0.067), text/thinking output $3 per 1M, input $0.50 per 1M (a photo is
-// 1,120 tokens). One picture ≈ $0.07 ≈ ₩100. The $30 rate is the batch tier, which we do not use. A call is made
-// only while the reserve still fits under the daily cap.
-const IMAGE_OUT_USD_PER_M = 60
+// Official standard prices (ai.google.dev/gemini-api/docs/pricing, checked 2026-10-19). A 1K picture is 1,120
+// output tokens: Flash-Lite Image $30 per 1M (= $0.0336 ≈ ₩50), Flash Image $60 per 1M (= $0.067 ≈ ₩100). Text and
+// thinking output and the input (a photo is 1,120 tokens) are counted at the higher of the two models' rates, so the
+// ledger never reads low. The batch tier (half price) is not used. A call is made only while the reserve still fits
+// under the daily cap.
+const IMAGE_OUT_USD_PER_M = { "gemini-3.1-flash-lite-image": 30, "gemini-3.1-flash-image": 60 }
+const UNKNOWN_IMAGE_OUT_USD_PER_M = 60
 const TEXT_OUT_USD_PER_M = 3
 const INPUT_USD_PER_M = 0.5
-const PICTURE_RESERVE_KRW = 110
+const PICTURE_RESERVE_KRW = { "gemini-3.1-flash-lite-image": 60 }
+const UNKNOWN_PICTURE_RESERVE_KRW = 110
 const KRW_PER_USD = 1500
 
+const reserveFor = (model) => PICTURE_RESERVE_KRW[model] ?? UNKNOWN_PICTURE_RESERVE_KRW
+
 /** ₩ for one answer from its usage. Without a per-modality breakdown every output token counts as image (upper bound). */
-export function pictureCostKrw(usage) {
+export function pictureCostKrw(usage, model = BACKGROUND_MODEL) {
   const output = Number(usage?.candidatesTokenCount) || 0
   const thoughts = Number(usage?.thoughtsTokenCount) || 0
   const details = Array.isArray(usage?.candidatesTokensDetails) ? usage.candidatesTokensDetails : null
   const imageTokens = details ? details.filter((d) => d?.modality === "IMAGE").reduce((sum, d) => sum + (Number(d?.tokenCount) || 0), 0) : output
   const textTokens = Math.max(0, output - imageTokens) + thoughts
   const input = Number(usage?.promptTokenCount) || 0
-  if (!output && !thoughts) return PICTURE_RESERVE_KRW
-  return ((imageTokens * IMAGE_OUT_USD_PER_M + textTokens * TEXT_OUT_USD_PER_M + input * INPUT_USD_PER_M) / 1_000_000) * KRW_PER_USD
+  if (!output && !thoughts) return reserveFor(model)
+  const imageRate = IMAGE_OUT_USD_PER_M[model] ?? UNKNOWN_IMAGE_OUT_USD_PER_M
+  return ((imageTokens * imageRate + textTokens * TEXT_OUT_USD_PER_M + input * INPUT_USD_PER_M) / 1_000_000) * KRW_PER_USD
 }
 
-/** GEMINI_API_KEY_2 (paid) or else GEMINI_API_KEY, and GEMINI_IMAGE_MODEL (default gemini-3.1-flash-image). */
+/** GEMINI_API_KEY_2 (paid) or else GEMINI_API_KEY, and GEMINI_IMAGE_MODEL (default gemini-3.1-flash-lite-image). */
 export function getBackgroundConfig() {
   const apiKey = process.env.GEMINI_API_KEY_2?.trim() || process.env.GEMINI_API_KEY?.trim()
   const model = process.env.GEMINI_IMAGE_MODEL?.trim() || BACKGROUND_MODEL
@@ -62,7 +70,8 @@ export function backgroundPrompt(details = {}) {
       ? `Replace the table, cloth, board and everything around the product with this advertising set: ${set}.`
       : `Replace the table, cloth, board and everything around the product with a premium advertising set that suits it (${DEFAULT_SETS}).`,
     "Remove any watermark, caption or text that is not printed on the product itself.",
-    "Vertical frame: the product group in the middle, about 60% of the frame width, its top about 25% from the top of the frame; the lower quarter is a calm, plain surface with no objects (text is added there later).",
+    // Close-up wording (2026-10-19): with "about 60% of the frame width" Flash-Lite drew the product at 25–30%.
+    "Framing: a tight close-up product shot, the camera close to the product. The product group fills about 75% of the frame width and is the clear hero of the picture, centred, its top about 20% from the top of the frame; do not show a wide empty table or a large empty backdrop. Only the lowest fifth of the frame is a calm, plain surface with no objects (text is added there later).",
     "Lit like a high-end commercial: a soft key light, a warm rim light along the product's edge, gentle reflections, photorealistic, the product sharp.",
     "Add no props, fruit, flowers, cutlery, people, text, letters, logos or watermarks.",
   ].join(" ")
@@ -102,7 +111,7 @@ function remember(key, result) {
 export async function makeBackground({ image, details, idempotencyKey }, config, { timeoutMs = 50_000 } = {}) {
   const cached = remembered(idempotencyKey)
   if (cached) return cached
-  if (!paidKeyFits(PICTURE_RESERVE_KRW)) throw new ApiError(429, "BACKGROUND_DAILY_LIMIT")
+  if (!paidKeyFits(reserveFor(config.model))) throw new ApiError(429, "BACKGROUND_DAILY_LIMIT")
   let response
   try {
     response = await fetch(`${ENDPOINT}/${config.model}:generateContent`, {
@@ -123,7 +132,7 @@ export async function makeBackground({ image, details, idempotencyKey }, config,
   const data = await response.json().catch(() => null)
   const usage = data?.usageMetadata ?? {}
   // Charged when an answer came back, picture or not (the provider bills the call).
-  addToLedger(pictureCostKrw(usage))
+  addToLedger(pictureCostKrw(usage, config.model))
   const picture = (data?.candidates?.[0]?.content?.parts ?? []).find((part) => part?.inlineData?.data)?.inlineData
   if (!picture || !/^image\/(png|jpeg|webp)$/.test(picture.mimeType ?? "")) throw new ApiError(502, "AI_BAD_RESPONSE")
   const result = { image: { mimeType: picture.mimeType, data: picture.data } }
