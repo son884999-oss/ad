@@ -5,7 +5,7 @@
 <title>홍보잇다 서비스 흐름도</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css">
 <style>
-  /* 홍보잇다 service flow, 2026-10-18 plan: 기본형 (+ background switch) and 고급형 = 특별. Source of 서비스흐름도.png. */
+  /* 홍보잇다 service flow, 2026-10-19 plan C: background popup on the photo step, 특급 upgrade on the result. Source of 서비스흐름도.png. */
   :root {
     --brand: #b44d1d; --brand-dark: #93390f; --brand-soft: #fdf0e6;
     --ink: #2b2420; --sub: #6e625a; --line: #e8dfd6; --card: #faf6f1; --paper: #ffffff;
@@ -82,9 +82,9 @@
   <header>
     <div>
       <h1>홍보잇다 <span>서비스 흐름도</span></h1>
-      <p>사진 한 장 → 포스터 · 짧은 영상 · 홍보 글. 기본형은 무료, 고급형은 "특별" 움직임 영상 하나.</p>
+      <p>사진 한 장 → 포스터 · 짧은 영상 · 홍보 글. 누구나 무료로 만들고, 시연 기기에서는 결과에서 "특급" 움직이는 영상으로 바꿀 수 있어요.</p>
     </div>
-    <div class="meta"><b>2026-10-18 개편안</b> (구현 예정 2026-10-19)<br>브랜치 feature/UI-Screen · 고급형 = 특별은 검토 후 공개</div>
+    <div class="meta"><b>2026-10-19 개편안 (C안)</b><br>브랜치 feature/UI-Screen · 시연 2026-11 초 · 특급은 시연 코드 기기만</div>
   </header>
 
   <div class="steps">
@@ -96,8 +96,8 @@
         <li>제품·가게 사진 1장</li>
         <li>만들 것: 포스터 / 영상 / 홍보 글 (한 번에 완성 가능)</li>
       </ul>
-      <div class="tier basic"><strong>기본형</strong> <span class="chip free">무료</span><br>대부분의 사장님. 시연도 이것으로.</div>
-      <div class="tier premium"><strong>고급형 = 특별</strong> <span class="chip paid">유료</span> <span class="chip wait">준비 중</span><br>배경이 다른 세계로 바뀌며 실제로 움직이는 광고 영상</div>
+      <div class="switch" style="flex-direction:column;align-items:flex-start"><span><b>사진을 넣으면 팝업 하나</b></span><span style="font-size:17px">"배경을 광고 사진처럼 바꿀까요?"</span><span><span class="chip free" style="font-size:15px;padding:6px 16px">바꾸기</span> <span class="chip wait" style="font-size:15px;padding:6px 16px">그대로</span></span><small style="color:var(--sub)">바꾸기를 고르면 정보를 입력하는 동안 뒤에서 미리 만듦 <span class="chip ai">AI</span></small></div>
+      <div class="tier basic" style="margin-top:12px">기본형/고급형 고르기 없음. <strong>모두 같은 흐름.</strong></div>
     </section>
     <div class="arrow">→</div>
     <!-- ② -->
@@ -107,9 +107,9 @@
       <ul>
         <li><span class="chip ai">AI</span> 사진을 보고 제품 이름·설명·특징을 미리 채움</li>
         <li>사장님이 고치기 + 가게 이름·위치·가격·연락처</li>
-        <li>홍보 분위기 고르기 (여러 개)</li>
+        <li>홍보 분위기 고르기 (자연 · 고급 · 친근 · 트렌디, 여러 개)</li>
       </ul>
-      <div class="switch"><i></i><span><b>배경을 광고 사진으로 바꾸기</b><br><small>기본형에서만 · 기본 꺼짐</small></span></div>
+      <div class="tier basic">지금 화면 그대로. <strong>새 버튼 없음.</strong><br>"특급"은 입력 화면에 두지 않아 "고급" 분위기와 겹치지 않음.</div>
     </section>
     <div class="arrow">→</div>
     <!-- ③④ -->
@@ -119,22 +119,22 @@
       <div class="colhead"><span></span><span>사진</span><span>영상</span><span>포스터 · 홍보 글</span></div>
       <div class="lanes">
         <div class="lane b0">
-          <div class="who">기본형<small>배경 스위치 꺼짐 · 0원 · 약 6초</small></div>
+          <div class="who">그대로<small>팝업에서 "그대로" · 0원 · 약 6초</small></div>
           <div class="box"><b>원래 사진 그대로</b>AI 호출 없음</div>
-          <div class="box"><b>기본형 모션 영상 6초</b>확대 → 클로즈업·빛·특징 태그 → 가격·행동 유도 카드, 합성음 (휴대폰 브라우저)</div>
+          <div class="box"><b>기본형 모션 영상 6초</b>확대 → 클로즈업·빛·특징 태그 → 가격·행동 유도 카드 (휴대폰 브라우저)<br><b style="margin-top:6px">소리</b>클래식 배경음 + 장면 전환 효과음 1개</div>
           <div class="box"><b>포스터</b>브라우저에서 그림 (사진 크게 / 사진 먼저)<br><b style="margin-top:6px">홍보 글</b><span class="chip ai">AI</span> 채널별 · 안 되면 기본 문구</div>
         </div>
         <div class="lane b1">
-          <div class="who">기본형 + 배경<small>스위치 켜짐 · 장당 26~60원 · 약 20초</small></div>
+          <div class="who">배경 바꾸기<small>팝업에서 "바꾸기" · 장당 26~60원 · 입력하는 동안 만듦</small></div>
           <div class="box ai"><b>Gemini 광고 배경</b>제품은 그대로, 주변만 광고 세트로 (gemini-3.1-flash-image, 13~25초)<br><b style="margin-top:6px">실패 · 하루 상한이면</b>원래 사진으로 그대로 진행</div>
           <div class="box"><b>기본형 모션 영상 6초</b>같은 구성, 사진만 광고 배경으로</div>
           <div class="box"><b>포스터 · 홍보 글</b>광고 배경 사진으로<br><b style="margin-top:6px">결과에서 고르기</b>"바뀐 사진 / 원래 사진" (제품이 달라졌으면 원래 사진)</div>
         </div>
         <div class="lane p">
-          <div class="who">고급형 = 특별<small>준비 중 · + 약 300~450원 · 1~3분</small></div>
-          <div class="box ai"><b>Gemini 광고 배경</b>포스터용 (기본형 + 배경과 같음)</div>
+          <div class="who">✦ 특급<small>결과 영상 탭의 버튼 · 시연 코드 기기만 · + 약 300~450원 · 1~3분 더</small></div>
+          <div class="box"><b>결과를 먼저 보여 줌</b>영상 탭의 "✦ 특급 영상으로 다시 만들기"를 누를 때만 시작</div>
           <div class="box paid"><b>Higgsfield 움직임 영상 5초</b>원본 사진에서 세계가 바뀌는 연출 (초콜릿 강·숲·제과점 …)<br><b style="margin-top:6px">후편집</b>색 보정 · 초점 오프닝 · 3컷 · 엔드 홀드 · 자막 · 합성음</div>
-          <div class="box"><b>포스터 · 홍보 글</b>기본형과 같음</div>
+          <div class="box"><b>포스터 · 홍보 글</b>그대로 (바뀌는 것은 영상만)</div>
         </div>
       </div>
     </section>
@@ -155,9 +155,9 @@
       <h4>한 번 만들 때 시간 · 비용</h4>
       <table>
         <tr><th>경로</th><th>기다림</th><th>비용</th></tr>
-        <tr><td>기본형</td><td class="num">약 6초</td><td class="num">0원</td></tr>
-        <tr><td>기본형 + 배경</td><td class="num">약 20초</td><td class="num">장당 26~60원</td></tr>
-        <tr class="p"><td>고급형 = 특별 (준비 중)</td><td class="num">1~3분</td><td class="num">+ 약 300~450원</td></tr>
+        <tr><td>그대로</td><td class="num">약 6초</td><td class="num">0원</td></tr>
+        <tr><td>배경 바꾸기</td><td class="num">입력하는 동안</td><td class="num">장당 26~60원</td></tr>
+        <tr class="p"><td>✦ 특급 (결과에서, 시연 기기)</td><td class="num">+ 1~3분</td><td class="num">+ 약 300~450원</td></tr>
       </table>
     </section>
   </div>
@@ -165,12 +165,12 @@
   <div class="guards">
     <b>유료 호출 보호</b>
     <span>주소당 분당 횟수 제한</span><span>Gemini 그림 하루 500원 (시연)</span><span>Higgsfield 하루 5번</span>
-    <span>같은 요청은 같은 결제 키 (두 번 결제 없음)</span><span>고급형은 시연 코드가 있는 기기만</span><span>실패해도 자동 재시도 없음</span>
+    <span>같은 요청은 같은 결제 키 (두 번 결제 없음)</span><span>특급은 시연 코드 기기만 (?demo=코드로 한 번 열기)</span><span>실패해도 자동 재시도 없음</span>
   </div>
 
   <footer>
-    <div class="legend"><span class="chip free">무료</span><span class="chip ai">AI (글·그림)</span><span class="chip paid">유료 영상</span><span class="chip wait">준비 중</span></div>
-    <div>원본: docs/서비스흐름도/서비스흐름도.html · 자세한 내용: docs/진척사항_2026-10-18.md 6절</div>
+    <div class="legend"><span class="chip free">무료</span><span class="chip ai">AI (글·그림)</span><span class="chip paid">유료 영상</span><span class="chip wait">선택 안 함</span></div>
+    <div>원본: docs/서비스흐름도/서비스흐름도.html · 자세한 내용: docs/진척사항_2026-10-18.md 6-0절</div>
   </footer>
 </div>
 </body>
