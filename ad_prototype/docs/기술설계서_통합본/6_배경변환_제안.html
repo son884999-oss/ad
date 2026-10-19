@@ -1,0 +1,87 @@
+<section class="sheet" data-file="6">
+  <style>
+    .bg6 { display: grid; grid-template-columns: 860px 1fr; gap: 24px; flex: 1; min-height: 0; }
+    .pairs { display: grid; gap: 14px; }
+    .pair { border: 2px solid var(--line); border-radius: 16px; padding: 12px 14px; }
+    .pair h3 { margin: 0 0 8px; font-size: 17px; }
+    .pair h3 small { font-weight: 600; color: var(--sub); font-size: 13px; margin-left: 6px; }
+    .shots { display: grid; grid-template-columns: 1fr 36px 1fr; align-items: center; }
+    .shots figure { margin: 0; text-align: center; }
+    .shots img { height: 330px; max-width: 100%; object-fit: contain; border-radius: 10px; background: #f3eee8; }
+    .shots figcaption { font-size: 13px; font-weight: 800; margin-top: 4px; }
+    .shots figcaption.after { color: var(--brand-dark); }
+    .shots i { font-style: normal; font-weight: 900; color: var(--brand); font-size: 26px; text-align: center; }
+    .pair p { margin: 6px 0 0; font-size: 13px; line-height: 1.5; color: var(--sub); }
+    .notes { display: grid; gap: 12px; align-content: start; }
+    .note6 { border: 2px solid var(--line); border-radius: 16px; padding: 12px 18px; font-size: 14.5px; line-height: 1.6; }
+    .note6 h3 { margin: 0 0 4px; font-size: 17px; }
+    .note6 h3 span { color: var(--brand); margin-right: 6px; }
+    .note6 ul { margin: 0; padding-left: 18px; }
+    .note6.key6 { background: var(--brand-soft); border-color: #f0cdb4; }
+    .facts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 6px; }
+    .facts div { background: var(--paper); border-radius: 10px; padding: 6px 10px; font-size: 12.5px; line-height: 1.35; border: 1px solid #f0cdb4; }
+    .facts b { display: block; font-size: 20px; color: var(--brand-dark); }
+  </style>
+  <header>
+    <div>
+      <h1><span>홍보잇다</span> 기술 설계서 · 6. 배경 변환 기능 제안 및 실효성 검토</h1>
+      <p>기존 기획에 없던 기능으로, 개발 과정에서 필요성을 확인하여 추가하였습니다. 실제 시험 결과를 바탕으로 검토 의견을 드립니다.</p>
+    </div>
+    <div class="meta"><b>6 / 6</b><br>작성 기준일 2026-10-19</div>
+  </header>
+
+  <div class="bg6">
+    <div class="pairs">
+      <div class="pair">
+        <h3>사례 1 · 초코 크루아상<small>휴대폰으로 직접 촬영한 사진, 현재 적용 설정으로 생성</small></h3>
+        <div class="shots">
+          <figure><img src="img/croissant-before.jpg" alt="원본 초코 크루아상 사진"><figcaption>원본 (케이블이 놓인 책상 위)</figcaption></figure>
+          <i>→</i>
+          <figure><img src="img/croissant-after.jpg" alt="배경 변환 후 초코 크루아상 사진"><figcaption class="after">배경 변환 후 (9:16, 6.0초, 약 50원)</figcaption></figure>
+        </div>
+        <p>초콜릿 코팅의 흘러내린 모양, 견과 토핑, 양쪽 초콜릿 스틱까지 원본 그대로 유지되고, 케이블·포장지·책상이 대리석 촬영 세트로 바뀌었습니다. 아래쪽은 자막을 넣을 수 있도록 비워 둡니다.</p>
+      </div>
+      <div class="pair">
+        <h3>사례 2 · 돈가스 (한계 사례)<small>휴대폰으로 직접 촬영한 사진, 현재 적용 설정으로 생성</small></h3>
+        <div class="shots">
+          <figure><img src="img/katsu-before.jpg" alt="원본 돈가스 사진"><figcaption>원본 (식판 위, 위에서 촬영)</figcaption></figure>
+          <i>→</i>
+          <figure><img src="img/katsu-after.jpg" alt="배경 변환 후 돈가스 사진"><figcaption class="after">배경 변환 후 (5.6초, 약 50원)</figcaption></figure>
+        </div>
+        <p>광고 사진으로서의 인상은 크게 좋아졌으나, <b>위에서 찍은 사진이 옆에서 본 구도로 바뀌면서 돈가스가 새로 그려졌습니다</b>(자른 단면의 고기가 보이고 조각 배치가 달라짐). 실제 제품과 다를 수 있어 원본 사진 선택이 꼭 필요한 사례입니다.</p>
+      </div>
+    </div>
+
+    <div class="notes">
+      <div class="note6 key6">
+        <h3><span>1.</span>제안 배경</h3>
+        소상공인의 제품 사진은 대부분 매장 테이블, 도마, 포장지 위에서 휴대폰으로 찍은 것이라 배경이 어수선합니다. 포스터와 영상의 디자인을 아무리 다듬어도 <b>사진 자체가 광고 사진처럼 보이지 않는 한계</b>가 있어, 제품은 그대로 두고 배경만 광고 촬영 세트로 바꾸는 기능을 추가하였습니다.
+        <div class="facts">
+          <div><b>약 50원</b>사진 1장당 비용</div>
+          <div><b>5~6초</b>생성 시간 (정보 입력 중 처리)</div>
+          <div><b>선택 시만</b>사용자가 원할 때만 실행</div>
+        </div>
+      </div>
+      <div class="note6">
+        <h3><span>2.</span>동작 방식</h3>
+        <ul>
+          <li>사진 등록 후 "배경을 광고 사진처럼 바꿀까요?"를 묻고, <b>바꾸기</b>를 고른 경우에만 실행합니다.</li>
+          <li>사용자가 정보를 입력하는 동안 미리 생성하여 기다리는 시간이 거의 없습니다.</li>
+          <li>결과 화면에서 <b>변환 사진 / 원본 사진</b>을 고를 수 있고, 고른 사진으로 포스터와 영상이 만들어집니다.</li>
+          <li>실패하거나 하루 비용 상한에 도달하면 원본 사진으로 그대로 진행합니다.</li>
+        </ul>
+      </div>
+      <div class="note6">
+        <h3><span>3.</span>실효성 검토</h3>
+        <ul>
+          <li><b>효과:</b> 어수선한 배경 정리와 광고 조명이 한 번에 이루어져 같은 포스터·영상 디자인이라도 결과물의 완성도가 크게 높아집니다.</li>
+          <li><b>모델 선정:</b> 상위 모델(3.1 Flash Image, 장당 약 100원·15~30초)과 같은 사진으로 비교한 결과, 제품 보존 품질이 같아 절반 가격의 Flash-Lite Image를 선택하였습니다.</li>
+          <li><b>한계:</b> 촬영 각도나 제품 모양이 바뀌어 다시 그려지는 경우가 있습니다(사례 2). 이에 원본 사진 선택을 항상 보장하고, 결과물에는 "AI 활용" 표시를 넣습니다.</li>
+          <li><b>향후 개선안:</b> 제품 영역만 오려 내고 배경만 생성해 합성하면 제품이 바뀌는 문제를 근본적으로 없앨 수 있으나, 합성 품질 검토가 필요합니다.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <footer><span>※ 사례 사진은 2026-10-19 실제 생성 결과이며, 비용은 Google 공식 요금(1K 이미지 $0.034) 기준입니다.</span><span>홍보잇다</span></footer>
+</section>
