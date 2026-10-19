@@ -91,7 +91,7 @@ pnpm verify:easy     # 쉬운 모드 문구·음성 입력·결과 탭
 
 - 검증 스크립트는 `/api/*`를 가짜 응답으로 처리합니다. 그래서 **키가 있어도 실제 비용이나 무료 한도를 쓰지 않습니다.**
 - 실제 영상 한 편을 직접 확인하려면 `node scripts/live-video-test.mjs --yes-spend`를 실행합니다. 이때만 유료 요청을 1회 보냅니다. `--yes-spend`를 빼면 요청 없이 연습만 합니다.
-- `verify:screen-fit`, `verify:readability`, `verify:mobile-flow`, `verify:ui`는 예전 화면 구조 기준이라 현재 화면에서는 실패합니다. 정리 대상입니다.
+- 예전 화면(2026-10-15 개편 전) 기준 점검 14개는 `scripts/archive/`로 옮겼습니다(2026-10-19). 지금 점검은 `npm run verify:*` 9개(`ai·video·easy·records·photo·promo·guard·scene·background`)와 `verify-reference-rebuild`, `audit:screens`, `eval:*`입니다.
 
 ## 공개 배포 전 필수
 
