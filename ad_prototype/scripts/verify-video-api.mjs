@@ -572,6 +572,25 @@ try {
       return ["수제 초코 생크림 케이크", "크림치즈 베이글", "수분 크림", "하트 카페라테", "수제 마카롱 녹차 필링", "녹차 라떼", "떡볶이"].map(motionEffectFor)
     })
     assert.deepEqual(effects, ["sheen", "sheen", "sparkle", "steam", "sheen", "steam", "steam"])
+    // Sound (src/videoSound.ts): a classical bed by kind — food before beauty, 트렌디 takes the livelier track,
+    // otherwise the name decides (stable) — and every file is served.
+    const sound = await page.evaluate(async () => {
+      const { musicFor } = await import("/src/videoSound.ts")
+      const picks = {
+        cake: musicFor("수제 초코 생크림 케이크"), cakeAgain: musicFor("수제 초코 생크림 케이크"), cream: musicFor("수분 크림"),
+        latteTrendy: musicFor("하트 카페라테", ["trendy"]), flowerTrendy: musicFor("장미 꽃다발", ["trendy"]), other: musicFor("원목 도마"),
+      }
+      const files = ["chopin-waltz-op69-1", "satie-gymnopedie-1", "bach-goldberg-aria", "schubert-d664-andante", "schubert-d959-andantino", "vivaldi-spring-allegro", "vivaldi-spring-largo", "transition-shimmer"]
+      const served = await Promise.all(files.map((f) => fetch(`/assets/audio/${f}.mp3`).then((r) => r.ok && r.headers.get("content-type")?.includes("audio"))))
+      return { picks, served }
+    })
+    assert.match(sound.picks.cake, /schubert-d664|bach-goldberg/)
+    assert.equal(sound.picks.cake, sound.picks.cakeAgain, "same product, same music")
+    assert.match(sound.picks.cream, /satie|schubert-d959/)
+    assert.match(sound.picks.latteTrendy, /chopin-waltz/)
+    assert.match(sound.picks.flowerTrendy, /vivaldi-spring-allegro/)
+    assert.match(sound.picks.other, /chopin-waltz|bach-goldberg/)
+    assert.ok(sound.served.every(Boolean), `audio files served: ${sound.served}`)
     await page.close()
   })
 

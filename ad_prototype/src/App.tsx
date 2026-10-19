@@ -31,6 +31,7 @@ import { makeScene } from "./scene"
 import { outputFolder, saveToComputer } from "./localSave"
 import { drawMotionFrame, MOTION_SECONDS, motionEffectFor, type MotionScene } from "./motionVideo"
 import { plainMp4File } from "./mp4Flatten"
+import { musicFor, prepareVideoSound } from "./videoSound"
 import { makeAdBackground } from "./background"
 import type { PosterThemeKey } from "./poster"
 import PhotoStep from "./PhotoStep"
@@ -2060,56 +2061,14 @@ function CreateFlow({
 
       const stream = canvas.captureStream(30)
 
-      // Two short synthesized cues (no music licence needed), mixed into the recording when the browser allows it.
-      let audio: AudioContext | null = null
-      try {
-        audio = new AudioContext()
-        const destination = audio.createMediaStreamDestination()
-        const chime = (at: number, frequencies: number[], length: number, level: number) => {
-          for (const [index, frequency] of frequencies.entries()) {
-            const oscillator = audio!.createOscillator()
-            const gain = audio!.createGain()
-            const startAt = audio!.currentTime + at + index * 0.09
-            oscillator.type = "sine"
-            oscillator.frequency.value = frequency
-            gain.gain.setValueAtTime(0.0001, startAt)
-            gain.gain.exponentialRampToValueAtTime(level, startAt + 0.02)
-            gain.gain.exponentialRampToValueAtTime(0.0001, startAt + length)
-            oscillator.connect(gain).connect(destination)
-            oscillator.start(startAt)
-            oscillator.stop(startAt + length + 0.05)
-          }
-        }
-        // A soft "whoosh" (filtered noise sweeping up) on each scene change, made here: no music licence needed.
-        const whoosh = (at: number, level: number) => {
-          const length = 0.55
-          const buffer = audio!.createBuffer(1, Math.round(audio!.sampleRate * length), audio!.sampleRate)
-          const samples = buffer.getChannelData(0)
-          for (let i = 0; i < samples.length; i += 1) samples[i] = Math.random() * 2 - 1
-          const noise = audio!.createBufferSource()
-          noise.buffer = buffer
-          const filter = audio!.createBiquadFilter()
-          filter.type = "bandpass"
-          filter.Q.value = 1.2
-          const gain = audio!.createGain()
-          const startAt = audio!.currentTime + at
-          filter.frequency.setValueAtTime(300, startAt)
-          filter.frequency.exponentialRampToValueAtTime(2600, startAt + length)
-          gain.gain.setValueAtTime(0.0001, startAt)
-          gain.gain.exponentialRampToValueAtTime(level, startAt + length * 0.6)
-          gain.gain.exponentialRampToValueAtTime(0.0001, startAt + length)
-          noise.connect(filter).connect(gain).connect(destination)
-          noise.start(startAt)
-          noise.stop(startAt + length + 0.05)
-        }
-        chime(0.3, [523.25, 659.25, 783.99], 1.2, 0.18)
-        whoosh(2.35, 0.12) // into the close-up (motionVideo.ts scene 2 at 2.6 s)
-        whoosh(4.15, 0.12) // into the end card (4.4 s)
-        chime(4.5, [783.99, 1046.5], 1.0, 0.14) // the end card
-        destination.stream.getAudioTracks().forEach((track) => stream.addTrack(track))
-      } catch {
-        audio = null
-      }
+      // A classical bed chosen by the kind of product and one soft effect on each scene change (src/videoSound.ts);
+      // the synthetic whoosh/chimes are gone (owner, 2026-10-18: they sounded broken). Silent if sound is unavailable.
+      const sound = await prepareVideoSound(stream, {
+        musicUrl: musicFor([details.name, details.description, details.features, details.keywords].filter(Boolean).join(" "), tones),
+        seconds: MOTION_SECONDS,
+        cues: [2.35, 4.15], // into the close-up (motionVideo.ts scene 2 at 2.6 s) and the end card (4.4 s)
+      })
+      const audio: AudioContext | null = sound?.audio ?? null
 
       const chunks: BlobPart[] = []
 
@@ -2203,6 +2162,7 @@ function CreateFlow({
           }
         }
 
+        sound?.start()
         recorder.start(250)
 
         videoFrameRef.current = window.requestAnimationFrame(drawFrame)
