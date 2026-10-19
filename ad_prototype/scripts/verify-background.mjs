@@ -56,7 +56,13 @@ try {
     // The holder is part of the product (a cutlet and sushi lost their plate in a real run), the angle is kept.
     assert.match(prompt, /Food is never placed directly on the table/)
     assert.match(prompt, /the plate, bowl, tray, board, cup, glass, bottle, box, case or stand\. Keep all of these/)
-    assert.match(prompt, /Keep the camera angle of the photo/)
+    // Owner's call: food moves to an appetizing three-quarter view; other products keep the photo's angle.
+    assert.match(prompt, /for food and drinks, move the camera to the most appetizing advertising angle/)
+    assert.match(prompt, /any other product keeps the camera angle of the photo/)
+    assert.match(backgroundPrompt({ productName: "수제 돈가스" }), /appetizing advertising angle for this food, a three-quarter view/)
+    assert.match(backgroundPrompt({ productName: "카페라테" }), /appetizing advertising angle for this food/)
+    assert.match(backgroundPrompt({ productName: "무선 이어폰" }), /Keep the camera angle of the photo, so the product's design is not redrawn/)
+    assert.doesNotMatch(backgroundPrompt({ productName: "수제 돈가스" }), /Keep the camera angle/)
     // No name yet: the model picks from the whole list.
     assert.match(prompt, /Use the advertising set that suits what the product is: a meal: a warm restaurant set/)
     assert.match(prompt, /an electronic gadget: a sleek tech product set/)

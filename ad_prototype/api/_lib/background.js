@@ -132,11 +132,22 @@ export function backgroundSetFor(details = {}) {
  * 1. What the product is: the item(s) sold PLUS whatever directly holds or presents them — plate, bowl, tray, board,
  *    cup, bottle, box, case, stand. Those stay (a disposable one may become a premium one of the same kind); only the
  *    setting around them changes. Food never lies directly on the table.
- * 2. The product is not redrawn: count, arrangement, colours, shapes, the camera angle (a cutlet shot from above
- *    became a side view and was redrawn in a real run).
- * 3. The set by kind (the matched one, or the whole list when no name is known yet), one fitting prop at most.
- * 4. Close-up framing (Flash-Lite drew the product small without it), light, nothing written.
+ * 2. The product is not redrawn: count, arrangement, colours, shapes.
+ * 3. Camera angle: food and drinks move to an appetizing three-quarter view (owner's call 2026-10-19: a cutlet and
+ *    sushi shot from straight above looked far better at an angle); other products keep the photo's angle, since a
+ *    new angle makes the model redraw a design (glasses, earphones, labels).
+ * 4. The set by kind (the matched one, or the whole list when no name is known yet), one fitting prop at most.
+ * 5. Close-up framing (Flash-Lite drew the product small without it), light, nothing written.
  */
+const FOOD_KINDS = new Set(["a meal", "Korean rice cakes or traditional sweets", "a dessert or bakery item", "a drink"])
+const APPETIZING_ANGLE = "a three-quarter view from about 30–45 degrees above, the angle food advertisements use, even if the photo was taken from straight above"
+
+function angleRule(chosen) {
+  if (!chosen) return `Camera angle: for food and drinks, move the camera to the most appetizing advertising angle, ${APPETIZING_ANGLE}; any other product keeps the camera angle of the photo.`
+  if (FOOD_KINDS.has(chosen.name)) return `Camera angle: move the camera to the most appetizing advertising angle for this food, ${APPETIZING_ANGLE}. Seen from the new angle, the food keeps its count, arrangement and look.`
+  return "Keep the camera angle of the photo, so the product's design is not redrawn."
+}
+
 export function backgroundPrompt(details = {}) {
   const chosen = backgroundSetFor(details)
   const list = [...BACKGROUND_SETS, OTHER_SET].map(({ name, set }) => `${name}: ${set}`).join("; ")
@@ -144,7 +155,8 @@ export function backgroundPrompt(details = {}) {
     "Edit this product photo from a small local shop into a premium advertisement photo by changing ONLY the setting around the product.",
     "What counts as the product: the item or items being sold together with whatever directly holds or presents them in the photo — the plate, bowl, tray, board, cup, glass, bottle, box, case or stand. Keep all of these. If that holder is disposable or shabby (paper, foil, plastic wrap, a takeaway box), replace it with a simple premium one of the same kind, shape and size. Food is never placed directly on the table; it stays on its plate, bowl, tray or board.",
     "Remove everything else: the table or floor surface, cloths, unrelated objects, cables that are not part of the product, bags, receipts, other dishes and drinks, hands and people. If a hand holds the product, show the product resting naturally on the surface instead.",
-    "The product must stay exactly as photographed: the same number of items, the same arrangement, the same colours (a white item stays white, a pale item stays pale), the same shapes, fillings, toppings, textures, labels and surface marks. Do not redraw, tidy, recolour, complete or add any item; a single shell, slice or piece stays exactly that. Keep the camera angle of the photo: a photo taken from above stays a view from above, a side view stays a side view.",
+    "The product must stay exactly as photographed: the same number of items, the same arrangement, the same colours (a white item stays white, a pale item stays pale), the same shapes, fillings, toppings, textures, labels and surface marks. Do not redraw, tidy, recolour, complete or add any item; a single shell, slice or piece stays exactly that.",
+    angleRule(chosen),
     chosen
       ? `This product is ${chosen.name}. Use this advertising set: ${chosen.set}.`
       : `Use the advertising set that suits what the product is: ${list}.`,
