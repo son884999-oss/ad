@@ -1181,6 +1181,9 @@ function CreateFlow({
   const aiEligibleImageRef = useRef("")
   const analyzedImageRef = useRef("")
   const [photoFill, setPhotoFill] = useState<"idle" | "loading" | "filled" | "failed">("idle")
+  // The owner asks for it (owner, 2026-10-19): the photo is read by the AI only when "자동으로 채워 주기" is pressed,
+  // not the moment it is added — no AI call for anyone who types themselves, and nothing filled in unasked.
+  const [scanImage, setScanImage] = useState("")
   // AI photo check (from the same analysis): shown on the photo step only if it arrives while the
   // user is still there; after moving on it is dropped so nothing interrupts.
   const [aiPhotoCheck, setAiPhotoCheck] = useState<{ image: string; check: PhotoCheck } | null>(null)
@@ -1208,7 +1211,7 @@ function CreateFlow({
   }, [imageUrl])
 
   useEffect(() => {
-    if (step !== 2 || !imageUrl || aiEligibleImageRef.current !== imageUrl || analyzedImageRef.current === imageUrl) return
+    if (step !== 2 || !imageUrl || scanImage !== imageUrl || aiEligibleImageRef.current !== imageUrl || analyzedImageRef.current === imageUrl) return
     const controller = new AbortController()
     setPhotoFill("loading")
     void analyzePhotoOnce(imageUrl).then((suggestion) => {
@@ -1223,7 +1226,13 @@ function CreateFlow({
       controller.abort()
       setPhotoFill("idle")
     }
-  }, [step, imageUrl])
+  }, [step, imageUrl, scanImage])
+  const scanPhoto = () => {
+    if (!imageUrl) return
+    // The same single analysis also gives what the photo shows (for the 홍보 글) and where the product is (poster).
+    startPhotoAnalysis(imageUrl)
+    setScanImage(imageUrl)
+  }
 
   const applyPhotoSuggestion = (suggestion: PhotoSuggestion) => {
     const current = detailsRef.current
@@ -1444,7 +1453,6 @@ function CreateFlow({
           if (request !== uploadRequestRef.current) return
 
           aiEligibleImageRef.current = reader.result
-          startPhotoAnalysis(reader.result)
           setImageUrl(reader.result)
           setUploadPending(false)
 
@@ -2433,6 +2441,12 @@ function CreateFlow({
             </p>
           )}
           <div className="details-fields mt-7 space-y-5">
+            {imageUrl && scanImage !== imageUrl && (
+              <button type="button" className="photo-scan" onClick={scanPhoto}>
+                <Icon name="picture" size={22} />
+                <span>{t("자동으로 채워 주기")}</span>
+              </button>
+            )}
             <div className="ai-fill-live" role="status" aria-live="polite" aria-atomic="true">
               {photoFill !== "idle" && (
                 <p className={`ai-fill-status${photoFill === "loading" ? " is-loading" : ""}`}>
@@ -2897,18 +2911,13 @@ function CreateFlow({
                       </button>
                   }
                   extra={
-                    <>
-                      {headlineOptions.length > 1 && (
-                        <button type="button" className="result-preview-action headline-next" onClick={() => pickHeadline((headlineIndex + 1) % headlineOptions.length)}>
-                          <span>{t("다른 문구로")} ({headlineIndex + 1}/{headlineOptions.length})</span>
-                        </button>
-                      )}
-                      <PosterStyleControls
-                        ratio={posterRatio}
-                        easyMode={easyMode}
-                        onChange={(next) => updateDetails({ ...details, ...next })}
-                      />
-                    </>
+                    // The first-line choice lives on the 홍보 글 tab only (owner, 2026-10-19): on the poster it changes one small
+                    // line under the product name, too little to see.
+                    <PosterStyleControls
+                      ratio={posterRatio}
+                      easyMode={easyMode}
+                      onChange={(next) => updateDetails({ ...details, ...next })}
+                    />
                   }
                 />
                 <ResultPreview>

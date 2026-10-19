@@ -229,6 +229,9 @@ for (const [width, height] of sizes) {
     await page.getByLabel(/제품 이름|무엇을 파나요|이름/).first().waitFor()
     await page.waitForTimeout(600)
     await report("내용")
+    // The photo is read only when asked (owner, 2026-10-19): 자동으로 채워 주기 fills the name the result needs.
+    await page.getByRole("button", { name: "자동으로 채워 주기" }).click()
+    await page.waitForFunction(() => Boolean(document.querySelector("#field-product-name")?.value), null, { timeout: 15000 })
     await page.locator(".details-primary-bar .studio-primary").click()
     await page.locator("#result-poster-preview img").waitFor({ timeout: 20000 })
     await report("결과-포스터")

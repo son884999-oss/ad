@@ -957,3 +957,10 @@ html[data-layout=mobile] .easy-mode .results-step:not(.is-single) .result-card:h
 /* The poster's three choices take a row on a phone: a shorter preview keeps 홈으로 clear of the bottom bar. */
 @media (min-height:681px) { html[data-layout=mobile] .results-step:not(.is-single) .result-card:has(.poster-use) .result-preview { height:calc(248px * var(--s)); } }
 @media (max-height:680px) { html[data-layout=mobile] .results-step:not(.is-single) .result-card:has(.poster-use) .result-preview { height:calc(100dvh - 580px);min-height:120px; } }
+/* 자동으로 채워 주기 (owner, 2026-10-19): the AI reads the photo only when asked; one clear button over the fields. */
+.photo-scan { display:flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:max(52px,calc(54px * var(--s)));padding:10px 14px;border:2px solid var(--color-brand);border-radius:var(--radius-control,10px);background:var(--color-brand-soft);color:var(--color-brand-hover);font-size:max(17px,calc(17px * var(--s)));font-weight:800; }
+.photo-scan svg { flex:none;width:calc(22px * var(--s));height:calc(22px * var(--s)); }
+.easy-mode .photo-scan { min-height:60px;font-size:calc(20px * var(--s)); }
+/* The info step grew by the 자동으로 채워 주기 button: a focused control scrolls clear of the sticky 홍보물 만들기 bar. */
+.details-fields :is(button,input,textarea,select,summary,[tabindex]) { scroll-margin-bottom:calc(140px * var(--s)); }
+

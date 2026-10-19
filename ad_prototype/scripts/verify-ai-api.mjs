@@ -337,7 +337,7 @@ async function openInfoStep(page) {
 const pressed = (page, name) => page.getByRole("button", { name, exact: true }).getAttribute("aria-pressed")
 
 try {
-  await check("browser: photo fills empty fields, keeps typed name, presses returned tones, uses AI 홍보 글", async () => {
+  await check("browser: 자동으로 채워 주기 fills empty fields, keeps typed name, presses returned tones, uses AI 홍보 글", async () => {
     const page = await newPage({ viewport: { width: 390, height: 844 }, reducedMotion: "reduce", permissions: ["clipboard-read", "clipboard-write"] })
     const errors = []
     page.on("pageerror", (e) => errors.push(e.message))
@@ -355,6 +355,9 @@ try {
       await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(cannedPromo) })
     })
     await openInfoStep(page)
+    // The photo is read only when asked (owner, 2026-10-19).
+    assert.equal(analyzeBody, null, "no analysis before 자동으로 채워 주기")
+    await page.getByRole("button", { name: "자동으로 채워 주기", exact: true }).click()
     await page.getByText("사진을 보고 내용을 채우고 있어요…").waitFor()
     assert.ok(await page.getByRole("button", { name: "홍보물 만들기", exact: true }).isDisabled(), "name still empty")
     await page.getByLabel("제품 이름", { exact: true }).fill("내가 쓴 이름")

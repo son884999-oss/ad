@@ -221,51 +221,42 @@ try {
     }
   })
 
-  await check("AI photoCheck isRealPhoto=false → 실제 사진이 아니에요 (on the photo step)", async () => {
+  // Owner, 2026-10-19: the photo is read by the AI only when 자동으로 채워 주기 is pressed on the info step.
+  await check("no AI call on the photo step: adding a photo reads nothing until 자동으로 채워 주기 is pressed", async () => {
     const page = await open({ analyze: json({ ...okSuggestion, photoCheck: { isRealPhoto: false, isBlurry: false, reason: "그림이에요" } }) })
-    await page.locator("#product-photo").setInputFiles(coffee)
-    await keepPhoto(page)
-    await warning(page).getByText("실제 사진이 아니에요.", { exact: false }).waitFor()
-    assert.match(await warning(page).innerText(), /가게나 제품을 직접 찍은 사진이 좋아요/)
-    assert.ok(await button(page, "이 사진 그대로 쓰기").isVisible())
-    await done(page)
-  })
-
-  await check("AI flag arriving after leaving the photo step shows nothing; auto-fill still works", async () => {
-    let release
-    const released = new Promise((r) => { release = r })
-    const page = await open({ analyze: async (route) => { await released; await json({ ...okSuggestion, photoCheck: { isRealPhoto: false, isBlurry: true, reason: "" } })(route) } })
-    await page.locator("#product-photo").setInputFiles(coffee)
-    await keepPhoto(page)
-    await ready(page)
-    assert.ok(await button(page, "다음으로").isEnabled(), "pending AI check does not block")
-    await button(page, "다음으로").click()
-    await page.getByLabel("제품 이름", { exact: true }).waitFor()
-    release()
-    await page.getByText("사진을 보고 채웠어요. 맞지 않으면 고쳐 주세요.").waitFor()
-    assert.equal(await page.getByLabel("제품 이름", { exact: true }).inputValue(), okSuggestion.productName)
-    assert.equal(await warning(page).count(), 0)
-    await button(page, "뒤로가기").click()
-    await ready(page)
-    await settle(page)
-    assert.equal(await warning(page).count(), 0, "late flag is dropped, not shown on return")
-    await done(page)
-  })
-
-  await check("analyze-photo runs once from photo selection through the info step and fills fields", async () => {
-    let body = null
-    const page = await open({ analyze: async (route) => { body = route.request().postDataJSON(); await json(okSuggestion)(route) } })
     await page.locator("#product-photo").setInputFiles(coffee)
     await keepPhoto(page)
     await ready(page)
     await settle(page, 400)
-    assert.equal(page.analyzeCalls, 1, "started on the photo step")
-    assert.equal(body.image.mimeType, "image/jpeg")
+    assert.equal(page.analyzeCalls, 0, "no request on the photo step")
+    assert.equal(await warning(page).getByText("실제 사진이 아니에요.", { exact: false }).count(), 0, "no AI photo flag without a request")
     await button(page, "다음으로").click()
+    await page.getByLabel("제품 이름", { exact: true }).waitFor()
+    await settle(page, 400)
+    assert.equal(page.analyzeCalls, 0, "none on the info step either until asked")
+    assert.equal(await page.getByLabel("제품 이름", { exact: true }).inputValue(), "", "nothing filled unasked")
+    assert.ok(await button(page, "자동으로 채워 주기").isVisible())
+    await done(page)
+  })
+
+  await check("자동으로 채워 주기 → one analyze-photo request fills the fields; the button goes; no second request", async () => {
+    let body = null
+    const page = await open({ analyze: async (route) => { body = route.request().postDataJSON(); await json({ ...okSuggestion, photoCheck: { isRealPhoto: false, isBlurry: true, reason: "" } })(route) } })
+    await page.locator("#product-photo").setInputFiles(coffee)
+    await keepPhoto(page)
+    await ready(page)
+    await button(page, "다음으로").click()
+    await button(page, "자동으로 채워 주기").click()
     await page.getByText("사진을 보고 채웠어요. 맞지 않으면 고쳐 주세요.").waitFor()
+    assert.equal(page.analyzeCalls, 1)
+    assert.equal(body.image.mimeType, "image/jpeg")
     assert.equal(await page.getByLabel("제품 이름", { exact: true }).inputValue(), okSuggestion.productName)
     assert.equal(await page.getByLabel("제품 설명", { exact: true }).inputValue(), okSuggestion.description)
+    assert.equal(await button(page, "자동으로 채워 주기").count(), 0, "asked once per photo")
     await button(page, "뒤로가기").click()
+    await ready(page)
+    await settle(page)
+    assert.equal(await warning(page).count(), 0, "the AI flag from the info step is never shown on the photo step")
     await button(page, "다음으로").click()
     await page.getByLabel("제품 이름", { exact: true }).waitFor()
     await settle(page)
@@ -363,4 +354,4 @@ try {
 } finally {
   await browser.close()
 }
-console.log(`PASS: verify-photo-step ${results.length} checks (api photoCheck, local + AI photo check, single analyze call, camera/album, examples disclosure)`)
+console.log(`PASS: verify-photo-step ${results.length} checks (api photoCheck, local photo check, analyze only on 자동으로 채워 주기, camera/album, examples disclosure)`)
