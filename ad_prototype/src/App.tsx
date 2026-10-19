@@ -24,7 +24,7 @@ import { useAiVideo, type AiVideoController, type SavedAiVideo } from "./useAiVi
 import { hasPremiumCode } from "./premiumAccess"
 import { AiVideoPlayer, AiVideoStatus, PremiumSteps, saveRealVideo, shareRealVideo, showsRealVideo, type PremiumStepState } from "./AiVideoPanel"
 import { isVideoUnavailable, prepareAiVideoFile, toVideoDetails } from "./video"
-import { buildPosterContent, loadPosterFonts, POSTER_THEMES, posterThemeFor, renderPosterToCanvas } from "./poster"
+import { buildPosterContent, loadPosterFonts, posterThemeFor, renderPosterToCanvas } from "./poster"
 import { photoPalette } from "./poster/photoColor"
 import { localBody, localCopy } from "./localCopy"
 import { type VideoCaption } from "./videoCaption"
@@ -144,14 +144,9 @@ type PosterRatioKey = "4:5" | "1:1" | "9:16"
 type PosterLayoutKey = "vertical" | "split" | "editorial"
 // Labels say what each shape is for, so nobody has to know what "4:5" means.
 const posterRatioOptions: [PosterRatioKey, string, string][] = [
-  ["4:5", "세로", "인스타 피드"],
-  ["1:1", "정사각", "카톡·블로그"],
-  ["9:16", "길쭉", "스토리·쇼츠"],
-]
-const posterLayoutOptions: [PosterLayoutKey, string][] = [
-  ["vertical", "사진 크게"],
-  ["split", "나란히"],
-  ["editorial", "사진 먼저"],
+  ["4:5", "인스타 피드", "세로"],
+  ["1:1", "카톡·블로그", "정사각"],
+  ["9:16", "스토리·쇼츠", "길쭉"],
 ]
 /** The old 기본형/고급형 screens, hidden since plan C; open the app with ?premiumui to see them (development, checks). */
 const premiumUi = typeof location !== "undefined" && new URLSearchParams(location.search).has("premiumui")
@@ -254,21 +249,13 @@ function SpecialFilmToggle({ value, easyMode, onChange }: { value: boolean; easy
   )
 }
 
-// 홍보 글 channels shown as chips; labels are the names shop owners use.
+// 홍보 글 channels shown as chips; labels are the names shop owners use. Three at most (owner, 2026-10-19), picked from
+// the nine B_이창훈/prompt.mjs CHANNEL_STYLES can write for: the three places small shops post most. KakaoTalk goes
+// through the share button; a record saved with another channel still shows its text.
 const copyChannelOptions: [Channel, string][] = [
-  ["download", "어디에나"],
   ["instagram", "인스타그램"],
   ["naver_place", "네이버 플레이스"],
   ["daangn", "당근"],
-  ["kakao", "카카오톡 채널"],
-]
-const posterThemeOptions: [PosterThemeKey | "", string][] = [
-  ["", "분위기대로"],
-  ["warm", "따뜻한"],
-  ["nature", "자연"],
-  ["minimal", "깔끔한"],
-  ["vibrant", "생기"],
-  ["luxury", "고급"],
 ]
 
 const toneValues: readonly Tone[] = ["natural", "premium", "friendly", "trendy"]
@@ -813,54 +800,42 @@ function radioNav(index: number, count: number, selected: number, pick: (index: 
   }
 }
 
-/** Poster shape (D_고혜숙): ratio, layout and colour, folded away until asked for. */
+/**
+ * Poster shape: three choices by where it will be posted, always in view right under the poster (owner,
+ * 2026-10-19: "at most three choices at a time, for everyone"; the old folded picker had 12 — size, layout, colour —
+ * and opened below the poster, so every change meant scrolling back up). The layout is 사진 크게 and the colour
+ * follows the photo; records saved with another layout or colour still draw as saved until a size is picked.
+ */
 function PosterStyleControls({
   ratio,
-  layout,
-  theme,
   easyMode,
   onChange,
 }: {
   ratio: PosterRatioKey
-  layout: PosterLayoutKey
-  theme: PosterThemeKey | ""
   easyMode: boolean
-  onChange: (next: { posterRatio?: PosterRatioKey; posterLayout?: PosterLayoutKey; posterTheme?: PosterThemeKey | "" }) => void
+  onChange: (next: { posterRatio: PosterRatioKey; posterLayout: PosterLayoutKey; posterTheme: "" }) => void
 }) {
   const t = (text: string) => uiText(text, easyMode)
-  const group = <T extends string>(legend: string, options: [T, string, string?][], value: T, pick: (value: T) => void, swatch?: (value: T) => ReactNode) => (
-    <fieldset className="poster-style-group" role="radiogroup">
-      <legend>{t(legend)}</legend>
+  const pick = (posterRatio: PosterRatioKey) => onChange({ posterRatio, posterLayout: "vertical", posterTheme: "" })
+  const selected = posterRatioOptions.findIndex(([id]) => id === ratio)
+  return (
+    <fieldset className="poster-use" role="radiogroup">
+      <legend className="sr-only">{t("어디에 올릴 포스터인가요?")}</legend>
       <div>
-        {options.map(([id, label, note], index) => (
+        {posterRatioOptions.map(([id, label], index) => (
           <button
             key={id}
             type="button"
             role="radio"
-            aria-checked={value === id}
+            aria-checked={ratio === id}
             onClick={() => pick(id)}
-            {...radioNav(index, options.length, options.findIndex(([option]) => option === value), (next) => pick(options[next][0]))}
+            {...radioNav(index, posterRatioOptions.length, selected, (next) => pick(posterRatioOptions[next][0]))}
           >
-            {swatch?.(id)}
             <span>{t(label)}</span>
-            {note && !easyMode && <small>{note}</small>}
           </button>
         ))}
       </div>
     </fieldset>
-  )
-  return (
-    <details className="poster-style">
-      <summary>{t("포스터 모양 바꾸기")}</summary>
-      <div className="poster-style-body">
-        {group("크기", posterRatioOptions, ratio, (posterRatio) => onChange({ posterRatio }))}
-        {group("배치", posterLayoutOptions.filter(([id]) => !(ratio === "1:1" && id === "split")), layout, (posterLayout) => onChange({ posterLayout }))}
-        {group("색", posterThemeOptions, theme, (posterTheme) => onChange({ posterTheme }), (id) => {
-          const colors = POSTER_THEMES[id || "minimal"]
-          return <i className={`poster-swatch${id ? "" : " is-auto"}`} aria-hidden="true" style={{ background: `linear-gradient(135deg, ${colors.bgGradient[0]}, ${colors.bgGradient[2]})`, borderColor: colors.accent }} />
-        })}
-      </div>
-    </details>
   )
 }
 
@@ -1511,7 +1486,7 @@ function CreateFlow({
   const activePromo = aiPromo && aiPromo.signature === promoSignature(details, channel) ? aiPromo : null
   // B_이창훈 writes three one-line angles; the user can pick one. It leads the 홍보 글 and the poster.
   const headlineOptions = activePromo
-    ? [...new Set([activePromo.copy, ...(activePromo.copyCandidates ?? [])].filter(Boolean))].slice(0, 4)
+    ? [...new Set([activePromo.copy, ...(activePromo.copyCandidates ?? [])].filter(Boolean))].slice(0, 3)
     : []
   // Stored on the AI answer itself: a fresh answer starts at its own first line, and the record keeps the choice.
   const headlineIndex = Math.min(activePromo?.chosen ?? 0, Math.max(headlineOptions.length - 1, 0))
@@ -1859,14 +1834,15 @@ function CreateFlow({
     if (outputFolderName && showCopy && finalText) void saveToComputer(outputFolderName, [{ name: "홍보글.txt", text: finalText }])
   }, [outputFolderName, finalText, showCopy])
   useEffect(() => {
-    if (outputFolderName && posterPreviewUrl) void saveToComputer(outputFolderName, [{ name: "포스터.png", blob: posterPreviewFileRef.current }])
-  }, [outputFolderName, posterPreviewUrl])
+    // The PNG is ready a moment after the quick preview (see the poster effect below), when the status says so.
+    if (outputFolderName && posterPreviewStatus === "ready" && posterPreviewFileRef.current) void saveToComputer(outputFolderName, [{ name: "포스터.png", blob: posterPreviewFileRef.current }])
+  }, [outputFolderName, posterPreviewUrl, posterPreviewStatus])
   // Signed-in owners: the finished poster and video also go to 내 홍보물 on the server (App saveResultFile).
   // Only once 만드는 중 is over: that is when the record (and its id) exists; before it, the id on hand is still
   // the previous record's, and a poster drawn early would be filed under it.
   useEffect(() => {
-    if (step === 3 && !generating && posterPreviewUrl && posterPreviewFileRef.current) onResultFile?.("poster", posterPreviewFileRef.current)
-  }, [posterPreviewUrl, generating]) // eslint-disable-line react-hooks/exhaustive-deps
+    if (step === 3 && !generating && posterPreviewStatus === "ready" && posterPreviewFileRef.current) onResultFile?.("poster", posterPreviewFileRef.current)
+  }, [posterPreviewUrl, posterPreviewStatus, generating]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (step === 3 && !generating && previewVideoFile) onResultFile?.("video", previewVideoFile)
   }, [previewVideoFile, generating]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -1887,7 +1863,7 @@ function CreateFlow({
   const posterKey = JSON.stringify([posterContent, posterTheme, posterRatio, posterLayout, photoBox?.image === imageUrl ? photoBox.box : null, sceneUrl.length])
   const posterDrawnTextRef = useRef("")
 
-  const createPosterFile = async (download: boolean) => {
+  const createPosterFile = async (download: boolean, onDrawn?: (canvas: HTMLCanvasElement) => void) => {
     if (download && posterPreviewFileRef.current) {
       triggerFileDownload(posterPreviewFileRef.current)
       setPosterStatus("ready")
@@ -1928,6 +1904,7 @@ function CreateFlow({
 
       if (!drawnText) throw new Error("canvas-unavailable")
       posterDrawnTextRef.current = drawnText.map((line) => line.replace(/[.!?。]+$/, "")).join(". ")
+      onDrawn?.(canvas)
 
       const blob = await new Promise<Blob | null>((resolve) =>
         canvas.toBlob(resolve, "image/png"),
@@ -1958,23 +1935,37 @@ function CreateFlow({
     }
   }
 
+  // The poster on screen. Changing its size or first line keeps the current picture up until the new one is drawn,
+  // then shows a quick JPEG of it at once; the PNG that is saved and shared is made right after (owner, 2026-10-19:
+  // every change used to blank the poster and wait for a 1–2.5 MB PNG, slow on phones). A different photo starts
+  // from blank, so an earlier poster never shows for the new one.
+  const posterUrlRef = useRef("")
+  const posterUrlImageRef = useRef("")
+  const showPosterUrl = (url: string) => {
+    if (posterUrlRef.current && posterUrlRef.current !== url) URL.revokeObjectURL(posterUrlRef.current)
+    posterUrlRef.current = url
+    posterUrlImageRef.current = url ? imageUrl : ""
+    setPosterPreviewUrl(url)
+  }
+  useEffect(() => () => { if (posterUrlRef.current) URL.revokeObjectURL(posterUrlRef.current) }, [])
   useEffect(() => {
     if (step !== 3 || !showPoster || !imageUrl) return
     let cancelled = false
-    let previewUrl = ""
     posterPreviewFileRef.current = null
-    setPosterPreviewUrl("")
-    setPosterVisibleText("")
+    if (posterUrlImageRef.current !== imageUrl) showPosterUrl("")
     setPosterPreviewStatus("preparing")
     // A redrawn poster has not been saved yet, so the earlier "저장했어요" status no longer applies.
     setPosterStatus("idle")
     // The preview and download use the same Canvas renderer and copy.
-    void createPosterFile(false).then((file) => {
+    void createPosterFile(false, (canvas) => {
+      canvas.toBlob((quick) => {
+        if (!cancelled && quick && !posterPreviewFileRef.current) showPosterUrl(URL.createObjectURL(quick))
+      }, "image/jpeg", 0.9)
+    }).then((file) => {
       if (cancelled) return
       if (!file) throw new Error("poster-preview-failed")
       posterPreviewFileRef.current = file
-      previewUrl = URL.createObjectURL(file)
-      setPosterPreviewUrl(previewUrl)
+      showPosterUrl(URL.createObjectURL(file))
       setPosterPreviewStatus("ready")
       notify("result")
       setPosterVisibleText(posterDrawnTextRef.current)
@@ -1984,7 +1975,6 @@ function CreateFlow({
     return () => {
       cancelled = true
       posterPreviewFileRef.current = null
-      if (previewUrl) URL.revokeObjectURL(previewUrl)
     }
   }, [
     step,
@@ -2907,13 +2897,18 @@ function CreateFlow({
                       </button>
                   }
                   extra={
-                    <PosterStyleControls
-                      ratio={posterRatio}
-                      layout={posterLayout}
-                      theme={details.posterTheme ?? ""}
-                      easyMode={easyMode}
-                      onChange={(next) => updateDetails({ ...details, ...next })}
-                    />
+                    <>
+                      {headlineOptions.length > 1 && (
+                        <button type="button" className="result-preview-action headline-next" onClick={() => pickHeadline((headlineIndex + 1) % headlineOptions.length)}>
+                          <span>{t("다른 문구로")} ({headlineIndex + 1}/{headlineOptions.length})</span>
+                        </button>
+                      )}
+                      <PosterStyleControls
+                        ratio={posterRatio}
+                        easyMode={easyMode}
+                        onChange={(next) => updateDetails({ ...details, ...next })}
+                      />
+                    </>
                   }
                 />
                 <ResultPreview>
@@ -2925,7 +2920,7 @@ function CreateFlow({
                       setPosterExpanded(false)
                       document.querySelector<HTMLElement>('[aria-controls="result-poster-preview"]')?.focus()
                     }}
-                    className={`result-main-preview ${posterExpanded ? "is-expanded" : ""}`}
+                    className={`result-main-preview ${posterExpanded ? "is-expanded" : ""}${posterPreviewUrl && posterPreviewStatus === "preparing" ? " is-updating" : ""}`}
                     role="group"
                     aria-label={t(posterExpanded ? "이미지 확대 미리보기" : "이미지 미리보기")}
                     tabIndex={posterExpanded ? 0 : undefined}
@@ -2959,7 +2954,7 @@ function CreateFlow({
                   onClick={() => createPosterFile(true)}
                   onShare={() => shareResult("poster")}
                   shareMessage={aiNote(t(shareMessages.poster ?? ""))}
-                  shareDisabled={!posterPreviewUrl}
+                  shareDisabled={!posterPreviewUrl || posterPreviewStatus !== "ready"}
                   disabled={posterStatus === "preparing" || !posterPreviewUrl}
                   busy={posterStatus === "preparing"}
                   error={posterStatus === "failed" || posterPreviewStatus === "failed"}
@@ -3117,33 +3112,15 @@ function CreateFlow({
                       </div>
                     </fieldset>
                   }
+                  // One button for every screen (owner, 2026-10-19): the three first lines in a list pushed the text out of
+                  // view; the changed line now shows right below, where the text is.
                   control={headlineOptions.length > 1 ? (
-                    easyMode ? (
-                      <>
-                        <button type="button" className="result-preview-action" onClick={() => pickHeadline((headlineIndex + 1) % headlineOptions.length)}>
-                          <span>{t("다른 말로 바꾸기")}</span>
-                        </button>
-                        <span className="sr-only" role="status">{chosenHeadline}</span>
-                      </>
-                    ) : (
-                      <fieldset className="headline-choice" role="radiogroup">
-                        <legend>{t("첫 줄 고르기")}</legend>
-                        <div>
-                          {headlineOptions.map((option, index) => (
-                            <button
-                              key={option}
-                              type="button"
-                              role="radio"
-                              aria-checked={index === headlineIndex}
-                              onClick={() => pickHeadline(index)}
-                              {...radioNav(index, headlineOptions.length, headlineIndex, pickHeadline)}
-                            >
-                              {option}
-                            </button>
-                          ))}
-                        </div>
-                      </fieldset>
-                    )
+                    <>
+                      <button type="button" className="result-preview-action headline-next" onClick={() => pickHeadline((headlineIndex + 1) % headlineOptions.length)}>
+                        <span>{t("다른 말로 바꾸기")} ({headlineIndex + 1}/{headlineOptions.length})</span>
+                      </button>
+                      <span className="sr-only" role="status">{chosenHeadline}</span>
+                    </>
                   ) : undefined}
                 />
                 <ResultPreview text>
@@ -3426,7 +3403,7 @@ export default function App() {
 
   const [step, setStep] = useState<Step>(1)
 
-  const [channel, setChannel] = useState<Channel>("download")
+  const [channel, setChannel] = useState<Channel>("instagram")
 
   const [imageUrl, setImageUrl] = useState("")
   const [sceneImage, setSceneImage] = useState<{ forImage: string; url: string } | null>(null)
