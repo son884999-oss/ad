@@ -6,7 +6,7 @@ import { tmpdir } from "node:os"
 import { join, resolve } from "node:path"
 import { Readable } from "node:stream"
 import { chromium } from "playwright"
-import { BACKGROUND_MODEL, backgroundPrompt, makeBackground, pictureCostKrw } from "../api/_lib/background.js"
+import { BACKGROUND_MODEL, backgroundPrompt, backgroundSetFor, makeBackground, pictureCostKrw } from "../api/_lib/background.js"
 import backgroundHandler from "../api/background.js"
 import { BACKUP_DAILY_LIMIT_KRW, backupSpentToday } from "../api/_lib/gemini.js"
 
@@ -53,9 +53,40 @@ try {
     assert.match(prompt, /Remove any watermark/)
     assert.match(prompt, /about 75% of the frame width/)
     assert.match(prompt, /lowest fifth of the frame is a calm, plain surface/)
-    // No name yet: the model picks the set from the photo; with a known food it gets the food set.
-    assert.match(prompt, /food or drinks: a white marble surface/)
-    assert.match(backgroundPrompt({ productName: "수제 마카롱" }), /premium food advertisement set/)
+    // The holder is part of the product (a cutlet and sushi lost their plate in a real run), the angle is kept.
+    assert.match(prompt, /Food is never placed directly on the table/)
+    assert.match(prompt, /the plate, bowl, tray, board, cup, glass, bottle, box, case or stand\. Keep all of these/)
+    assert.match(prompt, /Keep the camera angle of the photo/)
+    // No name yet: the model picks from the whole list.
+    assert.match(prompt, /Use the advertising set that suits what the product is: a meal: a warm restaurant set/)
+    assert.match(prompt, /an electronic gadget: a sleek tech product set/)
+    assert.match(prompt, /Add no extra props/)
+  })
+
+  await check("sets by kind: meals keep a restaurant table, desserts the patisserie, and shampoo, cosmetics, 떡, glasses, earphones their own", async () => {
+    const kind = (productName, productDescription) => backgroundSetFor({ productName, productDescription })?.name
+    assert.equal(backgroundSetFor({}), null)
+    assert.equal(kind("수제 돈가스"), "a meal")
+    assert.equal(kind("연어 초밥"), "a meal")
+    assert.equal(kind("치즈돈가스"), "a meal")
+    assert.equal(kind("떡볶이"), "a meal")
+    assert.equal(kind("쑥 인절미"), "Korean rice cakes or traditional sweets")
+    assert.equal(kind("초코 크루아상"), "a dessert or bakery item")
+    assert.equal(kind("설탕 쿠키"), "a dessert or bakery item")
+    assert.equal(kind("생크림 케이크"), "a dessert or bakery item")
+    assert.equal(kind("카페라테"), "a drink")
+    assert.equal(kind("탈모 샴푸"), "hair or body care")
+    assert.equal(kind("뷰티 세럼"), "skincare or make-up")
+    assert.equal(kind("수분 크림"), "skincare or make-up")
+    assert.equal(kind("뿔테 안경"), "glasses or a fashion accessory")
+    assert.equal(kind("무선 이어폰"), "an electronic gadget")
+    assert.equal(kind("회색 머그컵"), "a household item")
+    assert.equal(kind("수제 캔들"), "a household item")
+    assert.equal(kind("가죽 키링"), "a product")
+    const katsu = backgroundPrompt({ productName: "수제 돈가스" })
+    assert.match(katsu, /This product is a meal\. Use this advertising set: a warm restaurant set/)
+    assert.match(katsu, /except at most one small serving item that belongs with the dish/)
+    assert.match(backgroundPrompt({ productName: "무선 이어폰" }), /This product is an electronic gadget\..*Add no extra props/)
   })
 
   await check("one call: the paid key, the image model, 9:16 picture back; the ledger is charged from the usage", async () => {
