@@ -17,6 +17,7 @@ const aiRoutes: Record<string, string> = {
   '/api/scene-start': '/api/scene-start.js',
   '/api/scene-status': '/api/scene-status.js',
   '/api/background': '/api/background.js',
+  '/api/account-delete': '/api/account-delete.js',
 }
 
 // `npm run dev:mock`: the same app with made-up AI answers, so it can be tried or shown without using the Gemini
@@ -146,7 +147,7 @@ function aiApiDevServer(): Plugin {
         return
       }
       const env = loadEnv(server.config.mode, process.cwd(), '')
-      for (const key of ['COPA_API_KEY', 'COPA_MODEL', 'COPA_BASE_URL', 'GEMINI_API_KEY', 'GEMINI_API_KEY_2', 'GEMINI_MODEL', 'GEMINI_MODEL_2', 'GEMINI_IMAGE_MODEL', 'HF_CREDENTIALS', 'HF_VIDEO_MODEL', 'HF_VIDEO_DURATION', 'HF_VIDEO_RESOLUTION']) {
+      for (const key of ['COPA_API_KEY', 'COPA_MODEL', 'COPA_BASE_URL', 'GEMINI_API_KEY', 'GEMINI_API_KEY_2', 'GEMINI_MODEL', 'GEMINI_MODEL_2', 'GEMINI_IMAGE_MODEL', 'SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY', 'VITE_SUPABASE_URL', 'HF_CREDENTIALS', 'HF_VIDEO_MODEL', 'HF_VIDEO_DURATION', 'HF_VIDEO_RESOLUTION']) {
         if (env[key] && !process.env[key]) process.env[key] = env[key]
       }
       server.middlewares.use(async (req, res, next) => {

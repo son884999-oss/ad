@@ -17,6 +17,8 @@ import { recognitionConstructor, useVoiceInput } from "./useVoiceInput"
 import VoiceField from "./VoiceField"
 import { isMobileDevice } from "./DesktopStage"
 import { loadRecords, saveRecords } from "./recordsStore"
+import { authConfigured, authErrorMessage, deleteAccount, signInWithEmail, signInWithProvider, signOut, signUpWithEmail, useAuth } from "./auth"
+import { deleteCloudRecord, loadCloudRecords, pictureKey, saveCloudFile, saveCloudRecord, toDataUrl } from "./cloudRecords"
 import { analyzePhotoOnce, generatePromoText, isAiUnavailable, type PhotoCheck, type PhotoSuggestion, type PromoTextResult } from "./ai"
 import { useAiVideo, type AiVideoController, type SavedAiVideo } from "./useAiVideo"
 import { hasPremiumCode } from "./premiumAccess"
@@ -123,6 +125,13 @@ type GeneratedRecord = {
 
   /** Real (Higgsfield) video job for this result; the URL may expire after about a week. */
   video?: SavedAiVideo
+
+  /** Signed-in owner (Supabase user id) when this record is also kept on the server (src/cloudRecords.ts). */
+  owner?: string
+  /** What already went up: the photo and background fingerprints (pictureKey), so edits send the row only. */
+  cloud?: { photo?: string; scene?: string }
+  /** Links to the saved poster and video (records read from the server). */
+  cloudFiles?: { poster?: string; video?: string }
 }
 
 /** AI 홍보 글 for one set of inputs; `signature` ties it to the details and channel it was made for. */
@@ -1055,6 +1064,7 @@ function CreateFlow({
   easyMode,
 
   onResultCreated,
+  onResultFile,
 
   onDashboard,
 
@@ -1105,6 +1115,8 @@ function CreateFlow({
   easyMode: boolean
 
   onResultCreated: () => void
+  /** The poster or video file the moment it is ready (saved to the server for signed-in owners). */
+  onResultFile?: (kind: "poster" | "video", file: Blob) => void
 
   onDashboard: () => void
 
@@ -1849,6 +1861,15 @@ function CreateFlow({
   useEffect(() => {
     if (outputFolderName && posterPreviewUrl) void saveToComputer(outputFolderName, [{ name: "포스터.png", blob: posterPreviewFileRef.current }])
   }, [outputFolderName, posterPreviewUrl])
+  // Signed-in owners: the finished poster and video also go to 내 홍보물 on the server (App saveResultFile).
+  // Only once 만드는 중 is over: that is when the record (and its id) exists; before it, the id on hand is still
+  // the previous record's, and a poster drawn early would be filed under it.
+  useEffect(() => {
+    if (step === 3 && !generating && posterPreviewUrl && posterPreviewFileRef.current) onResultFile?.("poster", posterPreviewFileRef.current)
+  }, [posterPreviewUrl, generating]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (step === 3 && !generating && previewVideoFile) onResultFile?.("video", previewVideoFile)
+  }, [previewVideoFile, generating]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!outputFolderName || !previewVideoFile) return
     const ext = previewVideoFile.name.split(".").pop() || "mp4"
@@ -3459,8 +3480,91 @@ export default function App() {
     if (!recordsLoadedRef.current) return
     void saveRecords(records).then(setRecordsStored)
   }, [records])
+
+  // 회원가입·로그인 (Supabase): a signed-in owner's records are mirrored on the server (src/cloudRecords.ts).
+  // Signing in reads them; signing out takes them off this device (they stay on the server).
+  const auth = useAuth()
+  const userId = auth.user?.id ?? ""
+  const syncedRef = useRef(new Map<string, string>())
+  const pendingFilesRef = useRef(new Map<string, Map<"poster" | "video", Blob>>())
+  const previousUserRef = useRef("")
+  const recordData = (record: GeneratedRecord) => {
+    const { imageUrl: _image, sceneUrl: _scene, owner: _owner, cloud: _cloud, cloudFiles: _files, ...rest } = record
+    return JSON.stringify(rest)
+  }
+  useEffect(() => {
+    if (!auth.ready) return
+    const previous = previousUserRef.current
+    previousUserRef.current = userId
+    if (previous && previous !== userId) {
+      syncedRef.current.clear()
+      pendingFilesRef.current.clear()
+      setRecords((current) => current.filter((record) => record.owner !== previous))
+    }
+    if (!userId) return
+    void loadCloudRecords<GeneratedRecord>(userId).then((cloud) => {
+      if (!cloud.length || previousUserRef.current !== userId) return
+      for (const record of cloud) syncedRef.current.set(record.id, recordData(record))
+      setRecords((current) => {
+        const ids = new Set(current.map((record) => record.id))
+        const updated = current.map((record) => {
+          const remote = cloud.find((item) => item.id === record.id)
+          return remote ? { ...record, owner: userId, cloudFiles: remote.cloudFiles } : record
+        })
+        const added = cloud.filter((record) => !ids.has(record.id)).map((record) => ({ ...record, cloud: { photo: "server", scene: record.sceneUrl ? "server" : undefined } }))
+        return [...updated, ...added]
+      })
+    })
+  }, [userId, auth.ready]) // eslint-disable-line react-hooks/exhaustive-deps
+  const flushFiles = (recordId: string) => {
+    const files = pendingFilesRef.current.get(recordId)
+    if (!files || !userId) return
+    pendingFilesRef.current.delete(recordId)
+    for (const [kind, blob] of files) void saveCloudFile(userId, recordId, kind, blob).catch(() => undefined)
+  }
+  useEffect(() => {
+    if (!userId) return
+    // Shortly after the list settles: new or changed records go up, records deleted here go from the server.
+    const timer = window.setTimeout(() => {
+      const current = recordsRef.current
+      const ids = new Set(current.map((record) => record.id))
+      for (const id of [...syncedRef.current.keys()]) {
+        if (ids.has(id)) continue
+        syncedRef.current.delete(id)
+        void deleteCloudRecord(userId, id).catch(() => undefined)
+      }
+      for (const record of current) {
+        if (record.owner && record.owner !== userId) continue
+        const data = recordData(record)
+        const photoKey = pictureKey(record.imageUrl)
+        const sceneKey = pictureKey(record.sceneUrl)
+        const uploadPhoto = !record.cloud?.photo
+        const uploadScene = Boolean(record.sceneUrl) && record.cloud?.scene !== sceneKey && record.cloud?.scene !== "server"
+        if (record.owner === userId && !uploadPhoto && !uploadScene && syncedRef.current.get(record.id) === data) continue
+        syncedRef.current.set(record.id, data)
+        void saveCloudRecord(userId, record, { uploadPhoto, uploadScene })
+          .then(() => {
+            setRecords((list) => list.map((item) => item.id === record.id
+              ? { ...item, owner: userId, cloud: { photo: item.cloud?.photo ?? photoKey, scene: uploadScene ? sceneKey : item.cloud?.scene } }
+              : item))
+            flushFiles(record.id)
+          })
+          .catch(() => syncedRef.current.delete(record.id))
+      }
+    }, 800)
+    return () => window.clearTimeout(timer)
+  }, [records, userId]) // eslint-disable-line react-hooks/exhaustive-deps
   /** The record shown on the result screen; poster shape and first-line choices made there are saved into it. */
   const [currentRecordId, setCurrentRecordId] = useState("")
+  /** The poster or video for the record on screen: uploaded now if its row is on the server, else right after. */
+  const saveResultFile = (kind: "poster" | "video", file: Blob) => {
+    if (!userId || !currentRecordId) return
+    const files = pendingFilesRef.current.get(currentRecordId) ?? new Map<"poster" | "video", Blob>()
+    files.set(kind, file)
+    pendingFilesRef.current.set(currentRecordId, files)
+    const record = recordsRef.current.find((item) => item.id === currentRecordId)
+    if (record?.owner === userId && syncedRef.current.has(record.id)) flushFiles(record.id)
+  }
 
   // Remembered on this device so an older user does not have to find the switch again after a reload.
   const [easyMode, setEasyModeState] = useState(() => {
@@ -4077,6 +4181,16 @@ export default function App() {
     return (
       <Login
         onEnter={() => setPage("home")}
+        auth={{
+          configured: authConfigured,
+          onEmail: async (mode, email, password) => {
+            if (mode === "signup") return signUpWithEmail(email, password)
+            await signInWithEmail(email, password)
+            return "signed-in"
+          },
+          onSocial: signInWithProvider,
+          errorText: authErrorMessage,
+        }}
         easyMode={easyMode}
         speaking={speaking}
         speechPreparing={speechPreparing}
@@ -4119,6 +4233,18 @@ export default function App() {
 
         setPage("login")
       }}
+      account={auth.user ? {
+        email: auth.user.email ?? uiText("로그인한 계정", easyMode),
+        onSignOut: () => {
+          setMobileOpen(false)
+          void signOut()
+        },
+        onDelete: () => {
+          if (!window.confirm("회원 탈퇴하면 계정과 서버에 저장한 홍보물이 모두 지워져요. 탈퇴할까요?")) return
+          setMobileOpen(false)
+          void deleteAccount().then(() => window.alert("탈퇴했어요. 그동안 이용해 주셔서 감사해요.")).catch(() => window.alert("탈퇴하지 못했어요. 잠시 뒤에 다시 해 주세요."))
+        },
+      } : null}
     >
       {page === "home" && (
         <Home
@@ -4168,6 +4294,7 @@ export default function App() {
           }}
           easyMode={easyMode}
           onResultCreated={saveCurrentResult}
+          onResultFile={saveResultFile}
           onDashboard={() => navigate("home")}
           onStartNew={startNew}
           onResultTabChange={stopSpeech}
@@ -4185,7 +4312,13 @@ export default function App() {
           easyMode={easyMode}
           stored={recordsStored}
           records={records}
-          onOpen={openRecord}
+          onOpen={(record, kind) => {
+            // A record read from the server has links; it opens like a local one once its pictures are data URLs.
+            if (!/^https?:/.test(record.imageUrl)) return openRecord(record, kind)
+            void Promise.all([toDataUrl(record.imageUrl), record.sceneUrl ? toDataUrl(record.sceneUrl) : Promise.resolve(undefined)])
+              .then(([imageUrl, sceneUrl]) => openRecord({ ...record, imageUrl, sceneUrl }, kind))
+              .catch(() => window.alert("사진을 불러오지 못했어요. 잠시 뒤에 다시 열어 주세요."))
+          }}
           onDelete={(record, kind) => setRecords((current) => current.flatMap((item) => {
             if (item.id !== record.id) return [item]
             const removed = [...(item.removed ?? []), kind]

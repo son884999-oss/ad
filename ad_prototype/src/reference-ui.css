@@ -921,3 +921,17 @@ html[data-view=mobile] .easy-offer { top:calc(64px * var(--s) + 34px); }
 @media (min-width:768px) {
   html[data-view=mobile] .reference-app > .bg-ask-backdrop { position:absolute;border-radius:38px;overflow:hidden; }
 }
+/* 회원가입 (Supabase Auth): required consents and the readable privacy policy. */
+.reference-login-check { display:flex !important;flex-direction:row !important;align-items:center;gap:10px;min-height:44px;font-weight:600; }
+.reference-login-check input { width:24px;height:24px;min-height:0;margin:0;flex:none;accent-color:var(--color-brand); }
+.reference-login-policy { border:1px solid #e8dfd6;border-radius:10px;padding:0 12px;background:#faf6f1; }
+.reference-login-policy > summary { min-height:44px;display:flex;align-items:center;cursor:pointer;font-weight:700;color:var(--color-brand-hover); }
+.privacy-policy { padding:0 0 12px;font-size:max(14px,calc(14px * var(--s)));line-height:1.6;color:#4a3f38;word-break:keep-all; }
+.privacy-policy h3 { margin:14px 0 4px;font-size:max(15px,calc(15px * var(--s)));color:var(--color-ink); }
+.privacy-policy ul { margin:0;padding-left:18px; }
+.privacy-policy p { margin:0 0 6px; }
+.reference-login-form button:disabled, .reference-social button:disabled { opacity:.6; }
+/* Menu: the signed-in account. */
+.reference-menu-account { display:grid;grid-template-columns:24px 1fr;align-items:center;gap:10px;margin:0;padding:12px 4px;border-bottom:1px solid #efe8e1;color:#2b2420;font-weight:700;word-break:break-all; }
+.reference-menu-account > svg { color:#b44d1d; }
+.reference-menu-account small { display:block;font-weight:500;color:#6e625a;font-size:max(14px,calc(14px * var(--s))); }

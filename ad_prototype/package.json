@@ -24,9 +24,11 @@
     "eval:poster": "node scripts/eval-poster.mjs",
     "eval:video": "node scripts/eval-video.mjs",
     "check:copa": "node scripts/check-copa.mjs",
-    "verify:background": "node scripts/verify-background.mjs"
+    "verify:background": "node scripts/verify-background.mjs",
+    "verify:auth": "node scripts/verify-auth.mjs"
   },
   "dependencies": {
+    "@supabase/supabase-js": "2.118.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },
