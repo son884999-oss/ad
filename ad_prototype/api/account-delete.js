@@ -6,8 +6,15 @@ import { createClient } from "@supabase/supabase-js"
 import { ApiError, createJsonHandler } from "./_lib/http.js"
 
 function adminClient() {
-  const url = process.env.SUPABASE_URL?.trim() || process.env.VITE_SUPABASE_URL?.trim()
+  const raw = process.env.SUPABASE_URL?.trim() || process.env.VITE_SUPABASE_URL?.trim()
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim()
+  let url = ""
+  try {
+    // The project address only (the Data API page shows it with "/rest/v1/" on the end).
+    url = raw ? new URL(raw).origin : ""
+  } catch {
+    url = ""
+  }
   if (!url || !serviceKey) throw new ApiError(503, "AUTH_NOT_CONFIGURED")
   return createClient(url, serviceKey, { auth: { persistSession: false, autoRefreshToken: false } })
 }

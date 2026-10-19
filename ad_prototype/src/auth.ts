@@ -4,8 +4,19 @@
 import { createClient, type Session, type SupabaseClient, type User } from "@supabase/supabase-js"
 import { useEffect, useState } from "react"
 
-const url = import.meta.env.VITE_SUPABASE_URL as string | undefined
-const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined
+/** The project address only: the Data API page shows it with "/rest/v1/" on the end, which breaks sign-in. */
+export function projectUrl(value?: string) {
+  const text = value?.trim()
+  if (!text) return undefined
+  try {
+    return new URL(text).origin
+  } catch {
+    return undefined
+  }
+}
+
+const url = projectUrl(import.meta.env.VITE_SUPABASE_URL as string | undefined)
+const anonKey = (import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined)?.trim()
 
 export const supabase: SupabaseClient | null = url && anonKey ? createClient(url, anonKey, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, flowType: "pkce" } }) : null
 export const authConfigured = Boolean(supabase)
