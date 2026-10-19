@@ -342,7 +342,7 @@ function composePromoText(promo: PromoTextResult, details: GeneratedRecord["deta
 }
 
 /** How long 홍보물 만들기 waits for the AI 홍보 글 before using the local template. */
-const PROMO_WAIT_MS = 12_000
+const PROMO_WAIT_MS = 21_000
 // Another channel picked on the result screen: the owner is looking at 글을 맞추는 중, so it may take longer. On Vercel a
 // second channel took about 10 s (2026-10-20), and with a phone network the 12 s cap fell back to the plain text
 // without first-line choices ("다른 채널은 문구가 아예 안 뜬다").
@@ -3153,16 +3153,8 @@ function CreateFlow({
                       </div>
                     </fieldset>
                   }
-                  // One button for every screen (owner, 2026-10-19): the three first lines in a list pushed the text out of
-                  // view; the changed line now shows right below, where the text is.
-                  control={headlineOptions.length > 1 ? (
-                    <>
-                      <button type="button" className="result-preview-action headline-next" onClick={() => pickHeadline((headlineIndex + 1) % headlineOptions.length)}>
-                        <span>{t("다른 말로 바꾸기")} ({headlineIndex + 1}/{headlineOptions.length})</span>
-                      </button>
-                      <span className="sr-only" role="status">{chosenHeadline}</span>
-                    </>
-                  ) : undefined}
+                  // One text per channel, no "다른 말로 바꾸기" (owner, 2026-10-20: it showed on some channels and not on others
+                  // and was not worth the extra work); the AI's first line is used.
                 />
                 <ResultPreview text>
                   <div className="result-main-preview result-text-preview">

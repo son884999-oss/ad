@@ -988,3 +988,6 @@ html[data-layout=mobile] .results-step:not(.is-single) .result-card > .result-ne
 .reference-read.is-icon { justify-content:center;gap:4px;min-width:56px;min-height:52px;padding:0 12px;border-radius:999px;font-weight:800;white-space:nowrap; }
 .reference-read.is-icon > svg { padding:6px; }
 .easy-mode .reference-header .reference-read.is-icon { min-width:64px;min-height:56px;padding:0 12px; }
+/* [UX-후속-1021] 3: the 9:16 poster grew much taller than the others; the preview is capped so the whole poster stays
+   in view (the saved file keeps its size). 4:5 and 1:1 are under the cap and look the same. */
+.studio-shell .result-poster .result-preview .poster-image-canvas > img { width:auto;max-width:100%;max-height:62dvh;margin:0 auto; }

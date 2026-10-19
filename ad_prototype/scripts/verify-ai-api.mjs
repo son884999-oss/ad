@@ -431,9 +431,9 @@ try {
     const started = Date.now()
     await page.getByRole("button", { name: "홍보물 만들기", exact: true }).click()
     // The loading screen now also records the video and finishes its bar at 12.5%/s (owner, 2026-10-20).
-    await page.locator("#result-poster-preview img").waitFor({ timeout: 45000 })
+    await page.locator("#result-poster-preview img").waitFor({ timeout: 60000 })
     const waited = Date.now() - started
-    assert.ok(waited < 36000, `waited ${waited} ms`)
+    assert.ok(waited < 46000, `waited ${waited} ms`) // 21 s promo cap (2026-10-20) + video + finishing bar
     await page.getByRole("tab", { name: "홍보 글", exact: true }).click()
     const copy = await page.locator(".copy-result-text").innerText()
     assert.ok(copy.includes("느린 응답 케이크") && !copy.includes("AI 카피"))

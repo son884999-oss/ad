@@ -15,8 +15,10 @@ const HASHTAG_MAX = 5
 const HASHTAG_MAX_LENGTH = 10
 /** 제품 설명과 이 글자 수 이상 똑같이 이어지면 "되풀이"로 본다 (띄어쓰기·문장부호 제외) */
 const REPEAT_LIMIT = 12
-/** Whole request budget; the client stops waiting at about 12 s. */
-const TOTAL_BUDGET_MS = 11_000
+/** Whole request budget. The institution's Claude takes about 10 s (Vercel, 2026-10-20): at 11 s a slow answer (당근
+ * took 11.05 s) timed out here and the app fell back to text without first-line choices. The client waits 21 s on the
+ * first try and 25 s on a channel switch (src/App.tsx). */
+const TOTAL_BUDGET_MS = 20_000
 /** A rewrite is only attempted when at least this much of the budget is left. */
 const RETRY_MIN_MS = 5_000
 
@@ -356,7 +358,7 @@ export async function generatePromo(product, config, { now = Date.now } = {}) {
         config,
         systemInstruction: PROMO_SYSTEM_PROMPT,
         parts: [{ text: buildPromoUserPrompt(product) + (retryNote ? `\n\n${retryNote}` : "") }],
-        timeoutMs: Math.min(10_000, remaining()),
+        timeoutMs: Math.min(16_000, remaining()),
         maxOutputTokens: 1536, // copyCandidates·videoHeadline·cta도 함께 쓰므로 잘리지 않게 여유를 둔다
         responseJsonSchema: PROMO_RESPONSE_SCHEMA,
       })

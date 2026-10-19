@@ -12,6 +12,9 @@
     },
     "api/background.js": {
       "maxDuration": 60
+    },
+    "api/promo-text.js": {
+      "maxDuration": 30
     }
   }
 }

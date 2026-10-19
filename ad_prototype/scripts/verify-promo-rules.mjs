@@ -230,7 +230,8 @@ try {
     let t = 0
     replies = [bad]
     sentBodies.length = 0
-    const r = await generatePromo(normalizePromoInput(product), config, { now: () => (t += 3_500) })
+    // Each clock read moves 8 s, so after the first answer under 5 s of the 20 s budget is left (budget raised 2026-10-20).
+    const r = await generatePromo(normalizePromoInput(product), config, { now: () => (t += 8_000) })
     assert.equal(sentBodies.length, 1)
     assert.equal(r.copy, trimCliches(badData.copy))
   })
