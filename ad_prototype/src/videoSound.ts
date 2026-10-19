@@ -77,8 +77,8 @@ export async function prepareVideoSound(stream: MediaStream, { musicUrl, seconds
       bed.buffer = music
       const bedGain = context.createGain()
       bedGain.gain.setValueAtTime(0.0001, at)
-      bedGain.gain.linearRampToValueAtTime(0.9, at + 0.3)
-      bedGain.gain.setValueAtTime(0.9, at + Math.max(0.4, seconds - 1))
+      bedGain.gain.linearRampToValueAtTime(0.52, at + 0.3)
+      bedGain.gain.setValueAtTime(0.52, at + Math.max(0.4, seconds - 1))
       bedGain.gain.linearRampToValueAtTime(0.0001, at + seconds)
       bed.connect(bedGain).connect(warmth)
       bed.start(at)
@@ -95,7 +95,7 @@ export async function prepareVideoSound(stream: MediaStream, { musicUrl, seconds
         soften.Q.value = 0.5
         const shimmerGain = context.createGain()
         shimmerGain.gain.setValueAtTime(0.0001, at + cue)
-        shimmerGain.gain.linearRampToValueAtTime(0.3, at + cue + 0.04)
+        shimmerGain.gain.linearRampToValueAtTime(0.18, at + cue + 0.04)
         shimmer.connect(soften).connect(shimmerGain).connect(warmth)
         shimmer.start(at + cue)
       }
