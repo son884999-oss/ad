@@ -11,6 +11,17 @@ import { BACKUP_DAILY_LIMIT_KRW, backupSpentToday } from "../api/_lib/gemini.js"
 import { chromium } from "playwright"
 import analyzePhoto from "../api/analyze-photo.js"
 import promoText from "../api/promo-text.js"
+// Plan C: 다음으로 on the photo step asks "배경을 광고 사진처럼 바꿀까요?"; these checks keep the photo. Registered
+// once per page after the first photo: whenever the popup shows, 그대로 쓰기 is pressed before the next action.
+const keptPages = new WeakSet()
+const keepPhoto = async (page) => {
+  if (keptPages.has(page)) return
+  keptPages.add(page)
+  await page.addLocatorHandler(page.getByRole("dialog", { name: /배경을 광고 사진처럼/ }), async (dialog) => {
+    await dialog.getByRole("button", { name: /그대로/ }).click()
+  })
+}
+
 
 const base = process.argv[2] || "http://127.0.0.1:5173/"
 const results = []
@@ -319,6 +330,7 @@ async function openInfoStep(page) {
   await page.goto(base)
   await page.getByRole("button", { name: "홍보물 만들기", exact: true }).first().click()
   await page.locator("#product-photo").setInputFiles(photo)
+  await keepPhoto(page)
   await page.getByRole("button", { name: "다음으로", exact: true }).click()
   await page.getByLabel("제품 이름", { exact: true }).waitFor()
 }

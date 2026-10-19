@@ -35,10 +35,15 @@ const SCENES = [
 ]
 const GENERAL_SCENE = "a clean studio advertisement set: the product on a simple round podium, a soft gradient backdrop in a colour that suits the product, soft even light with a gentle shadow"
 
+/** The advertising set for this product group, or null when the words match none (api/_lib/background.js). */
+export function sceneFor(details) {
+  const text = `${details.productName ?? ""} ${details.productDescription ?? ""} ${details.highlights ?? ""}`
+  return SCENES.find(({ pattern }) => pattern.test(text))?.scene ?? null
+}
+
 /** The edit prompt: keep the product untouched, change only the surroundings, never add text (added later). */
 export function scenePrompt(details) {
-  const text = `${details.productName} ${details.productDescription ?? ""} ${details.highlights ?? ""}`
-  const scene = SCENES.find(({ pattern }) => pattern.test(text))?.scene ?? GENERAL_SCENE
+  const scene = sceneFor(details) ?? GENERAL_SCENE
   return [
     "Keep the product exactly as it is in the photo: the same shape, size, colours, surface details and any printed text or logo, unchanged.",
     `Replace only the surroundings with this advertising scene: ${scene}.`,

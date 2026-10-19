@@ -6,6 +6,17 @@
 import { mkdir, readFile } from "node:fs/promises"
 import { resolve } from "node:path"
 import { chromium } from "playwright"
+// Plan C: 다음으로 on the photo step asks "배경을 광고 사진처럼 바꿀까요?"; these checks keep the photo. Registered
+// once per page after the first photo: whenever the popup shows, 그대로 쓰기 is pressed before the next action.
+const keptPages = new WeakSet()
+const keepPhoto = async (page) => {
+  if (keptPages.has(page)) return
+  keptPages.add(page)
+  await page.addLocatorHandler(page.getByRole("dialog", { name: /배경을 광고 사진처럼/ }), async (dialog) => {
+    await dialog.getByRole("button", { name: /그대로/ }).click()
+  })
+}
+
 
 const args = process.argv.slice(2)
 const base = args.find((arg) => arg.startsWith("http")) || "http://127.0.0.1:5173/"
@@ -22,6 +33,7 @@ if (!file) {
   await page.goto(base)
   await page.getByRole("button", { name: "홍보물 만들기", exact: true }).first().click()
   await page.locator("#product-photo").setInputFiles(resolve("public/assets/reference-fresh/coffee.webp"))
+  await keepPhoto(page)
   await page.getByRole("button", { name: "다음으로" }).click()
   await page.getByLabel("제품 이름", { exact: true }).fill("수제 크림 커피")
   await page.getByLabel("가게 이름", { exact: true }).fill("골목커피")

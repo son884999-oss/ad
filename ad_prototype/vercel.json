@@ -9,6 +9,9 @@
     },
     "api/scene-status.js": {
       "maxDuration": 30
+    },
+    "api/background.js": {
+      "maxDuration": 60
     }
   }
 }

@@ -64,7 +64,8 @@ function readLedger() {
   return ledger.day === today() && Number.isFinite(ledger.krw) ? ledger : { day: today(), krw: 0 }
 }
 
-function addToLedger(krw) {
+/** Adds ₩ spent on the paid key today (text answers here, background pictures in api/_lib/background.js). */
+export function addToLedger(krw) {
   const ledger = readLedger()
   memoryLedger = { day: ledger.day, krw: Math.round((ledger.krw + krw) * 100) / 100 }
   try {
@@ -78,6 +79,11 @@ function addToLedger(krw) {
 /** ₩ spent today on the second key (estimate). */
 export function backupSpentToday() {
   return readLedger().krw
+}
+
+/** True while one more call of `reserve` ₩ still fits in today's cap on the paid key. */
+export function paidKeyFits(reserve) {
+  return backupSpentToday() + reserve <= BACKUP_DAILY_LIMIT_KRW
 }
 
 function backupAllowed() {

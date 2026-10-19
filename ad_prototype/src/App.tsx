@@ -1,3 +1,4 @@
+import { createPortal } from "react-dom"
 import {
   ChangeEvent,
   Fragment,
@@ -30,6 +31,7 @@ import { makeScene } from "./scene"
 import { outputFolder, saveToComputer } from "./localSave"
 import { drawMotionFrame, MOTION_SECONDS, motionEffectFor, type MotionScene } from "./motionVideo"
 import { plainMp4File } from "./mp4Flatten"
+import { makeAdBackground } from "./background"
 import type { PosterThemeKey } from "./poster"
 import PhotoStep from "./PhotoStep"
 import GenerationProgress from "./GenerationProgress"
@@ -141,6 +143,9 @@ const posterLayoutOptions: [PosterLayoutKey, string][] = [
   ["split", "나란히"],
   ["editorial", "사진 먼저"],
 ]
+/** The old 기본형/고급형 screens, hidden since plan C; open the app with ?premiumui to see them (development, checks). */
+const premiumUi = typeof location !== "undefined" && new URLSearchParams(location.search).has("premiumui")
+
 /** 기본형 (free motion video) or 고급형 (paid AI video), chosen under the photo. */
 function VideoModeToggle({ value, premiumAvailable, easyMode, onChange, withVideo = true }: { value: "basic" | "premium"; premiumAvailable: boolean; easyMode: boolean; onChange: (value: "basic" | "premium") => void; withVideo?: boolean }) {
   const t = (text: string) => uiText(text, easyMode)
@@ -170,6 +175,59 @@ function VideoModeToggle({ value, premiumAvailable, easyMode, onChange, withVide
       </div>
     </fieldset>
   )
+}
+
+/**
+ * 배경 바꾸기 popup (plan C): one question with two large answers, asked once per photo on 다음으로. Escape or the
+ * backdrop closes it without an answer (nothing paid, the owner stays where they were). Focus starts on 바꾸기,
+ * stays inside while it is open, and goes back to the button that opened it.
+ */
+function BackgroundAskDialog({ easyMode, onAnswer, onClose }: { easyMode: boolean; onAnswer: (change: boolean) => void; onClose: () => void }) {
+  const t = (text: string) => uiText(text, easyMode)
+  const first = useRef<HTMLButtonElement | null>(null)
+  // Drawn inside the app shell, so on a PC (the phone frame) it stays inside the frame (reference-ui.css).
+  const shell = document.querySelector(".reference-app")
+  useEffect(() => {
+    const opener = document.activeElement as HTMLElement | null
+    // Everything behind the popup is inert while it is open: no taps, no Tab stops, not read out.
+    const behind = shell ? [...shell.children].filter((el) => !el.classList.contains("bg-ask-backdrop") && !el.hasAttribute("inert")) : []
+    behind.forEach((el) => el.setAttribute("inert", ""))
+    first.current?.focus()
+    return () => {
+      behind.forEach((el) => el.removeAttribute("inert"))
+      opener?.focus?.()
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  const dialog = (
+    <div className="bg-ask-backdrop" onClick={(event) => { if (event.target === event.currentTarget) onClose() }}>
+      <div
+        className="bg-ask"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="bg-ask-title"
+        aria-describedby="bg-ask-body"
+        onKeyDown={(event) => {
+          if (event.key === "Escape") onClose()
+          if (event.key === "Tab") {
+            const buttons = [...event.currentTarget.querySelectorAll("button")]
+            const index = buttons.indexOf(document.activeElement as HTMLButtonElement)
+            const next = buttons[(index + (event.shiftKey ? buttons.length - 1 : 1)) % buttons.length]
+            next?.focus()
+            event.preventDefault()
+          }
+        }}
+      >
+        <h2 id="bg-ask-title">{t("배경을 광고 사진처럼 바꿀까요?")}</h2>
+        <p id="bg-ask-body">{t("AI가 제품은 그대로 두고 주변만 광고 사진처럼 바꿔요. 정보를 적는 동안 만들어 둘게요.")}</p>
+        <div className="bg-ask-actions">
+          <button ref={first} type="button" className="studio-primary" onClick={() => onAnswer(true)}>{t("바꾸기")}</button>
+          <button type="button" className="studio-secondary" onClick={() => onAnswer(false)}>{t("그대로 쓰기")}</button>
+        </div>
+        <small>{t("결과에서 원래 사진으로 되돌릴 수 있어요.")}</small>
+      </div>
+    </div>
+  )
+  return shell ? createPortal(dialog, shell) : dialog
 }
 
 /** 고급형 "특별 연출" on the 정보 입력 step: off = the safe push-in (default), on = the bold concept film. */
@@ -1285,6 +1343,14 @@ function CreateFlow({
   const [sampleVideoFile, setSampleVideoFile] = useState<File | null>(null)
   const [shareMessages, setShareMessages] = useState<Partial<Record<"poster" | "video" | "copy", string>>>({})
   const videoContextRef = useRef(0)
+  // 배경 바꾸기 (plan C, 2026-10-19): the owner's answer to the photo popup, the job's status, and which photo the
+  // result uses ("원래 사진" when the AI changed how the product looks). The picture itself is sceneImage (kept
+  // with the record). The poster and the 기본형 video use it as soon as it arrives.
+  const [bgChoice, setBgChoice] = useState<{ forImage: string; change: boolean } | null>(null)
+  const [bgState, setBgState] = useState<{ forImage: string; status: "making" | "ready" | "failed" | "limit" | "off" } | null>(null)
+  const [photoPick, setPhotoPick] = useState<"changed" | "original">("changed")
+  const bgControllerRef = useRef<AbortController | null>(null)
+  const sceneUrl = photoPick === "changed" && sceneImage?.forImage === imageUrl ? sceneImage.url : ""
 
   useEffect(() => {
     videoContextRef.current += 1
@@ -1339,6 +1405,8 @@ function CreateFlow({
     details.keywords,
 
     tonesKey,
+    // The advertising background arriving, or the owner switching 바뀐/원래 사진, makes a new video.
+    sceneUrl,
   ])
 
   const upload = (event: ChangeEvent<HTMLInputElement>) => {
@@ -1601,6 +1669,73 @@ function CreateFlow({
   useEffect(() => {
     if (step !== 3) dropScene()
   }, [step])
+
+  // 배경 바꾸기: started the moment the owner answers 바꾸기, so it runs while they type (about 15–30 s). A new
+  // photo cancels it and asks again; leaving a step does not (unlike the paid 고급형 video above).
+  useEffect(() => () => bgControllerRef.current?.abort(), [])
+  useEffect(() => {
+    bgControllerRef.current?.abort()
+    bgControllerRef.current = null
+    setBgState((current) => (current?.forImage === imageUrl ? current : null))
+    setPhotoPick("changed")
+  }, [imageUrl])
+  const startBackground = (forImage: string) => {
+    if (sceneImage?.forImage === forImage) {
+      setBgState({ forImage, status: "ready" })
+      return
+    }
+    bgControllerRef.current?.abort()
+    const controller = new AbortController()
+    bgControllerRef.current = controller
+    setBgState({ forImage, status: "making" })
+    void makeAdBackground(forImage, { productName: details.name?.trim() || undefined, productDescription: details.description || undefined, highlights: details.features || undefined }, controller.signal).then((result) => {
+      if (controller.signal.aborted || currentImageRef.current !== forImage) return
+      if ("url" in result) {
+        setSceneImage({ forImage, url: result.url })
+        setBgState({ forImage, status: "ready" })
+      } else {
+        // Not set up (no key) or today's cap: plainly said, and the original photo is used.
+        setBgState({ forImage, status: result.error === "AI_NOT_CONFIGURED" ? "off" : result.error === "BACKGROUND_DAILY_LIMIT" ? "limit" : "failed" })
+      }
+    })
+  }
+  // The popup asks once per photo, for posters and videos (a 홍보 글 alone has no picture to change). It opens on
+  // the photo step's 다음으로, after any 흐려요/어두워요 warning is settled (never on top of it), and again on the
+  // info step when the owner swaps the photo there.
+  const [asking, setAsking] = useState(false)
+  const needsAnswer = Boolean(imageUrl) && (showPoster || showVideo) && bgChoice?.forImage !== imageUrl
+  const goToDetails = () => {
+    if (needsAnswer) setAsking(true)
+    else setStep(2)
+  }
+  useEffect(() => {
+    if (step === 2 && bgChoice && needsAnswer && !uploadPending) setAsking(true)
+  }, [imageUrl, uploadPending]) // eslint-disable-line react-hooks/exhaustive-deps
+  const answerBackground = (change: boolean) => {
+    setAsking(false)
+    setBgChoice({ forImage: imageUrl, change })
+    if (change) startBackground(imageUrl)
+    else {
+      bgControllerRef.current?.abort()
+      setBgState(null)
+    }
+    if (step === 1) setStep(2)
+  }
+  const asksBackground = asking && Boolean(imageUrl) && (step === 1 || step === 2)
+  const ownBg = bgState?.forImage === imageUrl ? bgState.status : undefined
+  const bgNotice = !ownBg
+    ? ""
+    : ownBg === "making"
+      ? "광고 배경을 만들고 있어요 · 30초 안팎. 다 되면 포스터와 영상이 바뀌어요."
+      : ownBg === "ready"
+        ? photoPick === "changed"
+          ? "AI가 배경을 광고 사진처럼 바꿨어요. 제품이 달라 보이면 \"원래 사진\"을 골라 주세요."
+          : "원래 사진으로 만들었어요."
+        : ownBg === "limit"
+          ? "오늘 배경 바꾸기를 다 써서 원래 사진으로 만들었어요."
+          : ownBg === "off"
+            ? "배경 바꾸기가 지금 꺼져 있어서 원래 사진으로 만들었어요."
+            : "배경을 바꾸지 못해서 원래 사진으로 만들었어요."
   // The photo the current AI video job was started for (its own input may be the scene picture instead).
   const aiVideoForImageRef = useRef("")
   const startPremium = () => {
@@ -1642,8 +1777,9 @@ function CreateFlow({
     })
   }
   const specialFilm = Boolean(details.specialFilm) && showVideo
-  // The presenter's device (opened with ?demo=<code>, src/premiumAccess.ts) starts on 고급형; others on 기본형.
-  const videoMode = details.videoMode ?? (hasPremiumCode() ? "premium" : "basic")
+  // Plan C (2026-10-19): everyone gets 기본형 + 배경 바꾸기; the paid 고급형 video waits for [특급]
+  // (docs/나중에_할일.md). Its screens stay reachable for development and the checks with ?premiumui.
+  const videoMode = premiumUi ? details.videoMode ?? (hasPremiumCode() ? "premium" : "basic") : "basic"
   const sceneNotice = videoMode === "premium" && sceneState?.forImage === imageUrl
     ? sceneState.status === "making"
       ? specialFilm
@@ -1715,8 +1851,7 @@ function CreateFlow({
   // D's renderer has no side-by-side layout for a square; it would quietly fall back.
   const posterLayout: PosterLayoutKey = posterRatio === "1:1" && details.posterLayout === "split" ? "vertical" : details.posterLayout ?? "vertical"
   const posterTheme: PosterThemeKey = details.posterTheme || posterThemeFor(tones)
-  // 고급형: the poster is drawn from the new advertising scene once it is back (the product is unchanged).
-  const sceneUrl = videoMode === "premium" && sceneImage?.forImage === imageUrl ? sceneImage.url : ""
+  // The poster is drawn from the advertising background once it is back (sceneUrl, see 배경 바꾸기 above).
   const posterKey = JSON.stringify([posterContent, posterTheme, posterRatio, posterLayout, photoBox?.image === imageUrl ? photoBox.box : null, sceneUrl.length])
   const posterDrawnTextRef = useRef("")
 
@@ -1749,7 +1884,8 @@ function CreateFlow({
         themeKey: posterTheme,
         ratioKey: posterRatio,
         compositionKey: posterLayout,
-        aiMark: Boolean(activePromo),
+        // AI 표시 when an AI wrote the copy or drew the background (인공지능기본법 제31조).
+        aiMark: Boolean(activePromo) || Boolean(sceneUrl),
         // "색: 분위기대로" follows the product photo; a colour the user picked is kept as is.
         photoColors: details.posterTheme ? null : photoPalette(image),
         focusBox: !sceneUrl && photoBox?.image === imageUrl ? photoBox.box : null,
@@ -1902,7 +2038,8 @@ function CreateFlow({
     videoCancelledRef.current = false
 
     try {
-      const image = await loadCanvasImage(imageUrl)
+      // The advertising background when there is one (배경 바꾸기), else the photo.
+      const image = await loadCanvasImage(sceneUrl || imageUrl)
 
       if (videoCancelledRef.current) {
         setVideoStatus("cancelled")
@@ -2035,7 +2172,7 @@ function CreateFlow({
         framed.width = canvas.width
         framed.height = canvas.height
         const framedContext = framed.getContext("2d")
-        if (!framedContext || !drawStoryFrame(framedContext, image, photoBox?.image === imageUrl ? photoBox.box : null)) framedContext?.drawImage(image, 0, 0, framed.width, framed.height)
+        if (!framedContext || !drawStoryFrame(framedContext, image, !sceneUrl && photoBox?.image === imageUrl ? photoBox.box : null)) framedContext?.drawImage(image, 0, 0, framed.width, framed.height)
 
         // 6-second motion graphic (src/motionVideo.ts): push-in, close-up with a light sweep and the key points,
         // end card with the price and the call to action.
@@ -2197,6 +2334,24 @@ function CreateFlow({
             <p>{t("사진과 입력한 내용으로 만든 체험 결과예요. ")}</p>
           </div>
           {sceneNotice && <p className={`ai-notice scene-notice${sceneState?.status === "ready" ? " is-ai" : ""}`} role="status">{t(sceneNotice)}</p>}
+          {bgNotice && <p className={`ai-notice scene-notice${ownBg === "ready" && photoPick === "changed" ? " is-ai" : ""}`} role="status">{t(bgNotice)}</p>}
+          {ownBg === "ready" && sceneImage?.forImage === imageUrl && (
+            <div className="photo-pick" role="radiogroup" aria-label={t("포스터와 영상에 쓸 사진")}>
+              {([["changed", "바뀐 사진"], ["original", "원래 사진"]] as const).map(([id, label], index) => (
+                <button
+                  key={id}
+                  type="button"
+                  role="radio"
+                  aria-checked={photoPick === id}
+                  onClick={() => setPhotoPick(id)}
+                  {...radioNav(index, 2, photoPick === "changed" ? 0 : 1, (next) => setPhotoPick(next === 0 ? "changed" : "original"))}
+                >
+                  <img src={id === "changed" ? sceneImage.url : imageUrl} alt="" width="44" height="44" />
+                  <span>{t(label)}</span>
+                </button>
+              ))}
+            </div>
+          )}
           {showCopy && (
             <p className={`ai-notice${activePromo ? " is-ai" : ""}`}>
               {t(activePromo ? "AI가 쓴 글이 들어 있어요. 올리기 전에 읽어 봐 주세요." : "AI 없이 기본 문구로 만들었어요.")}
@@ -2221,9 +2376,9 @@ function CreateFlow({
           onUpload={upload}
           onDropFile={uploadFile}
           aiCheck={aiPhotoCheck?.image === imageUrl ? aiPhotoCheck.check : null}
-          onNext={() => setStep(2)}
+          onNext={goToDetails}
           easyMode={easyMode}
-          extra={showVideo || showPoster ? (
+          extra={premiumUi && (showVideo || showPoster) ? (
             <VideoModeToggle
               withVideo={showVideo}
               value={videoMode}
@@ -2234,6 +2389,7 @@ function CreateFlow({
           ) : null}
         />
       )}
+      {asksBackground && <BackgroundAskDialog easyMode={easyMode} onAnswer={answerBackground} onClose={() => setAsking(false)} />}
       {step === 2 && (
         <div className="details-step step-panel compact-information">
           <div className="information-photo" aria-busy={uploadPending}>

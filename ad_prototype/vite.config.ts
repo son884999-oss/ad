@@ -16,6 +16,7 @@ const aiRoutes: Record<string, string> = {
   '/api/video-cancel': '/api/video-cancel.js',
   '/api/scene-start': '/api/scene-start.js',
   '/api/scene-status': '/api/scene-status.js',
+  '/api/background': '/api/background.js',
 }
 
 // `npm run dev:mock`: the same app with made-up AI answers, so it can be tried or shown without using the Gemini
@@ -67,6 +68,11 @@ function mockAnswer(path: string, body: Record<string, unknown>) {
   if (path === '/api/scene-status') {
     const data = readFileSync(DEMO_SCENE).toString('base64')
     return [200, { status: 'completed', image: { mimeType: 'image/jpeg', data } }] as const
+  }
+  // 배경 바꾸기: the same demo scene picture, so the popup flow can be tried without spending.
+  if (path === '/api/background') {
+    const data = readFileSync(DEMO_SCENE).toString('base64')
+    return [200, { image: { mimeType: 'image/jpeg', data } }] as const
   }
   // Real AI video is never started in mock mode; the app shows its own sample video.
   return [503, { error: 'VIDEO_NOT_CONFIGURED' }] as const
@@ -140,7 +146,7 @@ function aiApiDevServer(): Plugin {
         return
       }
       const env = loadEnv(server.config.mode, process.cwd(), '')
-      for (const key of ['COPA_API_KEY', 'COPA_MODEL', 'COPA_BASE_URL', 'GEMINI_API_KEY', 'GEMINI_API_KEY_2', 'GEMINI_MODEL', 'GEMINI_MODEL_2', 'HF_CREDENTIALS', 'HF_VIDEO_MODEL', 'HF_VIDEO_DURATION', 'HF_VIDEO_RESOLUTION']) {
+      for (const key of ['COPA_API_KEY', 'COPA_MODEL', 'COPA_BASE_URL', 'GEMINI_API_KEY', 'GEMINI_API_KEY_2', 'GEMINI_MODEL', 'GEMINI_MODEL_2', 'GEMINI_IMAGE_MODEL', 'HF_CREDENTIALS', 'HF_VIDEO_MODEL', 'HF_VIDEO_DURATION', 'HF_VIDEO_RESOLUTION']) {
         if (env[key] && !process.env[key]) process.env[key] = env[key]
       }
       server.middlewares.use(async (req, res, next) => {

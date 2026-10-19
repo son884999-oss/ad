@@ -6,6 +6,17 @@
 import { mkdir } from "node:fs/promises"
 import { resolve } from "node:path"
 import { chromium } from "playwright"
+// Plan C: 다음으로 on the photo step asks "배경을 광고 사진처럼 바꿀까요?"; these checks keep the photo. Registered
+// once per page after the first photo: whenever the popup shows, 그대로 쓰기 is pressed before the next action.
+const keptPages = new WeakSet()
+const keepPhoto = async (page) => {
+  if (keptPages.has(page)) return
+  keptPages.add(page)
+  await page.addLocatorHandler(page.getByRole("dialog", { name: /배경을 광고 사진처럼/ }), async (dialog) => {
+    await dialog.getByRole("button", { name: /그대로/ }).click()
+  })
+}
+
 
 const args = process.argv.slice(2)
 const base = args.find((a) => a.startsWith("http")) || "http://127.0.0.1:5173/"
@@ -210,6 +221,11 @@ for (const [width, height] of sizes) {
     await page.waitForTimeout(400)
     await report("사진 넣은 뒤")
     await page.getByRole("button", { name: /다음/ }).first().click()
+    // Plan C: 다음으로 asks about the background; the popup is measured like any screen, then the photo is kept.
+    const ask = page.getByRole("dialog", { name: /배경을 광고 사진처럼/ })
+    await ask.waitFor()
+    await report("배경 팝업")
+    await ask.getByRole("button", { name: /그대로/ }).click()
     await page.getByLabel(/제품 이름|무엇을 파나요|이름/).first().waitFor()
     await page.waitForTimeout(600)
     await report("내용")

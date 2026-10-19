@@ -12,6 +12,17 @@ import videoStatus from "../api/video-status.js"
 import videoCancel from "../api/video-cancel.js"
 import { CONCEPT_NEGATIVE_PROMPT, conceptPrompt, parseDirection, rulesPrompt } from "../api/_lib/video-prompt.js"
 import { normalizeVideoInput, randomFromKey } from "../api/_lib/video.js"
+// Plan C: 다음으로 on the photo step asks "배경을 광고 사진처럼 바꿀까요?"; these checks keep the photo. Registered
+// once per page after the first photo: whenever the popup shows, 그대로 쓰기 is pressed before the next action.
+const keptPages = new WeakSet()
+const keepPhoto = async (page) => {
+  if (keptPages.has(page)) return
+  keptPages.add(page)
+  await page.addLocatorHandler(page.getByRole("dialog", { name: /배경을 광고 사진처럼/ }), async (dialog) => {
+    await dialog.getByRole("button", { name: /그대로/ }).click()
+  })
+}
+
 
 const base = process.argv[2] || "http://127.0.0.1:5173/"
 const results = []
@@ -466,9 +477,10 @@ async function newPage() {
   return { page, errors, counts }
 }
 async function createAll(page, name = "수제 크림과 커피") {
-  await page.goto(base)
+  await page.goto(`${base}?premiumui`) // the hidden 고급형 screens (plan C keeps them for [특급])
   await page.getByRole("button", { name: "홍보물 만들기", exact: true }).first().click()
   await page.locator("#product-photo").setInputFiles(photo)
+  await keepPhoto(page)
   // The paid AI video is asked for only with 고급형 (기본형, the default, is the free motion video).
   await page.getByRole("radio", { name: /고급형/ }).click()
   await page.getByRole("button", { name: "다음으로", exact: true }).click()
@@ -521,9 +533,10 @@ try {
 
   await check("browser: 특별 연출 shows on 정보 입력 only for 고급형; off → no concept style, on → concept film", async () => {
     const toInput = async (page, premium) => {
-      await page.goto(base)
+      await page.goto(`${base}?premiumui`)
       await page.getByRole("button", { name: "홍보물 만들기", exact: true }).first().click()
       await page.locator("#product-photo").setInputFiles(photo)
+      await keepPhoto(page)
       if (premium) await page.getByRole("radio", { name: /고급형/ }).click()
       await page.getByRole("button", { name: "다음으로", exact: true }).click()
       await page.getByLabel("제품 이름", { exact: true }).fill("수제 초코 생크림 케이크")
@@ -565,9 +578,10 @@ try {
   await check("browser: 기본형 (the default) never asks for the paid AI video", async () => {
     const { page, errors, counts } = await newPage()
     await stubVideoFlow(page, counts, [{ status: "queued" }])
-    await page.goto(base)
+    await page.goto(`${base}?premiumui`)
     await page.getByRole("button", { name: "홍보물 만들기", exact: true }).first().click()
     await page.locator("#product-photo").setInputFiles(photo)
+    await keepPhoto(page)
     assert.equal(await page.getByRole("radio", { name: /기본형/ }).getAttribute("aria-checked"), "true")
     await page.getByRole("button", { name: "다음으로", exact: true }).click()
     await page.getByLabel("제품 이름", { exact: true }).fill("기본형 테스트")
@@ -740,9 +754,10 @@ try {
     await page.addInitScript(fastTimers)
     // Keep the progress screen up: hold promo-text (capped by the client) and answer status slowly.
     await stubVideoFlow(page, counts, [{ status: "queued" }])
-    await page.goto(base)
+    await page.goto(`${base}?premiumui`)
     await page.getByRole("button", { name: "홍보물 만들기", exact: true }).first().click()
     await page.locator("#product-photo").setInputFiles(photo)
+    await keepPhoto(page)
     await page.getByRole("radio", { name: /고급형/ }).click()
     await page.getByRole("button", { name: "다음으로", exact: true }).click()
     await page.getByLabel("제품 이름", { exact: true }).fill("취소 테스트")

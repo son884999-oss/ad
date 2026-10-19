@@ -9,6 +9,17 @@ import { Readable } from "node:stream"
 import { resolve } from "node:path"
 import { chromium } from "playwright"
 import analyzePhotoHandler from "../api/analyze-photo.js"
+// Plan C: 다음으로 on the photo step asks "배경을 광고 사진처럼 바꿀까요?"; these checks keep the photo. Registered
+// once per page after the first photo: whenever the popup shows, 그대로 쓰기 is pressed before the next action.
+const keptPages = new WeakSet()
+const keepPhoto = async (page) => {
+  if (keptPages.has(page)) return
+  keptPages.add(page)
+  await page.addLocatorHandler(page.getByRole("dialog", { name: /배경을 광고 사진처럼/ }), async (dialog) => {
+    await dialog.getByRole("button", { name: /그대로/ }).click()
+  })
+}
+
 
 const base = process.argv[2] || "http://127.0.0.1:5173/"
 const coffee = resolve("public/assets/reference-fresh/coffee.webp")
@@ -139,6 +150,7 @@ try {
       const navTop = await page.evaluate(() => { const n = document.querySelector(".studio-bottom-nav"); return n && !n.classList.contains("is-top") ? n.getBoundingClientRect().top : innerHeight })
       assert.ok(box.y + box.height <= navTop + 1, `guide not under the bottom nav (${width}×${height})`)
       await page.locator("#product-photo").setInputFiles(coffee)
+      await keepPhoto(page)
       await ready(page)
       assert.equal(await guide.count(), 0, "replaced by the photo-ready card")
       await done(page)
@@ -149,6 +161,7 @@ try {
     for (const name of ["coffee", "cake", "store"]) {
       const page = await open()
       await page.locator("#product-photo").setInputFiles(resolve(`public/assets/reference-fresh/${name}.webp`))
+      await keepPhoto(page)
       await ready(page)
       await settle(page)
       assert.equal(await warning(page).count(), 0, name)
@@ -160,6 +173,7 @@ try {
   await check("blurry photo → 흐려요 warning; 다시 찍기 shows camera/album; 그대로 쓰기 continues", async () => {
     const page = await open({ touch: true })
     await page.locator("#product-photo").setInputFiles(await variant(page, "blur(4px)"))
+    await keepPhoto(page)
     await warning(page).getByText("사진이 흐려요.", { exact: false }).waitFor()
     assert.equal(await page.locator(".photo-check").getAttribute("aria-live"), "polite")
     assert.equal(await button(page, "다음으로").count(), 0, "warning replaces 다음으로")
@@ -168,9 +182,11 @@ try {
     const chooser = page.waitForEvent("filechooser")
     await button(page, "앨범에서 고르기").click()
     await (await chooser).setFiles(coffee)
+    await keepPhoto(page)
     await page.waitForFunction(() => !document.querySelector(".photo-check-warning") && document.querySelector(".photo-next-action"))
     // Blurry again, then keep it anyway: goes on to the info step and does not warn again.
     await page.locator("#product-photo").setInputFiles(await variant(page, "blur(4px)"))
+    await keepPhoto(page)
     await warning(page).waitFor()
     await button(page, "이 사진 그대로 쓰기").click()
     await page.getByLabel("제품 이름", { exact: true }).waitFor()
@@ -184,6 +200,7 @@ try {
   await check("PC / mouse: blurry warning offers 다른 사진 고르기 (opens the file picker)", async () => {
     const page = await open({ width: 1440, height: 900, view: "pc" })
     await page.locator("#product-photo").setInputFiles(await variant(page, "blur(4px)"))
+    await keepPhoto(page)
     await warning(page).waitFor()
     const chooser = page.waitForEvent("filechooser")
     await button(page, "다른 사진 고르기").click()
@@ -195,6 +212,7 @@ try {
     for (const easy of [false, true]) {
       const page = await open({ easy })
       await page.locator("#product-photo").setInputFiles(await variant(page, "brightness(0.2)"))
+      await keepPhoto(page)
       await warning(page).waitFor()
       const text = await warning(page).innerText()
       assert.match(text, /어두워요/)
@@ -206,6 +224,7 @@ try {
   await check("AI photoCheck isRealPhoto=false → 실제 사진이 아니에요 (on the photo step)", async () => {
     const page = await open({ analyze: json({ ...okSuggestion, photoCheck: { isRealPhoto: false, isBlurry: false, reason: "그림이에요" } }) })
     await page.locator("#product-photo").setInputFiles(coffee)
+    await keepPhoto(page)
     await warning(page).getByText("실제 사진이 아니에요.", { exact: false }).waitFor()
     assert.match(await warning(page).innerText(), /가게나 제품을 직접 찍은 사진이 좋아요/)
     assert.ok(await button(page, "이 사진 그대로 쓰기").isVisible())
@@ -217,6 +236,7 @@ try {
     const released = new Promise((r) => { release = r })
     const page = await open({ analyze: async (route) => { await released; await json({ ...okSuggestion, photoCheck: { isRealPhoto: false, isBlurry: true, reason: "" } })(route) } })
     await page.locator("#product-photo").setInputFiles(coffee)
+    await keepPhoto(page)
     await ready(page)
     assert.ok(await button(page, "다음으로").isEnabled(), "pending AI check does not block")
     await button(page, "다음으로").click()
@@ -236,6 +256,7 @@ try {
     let body = null
     const page = await open({ analyze: async (route) => { body = route.request().postDataJSON(); await json(okSuggestion)(route) } })
     await page.locator("#product-photo").setInputFiles(coffee)
+    await keepPhoto(page)
     await ready(page)
     await settle(page, 400)
     assert.equal(page.analyzeCalls, 1, "started on the photo step")
@@ -267,6 +288,7 @@ try {
     const picker = await chooser
     assert.equal(await picker.element().getAttribute("id"), "product-photo")
     await picker.setFiles(coffee)
+    await keepPhoto(page)
     await ready(page)
     // 사진 변경 on a phone offers the same choice.
     await button(page, "사진 변경").click()
