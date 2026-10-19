@@ -1,0 +1,153 @@
+/* 진짜 영상 (Higgsfield) status card and player inside the 영상 result tab. Scoped to new classes only. */
+.ai-video-player {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: #000;
+}
+
+.ai-video-status {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--color-line, #d9ded9);
+  border-radius: var(--radius-control, 12px);
+  background: var(--color-brand-soft, #eef6f1);
+  color: var(--color-ink, #1d2a24);
+}
+.ai-video-status.is-error {
+  border-color: var(--color-error, #b3261e);
+  background: var(--color-error-soft, #fdeceb);
+}
+.ai-video-status__title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.5;
+}
+.ai-video-status__meta {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 4px 12px;
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--color-muted, #4f5b55);
+}
+.ai-video-status__elapsed {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  color: var(--color-ink, #1d2a24);
+}
+
+.ai-video-progress {
+  position: relative;
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-brand, #b44d1d) 18%, transparent);
+}
+.ai-video-progress > span {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 40%;
+  border-radius: inherit;
+  background: var(--color-brand, #b44d1d);
+  animation: ai-video-indeterminate 1.6s ease-in-out infinite;
+}
+@keyframes ai-video-indeterminate {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(250%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ai-video-progress > span {
+    width: 100%;
+    animation: none;
+    opacity: 0.55;
+  }
+}
+
+.ai-video-action {
+  justify-self: start;
+  min-height: 48px;
+  padding: 10px 18px;
+  border: 1px solid var(--color-brand, #b44d1d);
+  border-radius: var(--radius-control, 12px);
+  background: var(--color-surface, #fff);
+  color: var(--color-brand, #b44d1d);
+  font-size: 17px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.ai-video-action:focus-visible {
+  outline: 3px solid var(--color-focus, #1a5fb4);
+  outline-offset: 2px;
+}
+
+.ai-video-note {
+  margin: 10px 0 0;
+  font-size: 16px;
+  line-height: 1.5;
+  font-weight: 700;
+  color: var(--color-brand, #b44d1d);
+}
+.ai-video-note.is-warning {
+  color: var(--color-muted, #4f5b55);
+  font-weight: 400;
+}
+
+/* 고급형 progress: three named steps (PremiumSteps in AiVideoPanel.tsx). */
+.premium-steps {
+  display: grid;
+  gap: 8px;
+  margin: 12px 0 0;
+  padding: 14px 16px;
+  list-style: none;
+  border: 1px solid var(--color-line, #d9ded9);
+  border-radius: var(--radius-control, 12px);
+  background: var(--color-surface, #fff);
+  color: var(--color-ink, #1d2a24);
+}
+.premium-steps__item {
+  display: grid;
+  grid-template-columns: 32px 1fr auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 40px;
+  font-size: 17px;
+  line-height: 1.4;
+  color: var(--color-muted, #4f5b55);
+}
+.premium-steps__dot {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 2px solid var(--color-line, #c9d0cb);
+  font-size: 15px;
+  font-weight: 700;
+}
+.premium-steps__meta { font-size: 15px; }
+.premium-steps__item.is-working { color: var(--color-ink, #1d2a24); font-weight: 700; }
+.premium-steps__item.is-working .premium-steps__dot {
+  border-color: var(--color-brand, #b44d1d);
+  color: var(--color-brand, #b44d1d);
+  animation: premium-step-pulse 1.6s ease-in-out infinite;
+}
+.premium-steps__item.is-done { color: var(--color-ink, #1d2a24); }
+.premium-steps__item.is-done .premium-steps__dot {
+  border-color: var(--color-brand, #b44d1d);
+  background: var(--color-brand, #b44d1d);
+  color: #fff;
+}
+@keyframes premium-step-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(180, 77, 29, 0.35); }
+  50% { box-shadow: 0 0 0 6px rgba(180, 77, 29, 0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .premium-steps__item.is-working .premium-steps__dot { animation: none; }
+}

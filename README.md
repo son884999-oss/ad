@@ -6,11 +6,11 @@
 
 저장소 루트에는 A~F 팀 폴더와 `ad_prototype`을 둡니다. `ad_prototype`은 Vercel에 연결된 React 앱입니다. Git 관리용 `.git`과 `.gitignore`는 유지합니다.
 
-홍보잇다의 시각 에셋은 **[A_손용범/assets/홍보잇다](A_손용범/assets/홍보잇다/README.md)**에 모았습니다. 생성 PNG 원본, 웹용 WebP, 승인 로고와 후보, UI 아이콘, 글꼴·라이선스·제작 기록을 구분합니다.
+팀원 작업물을 하나로 합친 앱은 `ad_prototype`입니다. 실행 방법, AI 키(`.env.local`) 설정, 팀 모듈 통합 현황은 [ad_prototype/README.md](ad_prototype/README.md)를 봅니다.
 
-복원용 백업은 저장소 밖의 `ad_restore_archive`에 보관합니다. [폴더 정리 상세](ad_prototype/docs/PROJECT_ORGANIZATION.md)를 참고하세요.
-
-UI 작업은 [프로토타입 안내](ad_prototype/README.md)와 [현재 유지보수 지침](ad_prototype/DESIGN_MAINTENANCE.md)을 따릅니다. 과거 단계별 문서는 [문서 색인](ad_prototype/docs/README.md)에서 확인합니다.
+- 작업 이력과 디자인 기준: [ad_prototype/인수인계서.md](ad_prototype/인수인계서.md)
+- 최근 진행 상황: [ad_prototype/docs/진척사항/진척사항_2026-10-20.md](ad_prototype/docs/진척사항/진척사항_2026-10-20.md) · 문서 안내: [ad_prototype/docs/README.md](ad_prototype/docs/README.md)
+- 시각 에셋(로고·일러스트·글꼴): `ad_prototype/design-assets/`, 앱에서 쓰는 사진은 `ad_prototype/public/assets/`
 
 | 구분 | 담당자 | 작업 |
 | --- | --- | --- |

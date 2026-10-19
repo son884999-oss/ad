@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react"
 import Icon from "./Icon"
+import { uiText } from "./easyText"
 
 type Kind = "all" | "poster" | "video" | "copy"
 type Step = { label: string; active: string; until: number }
@@ -26,6 +27,9 @@ const flows: Record<Kind, { heading: string; done: string; steps: Step[] }> = {
   ] },
 }
 
+/** Just before the middle step (until 68) is ticked off. */
+const HOLD = 66
+
 // Shown between "홍보물 만들기" and the results: the user's own photo becomes a poster preview
 // while a short checklist ticks off. Progress is time-based for the prototype and only reaches
 // 100% once the real preview is ready.
@@ -36,7 +40,9 @@ export default function GenerationProgress({
   ready,
   onDone,
   onCancel,
+  easyMode = false,
 }: {
+  easyMode?: boolean
   kind: Kind
   imageUrl: string
   title: string
@@ -44,7 +50,16 @@ export default function GenerationProgress({
   onDone: () => void
   onCancel: () => void
 }) {
+  const t = (text: string) => uiText(text, easyMode)
   const [percent, setPercent] = useState(0)
+  // Until the result is really ready the bar holds at HOLD, inside the middle (text) step, so that step is never
+  // ticked off while the AI text is still coming; after 3 s it says so instead of looking frozen.
+  const [slow, setSlow] = useState(false)
+  useEffect(() => {
+    if (ready || percent < HOLD) return
+    const timer = window.setTimeout(() => setSlow(true), 3000)
+    return () => window.clearTimeout(timer)
+  }, [ready, percent])
   const headingRef = useRef<HTMLHeadingElement>(null)
   const doneRef = useRef(onDone)
   doneRef.current = onDone
@@ -55,8 +70,10 @@ export default function GenerationProgress({
 
   useEffect(() => {
     const timer = window.setInterval(() => {
-      setPercent((value) => Math.min(ready ? 100 : 95, value + (value < 70 ? 2 : 1)))
-    }, 40)
+      // Owner, 2026-10-20: while the results are being made the bar creeps at 2.5% a second (it used to reach the hold
+      // point in about two seconds and stand still); once everything is ready it runs at 12.5% a second to 100%.
+      setPercent((value) => Math.min(ready ? 100 : HOLD, value + (ready ? 1.25 : 0.25)))
+    }, 100)
     return () => window.clearInterval(timer)
   }, [ready])
 
@@ -74,7 +91,7 @@ export default function GenerationProgress({
   return (
     <section className="generation" aria-labelledby="generation-title">
       <h2 id="generation-title" ref={headingRef} tabIndex={-1} data-screen-heading>
-        {heading}
+        {t(heading)}
       </h2>
       <div className={`generation-card is-${kind}${percent >= 100 ? " is-done" : ""}`} aria-hidden="true">
         <div className="generation-photo">
@@ -112,33 +129,34 @@ export default function GenerationProgress({
                 {state === "done" && <Icon name="check" size={16} />}
               </span>
               <span>
-                {state === "current" ? step.active : step.label}
-                <span className="sr-only">{state === "done" ? " 완료" : state === "current" ? " 진행 중" : " 대기"}</span>
+                {t(state === "current" ? step.active : step.label)}
+                <span className="sr-only">{t(state === "done" ? " 완료" : state === "current" ? " 진행 중" : " 대기")}</span>
               </span>
             </li>
           )
         })}
       </ol>
       <p className="sr-only" role="status">
-        {activeIndex < steps.length ? steps[activeIndex].active : done}
+        {t(activeIndex < steps.length ? steps[activeIndex].active : done)}
       </p>
       <div className="generation-bar">
         <div
           className="generation-track"
           role="progressbar"
-          aria-label="홍보물 만드는 중"
+          aria-label={t("홍보물 만드는 중")}
           aria-valuemin={0}
           aria-valuemax={100}
-          aria-valuenow={percent}
+          aria-valuenow={Math.floor(percent / 10) * 10}
         >
           <span style={{ width: `${percent}%` }} />
         </div>
         <span className="generation-percent" aria-hidden="true">
-          {percent}%
+          {Math.floor(percent)}%
         </span>
       </div>
+      <p className="generation-eta" role="status">{t(slow ? "조금 더 걸리고 있어요. 곧 나와요." : "보통 15초쯤 걸려요.")}</p>
       <button type="button" className="studio-secondary generation-cancel" onClick={onCancel}>
-        취소
+        {t("취소")}
       </button>
     </section>
   )

@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>홍보잇다 기술 설계서</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css">
+<style>
+  /* 홍보잇다 기술 설계서 (제출용), 2026-10-19. Two A4-landscape sheets (1600 × 1131): ① 시스템 구조, ② 비용. The 추후 검토 과제 sheet
+     (특급 영상, 결제) is kept locally until the team has reviewed it (outputs/내부문서_로컬/). Source of 기술문서_<data-file>.png and 기술문서.pdf (scripts/render-tech-doc.mjs).
+     The processing-flow / tech-stack sheet is kept locally only (ad_prototype/outputs/내부문서_로컬/). */
+  :root {
+    --brand: #b44d1d; --brand-dark: #93390f; --brand-soft: #fdf0e6;
+    --ink: #2b2420; --sub: #6e625a; --line: #e8dfd6; --card: #faf6f1; --paper: #ffffff;
+    --ai: #2f5d50; --ai-soft: #e7f1ec; --data: #2c4f7c; --data-soft: #e8eff8;
+    --later: #7a4b9a; --later-soft: #f3ecf8;
+  }
+  * { box-sizing: border-box; }
+  @page { size: 1600px 1131px; margin: 0; }
+  body { margin: 0; background: #ece6df; color: var(--ink); font-family: "Pretendard Variable", Pretendard, "Malgun Gothic", sans-serif; }
+  .sheet { width: 1600px; height: 1131px; padding: 44px 56px 30px; background: var(--paper); margin: 0 auto 24px; display: flex; flex-direction: column; overflow: hidden; page-break-after: always; break-after: page; }
+  @media print { body { background: var(--paper); } .sheet { margin: 0; } }
+
+  header { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 3px solid var(--ink); padding-bottom: 12px; margin-bottom: 22px; }
+  h1 { margin: 0; font-size: 34px; letter-spacing: -0.5px; }
+  h1 span { color: var(--brand); }
+  header p { margin: 5px 0 0; color: var(--sub); font-size: 17px; }
+  .meta { text-align: right; color: var(--sub); font-size: 14px; line-height: 1.5; }
+  .meta b { color: var(--ink); font-size: 20px; }
+  h2 { margin: 0 0 10px; font-size: 22px; }
+  h2 small { font-weight: 600; color: var(--sub); font-size: 15px; margin-left: 6px; }
+  footer { margin-top: auto; padding-top: 8px; border-top: 1px solid var(--line); display: flex; justify-content: space-between; color: var(--sub); font-size: 13px; }
+
+  .chip { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 13.5px; font-weight: 700; white-space: nowrap; }
+  .chip.free { background: var(--brand-soft); color: var(--brand-dark); }
+  .chip.ai { background: var(--ai-soft); color: var(--ai); }
+  .chip.data { background: var(--data-soft); color: var(--data); }
+
+  /* ---------- ① 가: diagram, titles only ---------- */
+  .key { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 22px; }
+  .key div { border-radius: 16px; padding: 16px 20px; font-size: 17px; line-height: 1.55; }
+  .key .k1 { background: var(--brand); color: #fff; }
+  .key .k2 { background: var(--ai-soft); color: var(--ai); border: 2px solid #b9d4c8; }
+  .key b { font-size: 20px; }
+  .flow-head, .flow { display: grid; grid-template-columns: 230px 34px 1fr 34px 1fr 34px 270px; }
+  .flow-head div { font-size: 15px; font-weight: 800; letter-spacing: 1px; color: var(--sub); padding: 0 4px 8px; }
+  .flows { display: grid; gap: 11px; }
+  .flow .to { display: flex; align-items: center; justify-content: center; color: var(--brand); font-weight: 900; font-size: 24px; }
+  .cell { border-radius: 13px; padding: 15px 16px; font-size: 20px; font-weight: 800; line-height: 1.3; border: 2px solid var(--line); background: var(--paper); display: flex; align-items: center; }
+  .cell.in { background: var(--card); }
+  .cell.br { border-color: #f0cdb4; background: var(--brand-soft); }
+  .cell.sv { border-color: #b9d4c8; background: var(--ai-soft); }
+  .cell.db { border-color: #bfd0e6; background: var(--data-soft); }
+  .cell.none { border-style: dashed; color: var(--sub); font-weight: 600; font-size: 17px; justify-content: center; }
+  .cell.out { border-color: var(--ink); color: var(--brand-dark); }
+  .cell small { font-weight: 600; font-size: 16px; color: var(--sub); margin-left: 8px; }
+
+  /* ---------- ① 나: principles ---------- */
+  .panels { display: grid; gap: 18px; }
+  .panel { border: 2px solid var(--line); border-radius: 18px; padding: 20px 26px; font-size: 18px; line-height: 1.65; }
+  .panel h3 { margin: 0 0 8px; font-size: 23px; }
+  .panel h3 span { color: var(--brand); margin-right: 8px; }
+  .panel h3 small { font-size: 16px; color: var(--sub); font-weight: 600; margin-left: 8px; }
+  .panel ul { margin: 0; padding-left: 22px; }
+  .aichain { margin-top: 16px; border: 2px solid var(--line); border-radius: 16px; padding: 12px 20px; display: flex; align-items: center; gap: 18px; font-size: 18px; }
+  .aichain b { font-size: 19px; white-space: nowrap; }
+  .aichain p { margin: 0; color: var(--sub); font-size: 15px; line-height: 1.45; }
+  .aichain .chain { margin: 0; flex: none; }
+  .chain { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 6px 0 10px; }
+  .chain span { padding: 8px 15px; border-radius: 11px; background: var(--ai-soft); color: var(--ai); font-weight: 800; font-size: 18px; }
+  .chain span.last { background: var(--brand-soft); color: var(--brand-dark); }
+  .chain i { font-style: normal; color: var(--sub); font-weight: 900; font-size: 20px; }
+
+  /* ---------- ② 가: cost ---------- */
+  table { width: 100%; border-collapse: collapse; }
+  .cost th { text-align: left; font-size: 14.5px; color: var(--sub); font-weight: 800; padding: 0 12px 6px; border-bottom: 2px solid var(--ink); }
+  .cost td { padding: 11px 12px; font-size: 18px; line-height: 1.45; border-bottom: 1px solid var(--line); vertical-align: top; }
+  .cost td:first-child { font-weight: 800; width: 300px; }
+  .cost td.won { font-weight: 800; white-space: nowrap; text-align: right; font-size: 19px; }
+  .cost td.won.zero { color: var(--brand-dark); }
+  .cost td small { color: var(--sub); font-size: 15px; }
+  .sum { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin: 18px 0; }
+  .sum div { border-radius: 14px; padding: 12px 18px; background: var(--card); border: 2px solid var(--line); font-size: 16px; line-height: 1.4; }
+  .sum b { display: block; font-size: 28px; color: var(--brand-dark); }
+  .safety { border: 2px solid var(--line); border-radius: 16px; padding: 14px 22px; font-size: 17px; line-height: 1.65; }
+  .safety h3 { margin: 0 0 6px; font-size: 20px; }
+  .safety ul { margin: 0; padding-left: 20px; columns: 2; column-gap: 30px; }
+
+  /* ---------- ② 나: later ---------- */
+  .later { border: 2px dashed var(--later); border-radius: 18px; padding: 16px 24px; background: #fcfafe; margin-bottom: 14px; }
+  .later h3 { margin: 0 0 4px; font-size: 24px; color: var(--later); }
+  .later h3 small { font-size: 16px; color: var(--sub); font-weight: 600; margin-left: 6px; }
+  .later p { margin: 4px 0 8px; font-size: 17px; line-height: 1.55; }
+  .later .steps { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 6px 0 10px; }
+  .later .steps span { padding: 6px 13px; border-radius: 10px; background: var(--later-soft); color: var(--later); font-weight: 800; font-size: 16px; }
+  .later .steps i { font-style: normal; color: var(--sub); font-weight: 900; }
+  .later dl { display: grid; grid-template-columns: 110px 1fr; gap: 5px 12px; margin: 0; font-size: 16.5px; line-height: 1.5; }
+  .later dt { font-weight: 800; color: var(--later); }
+  .later dd { margin: 0; }
+  .compare { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 6px 0 10px; }
+  .compare div { border-radius: 12px; padding: 9px 14px; font-size: 16px; line-height: 1.5; }
+  .compare .basic { background: var(--card); border: 2px solid var(--line); }
+  .compare .premium { background: var(--later-soft); border: 2px solid #d6c3e4; }
+  .compare b { display: block; font-size: 17px; }
+  .worlds { width: 100%; border-collapse: collapse; margin: 2px 0 10px; }
+  .worlds td { padding: 4px 10px; font-size: 15.5px; line-height: 1.4; border-bottom: 1px solid #e9def2; vertical-align: top; }
+  .worlds td:first-child { font-weight: 800; color: var(--later); white-space: nowrap; width: 150px; }
+  .oss { font-size: 14px; line-height: 1.55; color: var(--sub); border-top: 1px solid var(--line); padding-top: 8px; }
+  .oss b { color: var(--ink); }
+</style>
+</head>
+<body>
+
+<!-- ================= ① 가 ================= -->
+<section class="sheet" data-file="1">
+  <header>
+    <div>
+      <h1><span>홍보잇다</span> 기술 설계서 · ① 시스템 통합 구조도</h1>
+      <p>입력, 처리, 산출물의 관계를 한 장으로 정리하였습니다.</p>
+    </div>
+    <div class="meta"><b>1 / 2</b><br>작성 기준일 2026-10-19</div>
+  </header>
+
+  <div class="key">
+    <div class="k1"><b>디자인 · 연출 · 편집 · 음향 처리에는 생성형 AI API를 사용하지 않습니다</b><br>포스터, 영상, 자막, 배경음은 모두 사용자 단말의 브라우저에서 자체 개발 코드와 오픈소스로 처리합니다. 따라서 결과가 즉시 생성되고 서버 비용이 발생하지 않습니다.</div>
+    <div class="k2"><b>외부 AI는 두 가지 기능에만 사용합니다</b><br>① 문구 생성: 사진을 분석해 정보 입력 칸 자동 채움, 채널별 홍보 문구 작성<br>② 배경 변환: 사용자가 선택한 경우에만 수행합니다.</div>
+  </div>
+
+  <div class="flow-head">
+    <div>입력 (사용자)</div><div></div>
+    <div>브라우저 처리 <span class="chip free">무료 · 즉시</span></div><div></div>
+    <div>서버 · 외부 서비스 <span class="chip ai">AI</span> <span class="chip data">저장</span></div><div></div>
+    <div>산출물</div>
+  </div>
+  <div class="flows">
+    <div class="flow">
+      <div class="cell in">① 제품 사진</div><div class="to">→</div>
+      <div class="cell br">사진 품질 점검</div><div class="to">→</div>
+      <div class="cell sv">사진 분석 <small>Claude · Gemini</small></div><div class="to">→</div>
+      <div class="cell out">정보 입력 칸 자동 채움</div>
+    </div>
+    <div class="flow">
+      <div class="cell in">② 배경 변환 여부</div><div class="to">→</div>
+      <div class="cell br">배경 변환 선행 요청</div><div class="to">→</div>
+      <div class="cell sv">광고 배경 생성 <small>Gemini</small></div><div class="to">→</div>
+      <div class="cell out">변환 사진 / 원본 사진</div>
+    </div>
+    <div class="flow">
+      <div class="cell in">③ 정보 입력</div><div class="to">→</div>
+      <div class="cell br">AI가 채운 내용 확인 · 수정 (직접 · 음성 입력)</div><div class="to">→</div>
+      <div class="cell sv">홍보 문구 생성 및 검수 <small>Claude · Gemini</small></div><div class="to">→</div>
+      <div class="cell out">채널별 홍보 문구</div>
+    </div>
+    <div class="flow">
+      <div class="cell in">④ 생성 요청</div><div class="to">→</div>
+      <div class="cell br">포스터 생성</div><div class="to">→</div>
+      <div class="cell none">서버 · AI 미사용 · 0원</div><div class="to">→</div>
+      <div class="cell out">포스터 PNG</div>
+    </div>
+    <div class="flow">
+      <div class="cell in">⑤ 영상</div><div class="to">→</div>
+      <div class="cell br">영상 생성 (자막 · 배경음 포함)</div><div class="to">→</div>
+      <div class="cell none">서버 · AI 미사용 · 0원</div><div class="to">→</div>
+      <div class="cell out">6초 MP4</div>
+    </div>
+    <div class="flow">
+      <div class="cell in">⑥ 로그인 (선택)</div><div class="to">→</div>
+      <div class="cell br">기록 동기화</div><div class="to">→</div>
+      <div class="cell db">회원 · 저장 <small>Supabase</small></div><div class="to">→</div>
+      <div class="cell out">내 홍보물</div>
+    </div>
+  </div>
+
+  <div class="aichain"><b>문구 생성 AI 대체 순서</b><div class="chain"><span>Claude Haiku 4 (기관 제공)</span><i>→</i><span>Gemini 무료</span><i>→</i><span>Gemini 유료 (일 500원 한도)</span><i>→</i><span class="last">내장 기본 문구</span></div><p>장애 시 다음 순서로 자동 전환하며, 모든 AI가 실패하더라도 결과물은 생성됩니다.</p></div>
+
+  <footer><span>범례: 갈색 = 브라우저 처리(무료) · 초록 = 서버 경유 AI · 파랑 = 회원·저장 · 점선 = 서버 미경유</span><span>홍보잇다</span></footer>
+</section>
+
+<!-- ================= ② 가 ================= -->
+<section class="sheet" data-file="2">
+  <header>
+    <div>
+      <h1><span>홍보잇다</span> 기술 설계서 · ② 단계별 비용</h1>
+      <p>구현된 기능의 단계별 비용과 비용 통제 장치를 정리하였습니다.</p>
+    </div>
+    <div class="meta"><b>2 / 2</b><br>작성 기준일 2026-10-19</div>
+  </header>
+
+  <h2>단계별 예상 비용 <small>홍보물 1건 기준</small></h2>
+  <table class="cost">
+    <thead><tr><th>처리 단계</th><th>사용 자원</th><th style="text-align:right">비용</th></tr></thead>
+    <tbody>
+      <tr><td>접속 · 화면 제공</td><td>Vercel 무료 플랜</td><td class="won zero">0원</td></tr>
+      <tr><td>포스터 · 영상 · 자막 · 음향</td><td>사용자 단말의 브라우저 <small>(사용자 수와 무관하게 서버 비용 없음)</small></td><td class="won zero">0원</td></tr>
+      <tr><td>사진 분석</td><td>Claude(기관 제공) → Gemini 무료 <small>(둘 다 실패한 경우에만 유료 Gemini, 10원 이하)</small></td><td class="won zero">0원</td></tr>
+      <tr><td>홍보 문구 생성 · 검수</td><td>위와 동일한 순서</td><td class="won zero">0원</td></tr>
+      <tr><td>배경 변환 <small>(선택 시)</small></td><td>Gemini 이미지 생성 1장 <small>(공식 요금: 1K 이미지 $0.034 + 입력 소량. 동일 사진 재요청 시 추가 과금 없음)</small></td><td class="won">약 50원</td></tr>
+      <tr><td>회원 · 홍보물 저장</td><td>Supabase 무료 플랜 <small>(DB 500MB, 파일 1GB)</small></td><td class="won zero">0원</td></tr>
+    </tbody>
+  </table>
+  <div class="sum">
+    <div><b>0원</b>배경 변환 미선택 시 (홍보물 1건)</div>
+    <div><b>약 50원</b>배경 변환 선택 시 (홍보물 1건)</div>
+    <div><b>일 500원</b>유료 AI 일일 상한, 배경 변환 약 9장 (초과 시 원본 사진·기본 문구 사용)</div>
+  </div>
+  <div class="safety">
+    <h3>비용 통제 및 보안 장치 (구현 완료)</h3>
+    <ul>
+      <li>유료 AI 일일 비용 집계 및 상한(500원)</li>
+      <li>사용자별 분당 호출 횟수 제한</li>
+      <li>동일 요청 중복 과금 방지</li>
+      <li>유료 호출 실패 시 자동 재시도 없음</li>
+      <li>API 키는 서버에만 보관, 로그 기록 금지</li>
+      <li>모든 장애에 무료 대체 경로 제공</li>
+      <li>회원 데이터 본인 외 접근 차단</li>
+      <li>자동 점검 시 유료 AI 호출 없음</li>
+    </ul>
+  </div>
+
+  <footer><span></span><span>홍보잇다</span></footer>
+</section>
+
+</body>
+</html>
