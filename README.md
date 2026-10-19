@@ -9,7 +9,7 @@
 팀원 작업물을 하나로 합친 앱은 `ad_prototype`입니다. 실행 방법, AI 키(`.env.local`) 설정, 팀 모듈 통합 현황은 [ad_prototype/README.md](ad_prototype/README.md)를 봅니다.
 
 - 작업 이력과 디자인 기준: [ad_prototype/인수인계서.md](ad_prototype/인수인계서.md)
-- 최근 진행 상황: [ad_prototype/docs/진척사항_2026-10-16.md](ad_prototype/docs/진척사항_2026-10-16.md)
+- 최근 진행 상황: [ad_prototype/docs/진척사항/진척사항_2026-10-20.md](ad_prototype/docs/진척사항/진척사항_2026-10-20.md) · 문서 안내: [ad_prototype/docs/README.md](ad_prototype/docs/README.md)
 - 시각 에셋(로고·일러스트·글꼴): `ad_prototype/design-assets/`, 앱에서 쓰는 사진은 `ad_prototype/public/assets/`
 
 | 구분 | 담당자 | 작업 |

@@ -4,8 +4,8 @@
 팀원 폴더 `A_*`~`F_*`는 **읽기만** 한다.
 
 ## 먼저 볼 문서
-- **새 컴퓨터·새 세션이면 먼저: `ad_prototype/docs/시작안내.md`** — 설치, `.env.local` 다시 만들기, 넘어가지 않는 것, 지금 상태, 다음 할 일, 점검 명령.
-- 지금 방향과 결정: `ad_prototype/docs/진척사항_2026-10-20.md`(최신) · 전날 `ad_prototype/docs/진척사항_2026-10-19.md` · C안 결정 배경 `ad_prototype/docs/진척사항_2026-10-18.md` 6-00절 · 흐름도 `ad_prototype/docs/서비스흐름도/서비스흐름도.png`
+- **무엇이든 먼저: `ad_prototype/docs/README.md`** — 문서 지도, 지금 상태, 다음 할 일, 설치·`.env.local`, 점검 명령, 규칙 요약. (옛 `시작안내.md`는 여기로 합쳐짐)
+- 지금 방향과 결정: `ad_prototype/docs/진척사항/진척사항_2026-10-20.md`(최신) · 전날 `ad_prototype/docs/진척사항/진척사항_2026-10-19.md` · C안 결정 배경 `ad_prototype/docs/진척사항/진척사항_2026-10-18.md` 6-00절 · 흐름도 `ad_prototype/docs/서비스흐름도/서비스흐름도.png`
 - **보류 목록: `ad_prototype/docs/나중에_할일.md`** — 사용자가 "[특급] 넣어 줘", "[결제] 하자", "나중에 할 일 ○○"라고 하면 이 문서의 해당 항목을 따른다.
 - 배포: `ad_prototype/docs/배포_체크리스트.md` · 회원가입 설정: `ad_prototype/docs/회원가입_설정안내.md` · 인수인계: `ad_prototype/인수인계서.md` 맨 위 절 · 미룬 일: `ad_prototype/docs/품질개선_로드맵.md`
 - 기술 문서: 팀 공유 `ad_prototype/docs/기술문서/`(2장), 교수님 제출 `ad_prototype/docs/기술설계서_통합본/`(6장, `통합본_만들기.mjs`로 다시 만듦)
@@ -17,7 +17,7 @@
 - 푸시는 `feature/UI-Screen`만. `main` 병합과 Vercel 설정은 사용자가 직접.
 - **유료 호출**(Gemini 그림, Higgsfield 영상·장면)은 사용자가 정한 예산·횟수 안에서만. **쓰기 전에** `ad_prototype/docs/디자인개선_루프.md` "호출 사용량"에 먼저 적고 커밋한다. 실패해도 자동으로 다시 시도하지 않는다.
 - 내부 테스트에 홍보 문구가 필요하면 AI를 다시 부르지 말고 `ad_prototype/docs/기준문구/홍보글_채널별_{케이크,라테}.json`을 쓴다.
-- 결과는 실제 출력으로만 판단한다. 바꾼 뒤에는 tsc·build·`verify:*`(현재 유효한 것)·`audit:screens`·`eval:*`를 돌린다(SKILL.md 5절, 명령 모음은 시작안내 6절).
+- 결과는 실제 출력으로만 판단한다. 바꾼 뒤에는 tsc·build·`verify:*`(현재 유효한 것)·`audit:screens`·`eval:*`를 돌린다(SKILL.md 5절, 명령 모음은 docs/README.md 4절).
 - 사용자가 공유하지 않기로 한 내부 문서는 `ad_prototype/outputs/내부문서_로컬/`(git 제외)에 둔다. 공유 문서에 팀원 이식 이야기, 검토 안 된 과제(특급 영상·결제)를 넣지 않는다.
 
 ## 현재 방향 (2026-10-19, 구현됨)
