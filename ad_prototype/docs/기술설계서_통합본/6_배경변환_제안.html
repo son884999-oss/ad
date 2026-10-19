@@ -12,6 +12,10 @@
     .shots figcaption.after { color: var(--brand-dark); }
     .shots i { font-style: normal; font-weight: 900; color: var(--brand); font-size: 26px; text-align: center; }
     .pair p { margin: 6px 0 0; font-size: 13px; line-height: 1.5; color: var(--sub); }
+    .pair.compact { padding: 10px 14px; }
+    .pair.compact h3 { margin-bottom: 4px; }
+    .pair.compact .shots img { height: 175px; }
+    .pair.compact p { margin-top: 4px; font-size: 12.5px; line-height: 1.45; }
     .notes { display: grid; gap: 12px; align-content: start; }
     .note6 { border: 2px solid var(--line); border-radius: 16px; padding: 12px 18px; font-size: 14.5px; line-height: 1.6; }
     .note6 h3 { margin: 0 0 4px; font-size: 17px; }
@@ -79,6 +83,15 @@
           <li><b>한계:</b> 촬영 각도나 제품 모양이 바뀌어 다시 그려지는 경우가 있습니다(사례 2). 이에 원본 사진 선택을 항상 보장하고, 결과물에는 "AI 활용" 표시를 넣습니다.</li>
           <li><b>향후 개선안:</b> 제품 영역만 오려 내고 배경만 생성해 합성하면 제품이 바뀌는 문제를 근본적으로 없앨 수 있으나, 합성 품질 검토가 필요합니다.</li>
         </ul>
+      </div>
+      <div class="pair compact">
+        <h3>사례 3 · 연어 초밥<small>휴대폰으로 직접 촬영한 사진, 현재 적용 설정으로 생성</small></h3>
+        <div class="shots">
+          <figure><img src="img/salmon-before.jpg" alt="원본 연어 초밥 사진"><figcaption>원본 (식탁 위, 위에서 촬영)</figcaption></figure>
+          <i>→</i>
+          <figure><img src="img/salmon-after.jpg" alt="배경 변환 후 연어 초밥 사진"><figcaption class="after">배경 변환 후 (6.1초, 약 50원)</figcaption></figure>
+        </div>
+        <p>연어 10피스의 개수·결·배치와 곁들임(초생강, 락교, 와사비)이 유지되고, 접시·국·소스통·음료 캔이 정리되었습니다. 촬영 각도가 비스듬하게 바뀌고 연어 색이 조금 진해졌습니다.</p>
       </div>
     </div>
   </div>
