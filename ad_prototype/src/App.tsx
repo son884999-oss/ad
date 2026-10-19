@@ -820,10 +820,16 @@ function PosterStyleControls({
   onChange: (next: { posterRatio: PosterRatioKey; posterLayout: PosterLayoutKey; posterTheme: "" }) => void
 }) {
   const t = (text: string) => uiText(text, easyMode)
-  const pick = (posterRatio: PosterRatioKey) => onChange({ posterRatio, posterLayout: "vertical", posterTheme: "" })
+  const groupRef = useRef<HTMLFieldSetElement>(null)
+  // The new size changes the poster's height, which pushed the choices out of view on the basic screen (UX audit
+  // 2026-10-20): once the new poster is drawn, the choices are brought back into view.
+  const pick = (posterRatio: PosterRatioKey) => {
+    onChange({ posterRatio, posterLayout: "vertical", posterTheme: "" })
+    for (const wait of [250, 700]) window.setTimeout(() => groupRef.current?.scrollIntoView({ block: "nearest" }), wait)
+  }
   const selected = posterRatioOptions.findIndex(([id]) => id === ratio)
   return (
-    <fieldset className="poster-use" role="radiogroup">
+    <fieldset ref={groupRef} className="poster-use" role="radiogroup">
       <legend className="sr-only">{t("어디에 올릴 포스터인가요?")}</legend>
       <div>
         {posterRatioOptions.map(([id, label], index) => (

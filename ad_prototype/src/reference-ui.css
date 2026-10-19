@@ -979,3 +979,6 @@ html[data-layout=mobile] .easy-mode .results-step:not(.is-single) .result-card.r
 .result-next { display:flex;align-items:center;justify-content:center;gap:6px;width:100%;min-height:max(52px,calc(54px * var(--s)));margin-top:10px;border:2px solid var(--color-brand);border-radius:var(--radius-control,10px);background:#fff;color:var(--color-brand-hover);font-size:max(17px,calc(17px * var(--s)));font-weight:800; }
 .easy-mode .result-next { min-height:60px;font-size:calc(20px * var(--s)); }
 html[data-layout=mobile] .results-step:not(.is-single) .result-card > .result-next { order:3; }
+/* A check on the picked size and channel (UX audit 2026-10-20: colour and border alone; KRDS asks for 2+ cues). */
+.poster-use button[aria-checked=true] > span::before,
+.channel-choice button[aria-checked=true]::before { content:"✓ ";font-weight:900; }
