@@ -51,13 +51,22 @@ export async function prepareVideoSound(stream: MediaStream, { musicUrl, seconds
     audio = new AudioContext()
     const [music, effect] = await Promise.all([loadBuffer(audio, musicUrl), loadBuffer(audio, AUDIO + TRANSITION).catch(() => null)])
     const destination = audio.createMediaStreamDestination()
-    // A gentle limiter last: two sounds together never go past full scale (the old mix could).
+    // The owner heard the mix as sharp and piercing (2026-10-19). Measured: the transition chime put its energy in
+    // 2–4 kHz (only 7 dB under its total, peaks at -15 dB in that band) and the Vivaldi violins are bright above
+    // 4 kHz. So: everything passes a high shelf (-8 dB above 3 kHz) for a warmer sound, the effect is low-passed
+    // and softened below, and the limiter is only a safety catch near full scale (the old -10 dB / 8:1 setting
+    // pressed on every piano attack).
     const limiter = audio.createDynamicsCompressor()
-    limiter.threshold.value = -10
-    limiter.knee.value = 6
-    limiter.ratio.value = 8
-    limiter.attack.value = 0.003
-    limiter.release.value = 0.25
+    limiter.threshold.value = -3
+    limiter.knee.value = 3
+    limiter.ratio.value = 12
+    limiter.attack.value = 0.005
+    limiter.release.value = 0.3
+    const warmth = audio.createBiquadFilter()
+    warmth.type = "highshelf"
+    warmth.frequency.value = 3000
+    warmth.gain.value = -8
+    warmth.connect(limiter)
     limiter.connect(destination)
     destination.stream.getAudioTracks().forEach((track) => stream.addTrack(track))
     const context = audio
@@ -68,10 +77,10 @@ export async function prepareVideoSound(stream: MediaStream, { musicUrl, seconds
       bed.buffer = music
       const bedGain = context.createGain()
       bedGain.gain.setValueAtTime(0.0001, at)
-      bedGain.gain.linearRampToValueAtTime(0.75, at + 0.3)
-      bedGain.gain.setValueAtTime(0.75, at + Math.max(0.4, seconds - 1))
+      bedGain.gain.linearRampToValueAtTime(0.9, at + 0.3)
+      bedGain.gain.setValueAtTime(0.9, at + Math.max(0.4, seconds - 1))
       bedGain.gain.linearRampToValueAtTime(0.0001, at + seconds)
-      bed.connect(bedGain).connect(limiter)
+      bed.connect(bedGain).connect(warmth)
       bed.start(at)
       bed.stop(at + seconds + 0.05)
       if (!effect) return
@@ -79,9 +88,15 @@ export async function prepareVideoSound(stream: MediaStream, { musicUrl, seconds
         if (cue >= seconds) continue
         const shimmer = context.createBufferSource()
         shimmer.buffer = effect
+        // Low-passed (the chime's 2–4 kHz edge goes), quieter, and a 40 ms fade-in instead of a sharp onset.
+        const soften = context.createBiquadFilter()
+        soften.type = "lowpass"
+        soften.frequency.value = 1800
+        soften.Q.value = 0.5
         const shimmerGain = context.createGain()
-        shimmerGain.gain.value = 0.55
-        shimmer.connect(shimmerGain).connect(limiter)
+        shimmerGain.gain.setValueAtTime(0.0001, at + cue)
+        shimmerGain.gain.linearRampToValueAtTime(0.3, at + cue + 0.04)
+        shimmer.connect(soften).connect(shimmerGain).connect(warmth)
         shimmer.start(at + cue)
       }
     }
