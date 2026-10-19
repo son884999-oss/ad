@@ -233,7 +233,7 @@ for (const [width, height] of sizes) {
     await page.getByRole("button", { name: "자동으로 채워 주기" }).click()
     await page.waitForFunction(() => Boolean(document.querySelector("#field-product-name")?.value), null, { timeout: 15000 })
     await page.locator(".details-primary-bar .studio-primary").click()
-    await page.locator("#result-poster-preview img").waitFor({ timeout: 20000 })
+    await page.locator("#result-poster-preview img").waitFor({ timeout: 45000 }) // the loading screen also records the video (2026-10-20)
     await report("결과-포스터")
     for (const id of ["video", "copy"]) {
       await page.locator(`#result-tab-${id}`).click()

@@ -3238,13 +3238,10 @@ function Records({
   stored: boolean
   records: GeneratedRecord[]
   onOpen: (record: GeneratedRecord, kind: "poster" | "video" | "copy") => void
-  onDelete: (record: GeneratedRecord, kind: "poster" | "video" | "copy") => void
+  onDelete: (record: GeneratedRecord) => void
   onCreate: () => void
   onStartNew: () => void
 }) {
-  const [filter, setFilter] = useState<"all" | "poster" | "video" | "copy">(
-    "all",
-  )
   // 목록/격자: the viewer's own choice wins; without one, 쉬운 화면 starts with big thumbnails.
   const [chosenView, setChosenView] = useState<RecordsView | null>(readRecordsView)
   const view: RecordsView = chosenView ?? (easyMode ? "grid" : "list")
@@ -3256,7 +3253,9 @@ function Records({
       // storage blocked: the choice still holds for this visit
     }
   }
-  const entries = records.flatMap((record) => {
+  // One card per creation (owner, 2026-10-20): one 홍보물 made the poster, the video and the text together, and the
+  // list used to show them as three separate cards (and a 4-button filter), as if made three times.
+  const visible = records.flatMap((record) => {
     const kinds: ("poster" | "video" | "copy")[] =
       record.type === "all"
         ? [
@@ -3265,11 +3264,9 @@ function Records({
             "copy",
           ]
         : [record.type]
-    return kinds.filter((kind) => !record.removed?.includes(kind)).map((kind) => ({ record, kind }))
+    const kept = kinds.filter((kind) => !record.removed?.includes(kind))
+    return kept.length ? [{ record, kinds: kept, kind: kept[0] }] : []
   })
-  const visible = entries.filter(
-    (entry) => filter === "all" || entry.kind === filter,
-  )
   const labels = easyMode
     ? { all: "전체", poster: "포스터", video: "영상", copy: "홍보 글" }
     : { all: "전체", poster: "이미지", video: "영상", copy: "홍보 글" }
@@ -3282,25 +3279,9 @@ function Records({
       <p className="records-retention-note">
         {t(stored ? "이 기기에 저장된 홍보물이에요. 다른 기기에서는 보이지 않아요." : "이 창에서 만든 홍보물을 확인할 수 있어요.")}
       </p>
-      <div
-        className="records-filters"
-        role="group"
-        aria-label={t("홍보물 종류 필터")}
-      >
-        {(["all", "poster", "video", "copy"] as const).map((kind) => (
-          <button
-            key={kind}
-            aria-pressed={filter === kind}
-            onClick={() => setFilter(kind)}
-          >
-            <Icon name={kind === "all" ? "grid" : kind === "poster" ? "picture" : kind} size={24} />
-            <span>{labels[kind]}</span>
-          </button>
-        ))}
-      </div>
       <div className="records-toolbar">
         <p className="records-count" role="status">
-          {labels[filter]} · {visible.length}개
+          {t("모두")} {visible.length}{t("개")}
         </p>
         {visible.length > 0 && (
           <div className="records-view-toggle" role="group" aria-label={t("보기 방식")}>
@@ -3319,8 +3300,8 @@ function Records({
       </div>
       {visible.length ? (
         <div className={view === "grid" ? "records-grid" : "records-list"}>
-          {visible.map(({ record, kind }) => (
-            <div className="record-entry" key={`${record.id}-${kind}`}>
+          {visible.map(({ record, kinds, kind }) => (
+            <div className="record-entry" key={record.id}>
             <button
               className={view === "grid" ? "record-card" : "record-item"}
               onClick={() => onOpen(record, kind)}
@@ -3347,7 +3328,7 @@ function Records({
                   {record.details.name?.trim() || record.details.description}
                 </strong>
                 <small>
-                  {labels[kind]} · {record.createdAt}
+                  {kinds.map((value) => labels[value]).join("·")} · {record.createdAt}
                 </small>
                 <span className="sr-only">{t("결과 다시 보기")}</span>
               </span>
@@ -3356,9 +3337,9 @@ function Records({
             <button
               type="button"
               className="record-delete"
-              aria-label={`${record.details.name?.trim() || labels[kind]} ${labels[kind]} ${t("지우기")}`}
+              aria-label={`${record.details.name?.trim() || labels[kind]} ${t("지우기")}`}
               onClick={() => {
-                if (window.confirm(t("이 홍보물을 지울까요? 지우면 되돌릴 수 없어요."))) onDelete(record, kind)
+                if (window.confirm(t("이 홍보물을 지울까요? 포스터·영상·글이 함께 지워지고 되돌릴 수 없어요."))) onDelete(record)
               }}
             >
               {t("지우기")}
@@ -4337,14 +4318,7 @@ export default function App() {
               .then(([imageUrl, sceneUrl]) => openRecord({ ...record, imageUrl, sceneUrl }, kind))
               .catch(() => window.alert("사진을 불러오지 못했어요. 잠시 뒤에 다시 열어 주세요."))
           }}
-          onDelete={(record, kind) => setRecords((current) => current.flatMap((item) => {
-            if (item.id !== record.id) return [item]
-            const removed = [...(item.removed ?? []), kind]
-            const kinds = item.type === "all"
-              ? [...(item.outputFormat !== "video" ? ["poster"] : []), ...(item.outputFormat !== "poster" ? ["video"] : []), "copy"]
-              : [item.type]
-            return kinds.every((value) => removed.includes(value as "poster" | "video" | "copy")) ? [] : [{ ...item, removed }]
-          }))}
+          onDelete={(record) => setRecords((current) => current.filter((item) => item.id !== record.id))}
           onCreate={() => navigate("create", "all")}
           onStartNew={startNew}
         />
