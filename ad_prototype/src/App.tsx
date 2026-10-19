@@ -29,6 +29,7 @@ import { drawStoryFrame } from "./videoFrame"
 import { makeScene } from "./scene"
 import { outputFolder, saveToComputer } from "./localSave"
 import { drawMotionFrame, MOTION_SECONDS, motionEffectFor, type MotionScene } from "./motionVideo"
+import { plainMp4File } from "./mp4Flatten"
 import type { PosterThemeKey } from "./poster"
 import PhotoStep from "./PhotoStep"
 import GenerationProgress from "./GenerationProgress"
@@ -2018,10 +2019,11 @@ function CreateFlow({
             ? "mp4"
             : "webm"
 
+          // Recorded MP4 is fragmented with no duration: KakaoTalk posted only the first 3 s. Made plain here.
           resolve(
-            new File([blob], outputFileName(posterContent.productName, "영상", extension), {
+            plainMp4File(new File([blob], outputFileName(posterContent.productName, "영상", extension), {
               type: actualType,
-            }),
+            })),
           )
         }
 

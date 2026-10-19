@@ -10,6 +10,7 @@
 // opening, a warm pad under the shot, a chime with the invitation). No music licence is needed.
 
 import { drawElegantCaption, drawVideoCaption, loadCaptionFonts, type VideoCaption } from "./videoCaption"
+import { plainMp4File } from "./mp4Flatten"
 
 // With sound (H.264 + AAC first, as in the 기본형 recorder), then video only.
 const MIME_WITH_AUDIO = ["video/mp4;codecs=avc1.42E01E,mp4a.40.2", "video/webm;codecs=vp9,opus", "video/webm;codecs=vp8,opus"]
@@ -227,7 +228,8 @@ export async function captionVideo(clip: Blob, caption: VideoCaption, accent?: s
     stream.getTracks().forEach((track) => track.stop())
     if (!blob.size) return null
     const extension = blob.type.startsWith("video/mp4") ? "mp4" : "webm"
-    return new File([blob], `${name}.${extension}`, { type: blob.type })
+    // Recorded MP4 is fragmented with no duration: KakaoTalk posted only the first 3 s. Made plain here.
+    return plainMp4File(new File([blob], `${name}.${extension}`, { type: blob.type }))
   } catch {
     return null
   } finally {

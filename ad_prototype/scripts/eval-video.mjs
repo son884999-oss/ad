@@ -36,6 +36,26 @@ if (!file) {
   await page.close()
 }
 
+// A shared MP4 must be plain (no moof fragments) with its real duration in mvhd: KakaoTalk posted only the
+// first 3 s of the fragmented file MediaRecorder writes (2026-10-19, src/mp4Flatten.ts).
+if (file.endsWith(".mp4")) {
+  const bytes = await readFile(file)
+  const top = []
+  for (let at = 0; at + 8 <= bytes.length;) {
+    const size = bytes.readUInt32BE(at)
+    top.push(bytes.toString("latin1", at + 4, at + 8))
+    if (size < 8) break
+    at += size
+  }
+  const moov = bytes.indexOf("mvhd", 0, "latin1")
+  const mvhdDuration = moov > 0 ? (bytes[moov + 4] === 1 ? Number(bytes.readBigUInt64BE(moov + 28)) / bytes.readUInt32BE(moov + 24) : bytes.readUInt32BE(moov + 20) / bytes.readUInt32BE(moov + 16)) : 0
+  console.log(`mp4 boxes ${top.join(" ")} · header duration ${mvhdDuration.toFixed(2)}s`)
+  if (top.includes("moof") || !(mvhdDuration > 4)) {
+    console.error("FAIL: the MP4 is fragmented or has no duration (KakaoTalk would cut it)")
+    process.exitCode = 1
+  }
+}
+
 const viewer = await browser.newPage({ viewport: { width: 540, height: 960 } })
 const type = file.endsWith(".webm") ? "video/webm" : "video/mp4"
 await viewer.setContent(`<body style="margin:0;background:#000"><video id=v muted style="width:540px;height:960px;object-fit:contain" src="data:${type};base64,${(await readFile(file)).toString("base64")}"></video></body>`)
