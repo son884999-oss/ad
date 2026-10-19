@@ -84,7 +84,7 @@
       <h1>홍보잇다 <span>서비스 흐름도</span></h1>
       <p>사진 한 장 → 포스터 · 짧은 영상 · 홍보 글. 누구나 무료로 만들고, 시연 기기에서는 결과에서 "특급" 움직이는 영상으로 바꿀 수 있어요.</p>
     </div>
-    <div class="meta"><b>2026-10-19 개편안 (C안)</b><br>브랜치 feature/UI-Screen · 시연 2026-11 초 · 특급은 시연 코드 기기만</div>
+    <div class="meta"><b>2026-10-19 C안 (구현됨, 특급 제외)</b><br>브랜치 feature/UI-Screen · 시연 2026-11 초 · 특급은 팀 논의 후</div>
   </header>
 
   <div class="steps">
@@ -96,7 +96,7 @@
         <li>제품·가게 사진 1장</li>
         <li>만들 것: 포스터 / 영상 / 홍보 글 (한 번에 완성 가능)</li>
       </ul>
-      <div class="switch" style="flex-direction:column;align-items:flex-start"><span><b>사진을 넣으면 팝업 하나</b></span><span style="font-size:17px">"배경을 광고 사진처럼 바꿀까요?"</span><span><span class="chip free" style="font-size:15px;padding:6px 16px">바꾸기</span> <span class="chip wait" style="font-size:15px;padding:6px 16px">그대로</span></span><small style="color:var(--sub)">바꾸기를 고르면 정보를 입력하는 동안 뒤에서 미리 만듦 <span class="chip ai">AI</span></small></div>
+      <div class="switch" style="flex-direction:column;align-items:flex-start"><span><b>[다음으로]를 누르면 팝업 하나</b></span><span style="font-size:17px">"배경을 광고 사진처럼 바꿀까요?"</span><span><span class="chip free" style="font-size:15px;padding:6px 16px">바꾸기</span> <span class="chip wait" style="font-size:15px;padding:6px 16px">그대로</span></span><small style="color:var(--sub)">흐려요·어두워요 확인 뒤에 물음. 바꾸기면 정보를 입력하는 동안 뒤에서 미리 만듦 <span class="chip ai">AI</span></small></div>
       <div class="tier basic" style="margin-top:12px">기본형/고급형 고르기 없음. <strong>모두 같은 흐름.</strong></div>
     </section>
     <div class="arrow">→</div>
@@ -121,7 +121,7 @@
         <div class="lane b0">
           <div class="who">그대로<small>팝업에서 "그대로" · 0원 · 약 6초</small></div>
           <div class="box"><b>원래 사진 그대로</b>AI 호출 없음</div>
-          <div class="box"><b>기본형 모션 영상 6초</b>확대 → 클로즈업·빛·특징 태그 → 가격·행동 유도 카드 (휴대폰 브라우저)<br><b style="margin-top:6px">소리</b>클래식 배경음 + 장면 전환 효과음 1개</div>
+          <div class="box"><b>기본형 모션 영상 6초</b>확대 → 클로즈업·빛·특징 태그 → 가격·행동 유도 카드 (휴대폰 브라우저)<br><b style="margin-top:6px">소리</b>업종별 클래식 배경음(쇼팽·사티·바흐·슈베르트·비발디) + 장면 전환 효과음</div>
           <div class="box"><b>포스터</b>브라우저에서 그림 (사진 크게 / 사진 먼저)<br><b style="margin-top:6px">홍보 글</b><span class="chip ai">AI</span> 채널별 · 안 되면 기본 문구</div>
         </div>
         <div class="lane b1">
@@ -131,7 +131,7 @@
           <div class="box"><b>포스터 · 홍보 글</b>광고 배경 사진으로<br><b style="margin-top:6px">결과에서 고르기</b>"바뀐 사진 / 원래 사진" (제품이 달라졌으면 원래 사진)</div>
         </div>
         <div class="lane p">
-          <div class="who">✦ 특급<small>결과 영상 탭의 버튼 · 시연 코드 기기만 · + 약 300~450원 · 1~3분 더</small></div>
+          <div class="who">✦ 특급<small>보류 · 팀 논의 후 예시를 만들어 공유하고 결정 · + 약 300~450원 · 1~3분 더</small></div>
           <div class="box"><b>결과를 먼저 보여 줌</b>영상 탭의 "✦ 특급 영상으로 다시 만들기"를 누를 때만 시작</div>
           <div class="box paid"><b>Higgsfield 움직임 영상 5초</b>원본 사진에서 세계가 바뀌는 연출 (초콜릿 강·숲·제과점 …)<br><b style="margin-top:6px">후편집</b>색 보정 · 초점 오프닝 · 3컷 · 엔드 홀드 · 자막 · 합성음</div>
           <div class="box"><b>포스터 · 홍보 글</b>그대로 (바뀌는 것은 영상만)</div>
