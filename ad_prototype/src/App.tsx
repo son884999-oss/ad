@@ -2160,6 +2160,8 @@ function CreateFlow({
             return ink ? [1, 3, 5].map((i) => parseInt(ink.slice(i, i + 2), 16)).join(", ") : channelTheme.rgb
           })(),
           effect: motionEffectFor([details.name, details.description, details.features, details.keywords].filter(Boolean).join(" ")),
+          // One "AI 활용" mark when an AI wrote the copy or drew the background, as on the poster.
+          aiMark: Boolean(activePromo) || Boolean(sceneUrl),
         }
 
         const drawFrame = (now: number) => {

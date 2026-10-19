@@ -20,6 +20,9 @@ export type MotionScene = {
   accent: string
   /** The kind of product (motionEffectFor): picks the moving touch on top of the photo. */
   effect?: MotionEffect
+  /** "AI 활용" in the corner when an AI wrote the copy or drew the background (one mark for both; the
+   *  institution's advice 2026-10-19: combine it, or mark conservatively). Same look as the poster's. */
+  aiMark?: boolean
 }
 
 export type MotionEffect = "steam" | "sparkle" | "petals" | "glow" | "sheen"
@@ -303,4 +306,25 @@ export function drawMotionFrame(ctx: CanvasRenderingContext2D, seconds: number, 
     drawPoints(ctx, scene, seconds)
   }
   drawEndCard(ctx, scene, seconds)
+  if (scene.aiMark) drawAiMark(ctx)
+}
+
+/** The poster's "AI 활용" pill, top right just under the stories' top band (250 px), on every frame. */
+function drawAiMark(ctx: CanvasRenderingContext2D) {
+  const label = "AI 활용"
+  ctx.save()
+  ctx.font = `700 26px "Pretendard Variable", Pretendard, "Noto Sans KR", sans-serif`
+  const w = ctx.measureText(label).width + 30
+  const h = 44
+  const x = ctx.canvas.width - w - 32
+  const y = 262
+  ctx.fillStyle = "rgba(29,26,23,.62)"
+  ctx.beginPath()
+  ctx.roundRect(x, y, w, h, h / 2)
+  ctx.fill()
+  ctx.fillStyle = "#ffffff"
+  ctx.textAlign = "left"
+  ctx.textBaseline = "middle"
+  ctx.fillText(label, x + 15, y + h / 2 + 1)
+  ctx.restore()
 }

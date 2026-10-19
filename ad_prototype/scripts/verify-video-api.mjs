@@ -591,6 +591,26 @@ try {
     assert.match(sound.picks.flowerTrendy, /vivaldi-spring-allegro/)
     assert.match(sound.picks.other, /chopin-waltz|bach-goldberg/)
     assert.ok(sound.served.every(Boolean), `audio files served: ${sound.served}`)
+    // AI 활용 in the 기본형 video only when an AI wrote the copy or drew the background (institution's advice).
+    const marks = await page.evaluate(async () => {
+      const { drawMotionFrame } = await import("/src/motionVideo.ts")
+      const texts = (aiMark) => {
+        const canvas = document.createElement("canvas")
+        canvas.width = 1080
+        canvas.height = 1920
+        const ctx = canvas.getContext("2d")
+        const seen = []
+        const fill = ctx.fillText.bind(ctx)
+        ctx.fillText = (text, ...rest) => { seen.push(String(text)); return fill(text, ...rest) }
+        const framed = document.createElement("canvas")
+        framed.width = 1080
+        framed.height = 1920
+        drawMotionFrame(ctx, 1.2, { framed, caption: { headline: "오늘 만든 케이크" }, points: [], accent: "74, 47, 38", aiMark })
+        return seen
+      }
+      return { on: texts(true).includes("AI 활용"), off: texts(false).includes("AI 활용") }
+    })
+    assert.deepEqual(marks, { on: true, off: false })
     await page.close()
   })
 
