@@ -964,3 +964,18 @@ html[data-layout=mobile] .easy-mode .results-step:not(.is-single) .result-card:h
 /* The info step grew by the 자동으로 채워 주기 button: a focused control scrolls clear of the sticky 홍보물 만들기 bar. */
 .details-fields :is(button,input,textarea,select,summary,[tabindex]) { scroll-margin-bottom:calc(140px * var(--s)); }
 
+/* Poster shown big from the start (owner, 2026-10-20): full width at its own shape, no 크게 보기; the page scrolls. */
+html[data-layout=mobile] .results-step:not(.is-single) .result-card.result-poster .result-preview,
+html[data-layout=mobile] .easy-mode .results-step:not(.is-single) .result-card.result-poster .result-preview { height:auto;min-height:0; }
+.studio-shell .result-poster .result-preview .poster-image-canvas { height:auto; }
+.studio-shell .result-poster .result-preview .poster-image-canvas > img { width:100%;height:auto;max-height:none;object-fit:contain; }
+/* Result tabs after the references (KRDS tabs/step indicator, NN/g, GOV.UK; 2026-10-20). */
+.studio-shell .result-tabs-bar .result-made { display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:2px 10px;margin:0 2px 8px; }
+.studio-shell .result-tabs-bar .result-made strong { font-size:max(17px,calc(17px * var(--s)));font-weight:800;color:var(--color-ink); }
+.studio-shell .result-tabs-bar .result-made span { font-size:max(16px,calc(16px * var(--s)));color:var(--color-muted); }
+.studio-shell .result-tabs-bar .result-made b { color:var(--color-brand-hover); }
+/* unselected tabs look pressable: white with a border (selected: filled, bold, bar) */
+.studio-shell .result-tabs-bar .result-tabs button[aria-selected="false"] { background:#fff;box-shadow:inset 0 0 0 2px var(--color-line-strong,#cdbfb2);color:var(--color-ink); }
+.result-next { display:flex;align-items:center;justify-content:center;gap:6px;width:100%;min-height:max(52px,calc(54px * var(--s)));margin-top:10px;border:2px solid var(--color-brand);border-radius:var(--radius-control,10px);background:#fff;color:var(--color-brand-hover);font-size:max(17px,calc(17px * var(--s)));font-weight:800; }
+.easy-mode .result-next { min-height:60px;font-size:calc(20px * var(--s)); }
+html[data-layout=mobile] .results-step:not(.is-single) .result-card > .result-next { order:3; }

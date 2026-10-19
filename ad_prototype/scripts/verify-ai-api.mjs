@@ -430,9 +430,10 @@ try {
     await page.getByLabel("제품 이름", { exact: true }).fill("느린 응답 케이크")
     const started = Date.now()
     await page.getByRole("button", { name: "홍보물 만들기", exact: true }).click()
-    await page.locator("#result-poster-preview img").waitFor({ timeout: 25000 })
+    // The loading screen now also records the video and finishes its bar at 12.5%/s (owner, 2026-10-20).
+    await page.locator("#result-poster-preview img").waitFor({ timeout: 45000 })
     const waited = Date.now() - started
-    assert.ok(waited < 16000, `waited ${waited} ms`)
+    assert.ok(waited < 36000, `waited ${waited} ms`)
     await page.getByRole("tab", { name: "홍보 글", exact: true }).click()
     const copy = await page.locator(".copy-result-text").innerText()
     assert.ok(copy.includes("느린 응답 케이크") && !copy.includes("AI 카피"))

@@ -135,6 +135,7 @@ try {
   await check("voice: tap starts listening, final result replaces AI text, 되돌리기 restores, Tab focus does not start", async () => {
     const page = await open({ easy: true, analyze: { productName: "AI가 붙인 이름", description: "", highlights: "", keyFeatures: [], targetAudience: "", tones: [] } })
     await toInfo(page)
+    await page.getByRole("button", { name: "자동으로 채워 주기" }).click() // the photo is read only when asked (2026-10-19)
     await page.getByText("사진을 보고 미리 써 뒀어요. 맞으면 그대로 두세요.").waitFor()
     assert.equal(await nameField(page).inputValue(), "AI가 붙인 이름")
     // Keyboard focus (Tab) must not start the microphone.

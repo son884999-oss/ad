@@ -20,7 +20,7 @@ const browser=await chromium.launch({channel:'msedge',headless:true})
 const reports=[]
 async function capture(page,name,width,selectors){
  await page.evaluate(async()=>{await document.fonts.ready;await Promise.all([...document.images].map(i=>i.complete?Promise.resolve():new Promise(r=>{i.onload=r;i.onerror=r})));document.getAnimations().forEach(a=>a.finish())})
- const geometry=await page.evaluate(selectors=>{const navEl=document.querySelector('.studio-bottom-nav'),nav=navEl.getBoundingClientRect();const main=document.querySelector('.studio-main');return {navTop:navEl.classList.contains('is-top')?innerHeight:nav.top,mainScroll:main.scrollHeight-main.clientHeight,overflow:document.documentElement.scrollWidth>innerWidth,targets:selectors.map(selector=>{const e=document.querySelector(selector),r=e.getBoundingClientRect();return {selector,top:r.top,bottom:r.bottom}})}},selectors)
+ const geometry=await page.evaluate(selectors=>{const navEl=document.querySelector('.studio-bottom-nav'),nav=navEl.getBoundingClientRect();const main=document.querySelector('.studio-main');return {navTop:navEl.classList.contains('is-top')?innerHeight:nav.top,mainScroll:main.scrollHeight-main.clientHeight,overflow:document.documentElement.scrollWidth>innerWidth,targets:selectors.map(selector=>{const e=document.querySelector(selector);e.scrollIntoView({block:'center'});const r=e.getBoundingClientRect();return {selector,top:r.top,bottom:r.bottom}})}},selectors)
  assert.equal(geometry.overflow,false)
  for(const t of geometry.targets)assert.ok(t.bottom<=geometry.navTop+2,`${name} ${width}: ${t.selector} is covered by bottom nav (${t.bottom}>${geometry.navTop})`)
  await page.screenshot({path:join(out,`${name}-${width}.png`)})

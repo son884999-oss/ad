@@ -343,6 +343,10 @@ function composePromoText(promo: PromoTextResult, details: GeneratedRecord["deta
 
 /** How long 홍보물 만들기 waits for the AI 홍보 글 before using the local template. */
 const PROMO_WAIT_MS = 12_000
+// Another channel picked on the result screen: the owner is looking at 글을 맞추는 중, so it may take longer. On Vercel a
+// second channel took about 10 s (2026-10-20), and with a phone network the 12 s cap fell back to the plain text
+// without first-line choices ("다른 채널은 문구가 아예 안 뜬다").
+const PROMO_SWITCH_WAIT_MS = 25_000
 
 const MAX_PHOTO_SIZE = 10 * 1024 * 1024
 const ACCEPTED_PHOTO_TYPES = ["image/jpeg", "image/png", "image/webp"]
@@ -1287,7 +1291,7 @@ function CreateFlow({
   }
   // One AI answer per channel and inputs, so going back to a channel shows its text without a new request.
   const promoCacheRef = useRef(new Map<string, AiPromo>())
-  const requestPromoText = (forChannel: Channel = channel) => {
+  const requestPromoText = (forChannel: Channel = channel, waitMs = PROMO_WAIT_MS) => {
     cancelPromoRequest()
     const signature = promoSignature(details, forChannel)
     if (aiPromo?.signature === signature) return
@@ -1316,7 +1320,7 @@ function CreateFlow({
         visualDetails: photoDetailsRef.current.image === imageUrl ? photoDetailsRef.current.details : undefined,
         channel: forChannel,
       },
-      { signal: controller.signal, timeoutMs: PROMO_WAIT_MS },
+      { signal: controller.signal, timeoutMs: waitMs },
     ).then((result) => {
       if (promoControllerRef.current !== controller) return
       promoControllerRef.current = null
@@ -1506,7 +1510,7 @@ function CreateFlow({
   const pickChannel = (next: Channel) => {
     if (next === channel) return
     setChannel(next)
-    if (showCopy) requestPromoText(next)
+    if (showCopy) requestPromoText(next, PROMO_SWITCH_WAIT_MS)
   }
   const pickHeadline = (index: number) => { if (activePromo) setAiPromo({ ...activePromo, chosen: index }) }
   const copyText = activePromo ? composePromoText({ ...activePromo, copy: chosenHeadline }, details) : resultCopy[channel]
@@ -1545,6 +1549,24 @@ function CreateFlow({
       document
         .getElementById(`result-tab-${id}`)
         ?.focus({ preventScroll: true })
+  }
+
+  // "다음: 영상 ▶" under a result, so the results can be gone through in order without knowing the tabs are tabs.
+  const nextResultButton = (id: "poster" | "video" | "copy") => {
+    const next = resultTabs[resultTabs.findIndex((tab) => tab.id === id) + 1]
+    if (!next) return null
+    return (
+      <button
+        type="button"
+        className="result-next"
+        onClick={() => {
+          selectResultTab(next.id, true)
+          document.querySelector(".result-tabs-bar")?.scrollIntoView({ block: "start" })
+        }}
+      >
+        {t("다음")}: {next.label} <span aria-hidden="true">▶</span>
+      </button>
+    )
   }
 
   const finalText = `${copyText.trim()}\n\n${hashtags.join(" ")}`.trim()
@@ -2253,15 +2275,26 @@ function CreateFlow({
     }
   }
 
-  // Opening the 영상 tab prepares the sample video file once, so 공유하기 works on the first tap
-  // (a share sheet must open right after the tap, before a 5 s recording could finish).
+  // The sample video is recorded while the loading screen is still up, once the poster and the 홍보 글 (its caption)
+  // are ready, so the 영상 tab plays the real file the moment the results open (owner, 2026-10-20: the tab used to
+  // show a pretend zoom of the photo first). After the results open, opening the 영상 tab prepares it if needed,
+  // so 공유하기 works on the first tap (a share sheet must open right after the tap).
   const videoPreparedForRef = useRef(-1)
   useEffect(() => {
-    if (step !== 3 || generating || activeResultTab !== "video" || showsRealVideo(aiVideo.state)) return
+    if (step !== 3 || !showVideo || showsRealVideo(aiVideo.state)) return
+    if (generating ? promoPending || (showPoster && posterPreviewStatus === "preparing") : activeResultTab !== "video") return
     if (videoShareFileRef.current || videoPreparedForRef.current === videoContextRef.current) return
     videoPreparedForRef.current = videoContextRef.current
     void prepareVideoDownload(false)
-  }, [step, generating, activeResultTab, aiVideo.state]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [step, generating, activeResultTab, aiVideo.state, promoPending, posterPreviewStatus, showVideo]) // eslint-disable-line react-hooks/exhaustive-deps
+  // The loading screen waits for that video too, but never more than 25 s for it.
+  const [videoWaitOver, setVideoWaitOver] = useState(false)
+  useEffect(() => {
+    if (!generating) { setVideoWaitOver(false); return }
+    const timer = window.setTimeout(() => setVideoWaitOver(true), 25_000)
+    return () => window.clearTimeout(timer)
+  }, [generating])
+  const videoReadyForResults = !showVideo || showsRealVideo(aiVideo.state) || Boolean(sampleVideoFile) || videoStatus === "failed" || videoStatus === "unsupported" || videoWaitOver
 
   const shareResult = async (kind: "poster" | "video" | "copy") => {
     const update = (message: string) => setShareMessages(current => ({...current, [kind]: message}))
@@ -2302,7 +2335,7 @@ function CreateFlow({
           kind={type}
           imageUrl={imageUrl}
           title={details.shopName?.trim() || details.name?.trim() || details.description.trim() || "우리 가게"}
-          ready={(!showPoster || posterPreviewStatus !== "preparing") && !promoPending}
+          ready={(!showPoster || posterPreviewStatus !== "preparing") && !promoPending && videoReadyForResults}
           easyMode={easyMode}
           onCancel={() => {
             cancelPromoRequest()
@@ -2831,6 +2864,14 @@ function CreateFlow({
       {step === 3 && !generating && (
         <div className={`results-step step-panel${resultTabs.length === 1 ? " is-single" : ""}`}>
           <div className="result-tabs-bar">
+            {/* Tab references (KRDS tabs and step indicator, NN/g, GOV.UK; 2026-10-20): tabs hide content, so one line says
+                that all results were made together, and "n/N" says which one is open. No thumbnails (owner rejected them). */}
+            {resultTabs.length > 1 && (
+              <div className="result-made">
+                <strong>{t(`${resultTabs.map((tab) => tab.label).join("·")}, ${resultTabs.length}가지를 만들었어요`)}</strong>
+                <span>{t("눌러서 바꿔 보세요")} <b>{resultTabs.findIndex((tab) => tab.id === activeResultTab) + 1}/{resultTabs.length}</b></span>
+              </div>
+            )}
             <div
               className="result-tabs"
               role="tablist"
@@ -2891,25 +2932,8 @@ function CreateFlow({
                   easyMode={easyMode}
                   icon="picture"
                   title={easyMode ? "포스터" : "이미지"}
-                  control={
-                      <button
-                        type="button"
-                        className="result-preview-action"
-                        aria-controls="result-poster-preview"
-                        disabled={!posterPreviewUrl}
-                        onClick={() => {
-                          const expanded = !posterExpanded
-                          setPosterExpanded(expanded)
-                          if (expanded) window.requestAnimationFrame(() => {
-                            const preview = posterPreviewRef.current
-                            if (preview?.classList.contains("is-expanded")) preview.focus({ preventScroll: true })
-                          })
-                        }}
-                      >
-                        <Icon name={posterExpanded ? "zoom-out" : "zoom-in"} size={34} />
-                        <span>{t(posterExpanded ? "작게 보기" : "크게 보기")}</span>
-                      </button>
-                  }
+                  // No 크게 보기 (owner, 2026-10-20): the poster is shown full width at its own shape from the start, like the
+                  // video; a longer scroll is fine.
                   extra={
                     // The first-line choice lives on the 홍보 글 tab only (owner, 2026-10-19): on the poster it changes one small
                     // line under the product name, too little to see.
@@ -2981,6 +3005,7 @@ function CreateFlow({
                           : ""
                   )}
                 />
+                {nextResultButton("poster")}
                 {RESULT_SECONDARY_FEATURES_ENABLED && <details className="media-full-copy">
                   <summary>이미지 문구 원문 보기</summary>
                   <p>{details.name}</p>
@@ -3082,6 +3107,7 @@ function CreateFlow({
                       ? `${videoMessage} 다른 작업으로 이동하면 준비를 취소해요.`
                       : videoMessage)}
                 />
+                {nextResultButton("video")}
                 {RESULT_SECONDARY_FEATURES_ENABLED && <details className="media-full-copy">
                   <summary>영상 문구 원문 보기</summary>
                   <p>{details.features}</p>

@@ -70,8 +70,10 @@ export default function GenerationProgress({
 
   useEffect(() => {
     const timer = window.setInterval(() => {
-      setPercent((value) => Math.min(ready ? 100 : HOLD, value + (value < 70 ? 2 : 1)))
-    }, 40)
+      // Owner, 2026-10-20: while the results are being made the bar creeps at 2.5% a second (it used to reach the hold
+      // point in about two seconds and stand still); once everything is ready it runs at 12.5% a second to 100%.
+      setPercent((value) => Math.min(ready ? 100 : HOLD, value + (ready ? 1.25 : 0.25)))
+    }, 100)
     return () => window.clearInterval(timer)
   }, [ready])
 
@@ -149,7 +151,7 @@ export default function GenerationProgress({
           <span style={{ width: `${percent}%` }} />
         </div>
         <span className="generation-percent" aria-hidden="true">
-          {percent}%
+          {Math.floor(percent)}%
         </span>
       </div>
       <p className="generation-eta" role="status">{t(slow ? "조금 더 걸리고 있어요. 곧 나와요." : "보통 10초쯤 걸려요.")}</p>
