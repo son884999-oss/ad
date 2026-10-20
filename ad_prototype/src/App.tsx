@@ -190,7 +190,55 @@ function VideoModeToggle({ value, premiumAvailable, easyMode, onChange, withVide
  */
 function BackgroundAskDialog({ easyMode, onAnswer, onClose }: { easyMode: boolean; onAnswer: (change: boolean) => void; onClose: () => void }) {
   const t = (text: string) => uiText(text, easyMode)
-  const first = useRef<HTMLButtonElement | null>(null)
+  return (
+    <AppDialog titleId="bg-ask-title" bodyId="bg-ask-body" onClose={onClose}>
+      <h2 id="bg-ask-title">{t("배경을 광고 사진처럼 바꿀까요?")}</h2>
+      <p id="bg-ask-body">{t("AI가 제품은 그대로 두고 주변만 광고 사진처럼 바꿔요. 정보를 적는 동안 만들어 둘게요.")}</p>
+      <div className="bg-ask-actions">
+        <button type="button" className="studio-primary" onClick={() => onAnswer(true)}>{t("바꾸기")}</button>
+        <button type="button" className="studio-secondary" onClick={() => onAnswer(false)}>{t("그대로 쓰기")}</button>
+      </div>
+      <small>{t("다 되면 원본 사진과 보정 사진 중에서 고를 수 있어요.")}</small>
+    </AppDialog>
+  )
+}
+
+/**
+ * 사진 고르기 popup (QA 2026-10-20): once the advertising background is ready, the original and the changed photo
+ * are shown near full screen (original left, corrected right), and only the one picked is used from then on
+ * (정보 입력 사진, poster, video). Tapping outside does nothing; Escape keeps the current pick. It reopens from
+ * 결과 보기's "사진 다시 고르기".
+ */
+function PhotoPickDialog({ easyMode, originalUrl, changedUrl, pick, onPick, onClose }: { easyMode: boolean; originalUrl: string; changedUrl: string; pick: "changed" | "original"; onPick: (pick: "changed" | "original") => void; onClose: () => void }) {
+  const t = (text: string) => uiText(text, easyMode)
+  // Left the original, right the corrected one (owner, QA 2026-10-20). Focus starts on the current pick.
+  const options = ([["original", "원본 사진", originalUrl], ["changed", "보정 사진", changedUrl]] as const)
+  return (
+    <AppDialog titleId="photo-pick-title" bodyId="photo-pick-body" onClose={onClose} className="photo-pick-dialog" backdropClass="is-full" closeOnBackdrop={false} focusSelector={`[data-pick="${pick}"]`}>
+      <div className="photo-pick-head">
+        <span className="photo-pick-chip"><Icon name="check" size={16} />{t("보정이 끝났어요")}</span>
+        <h2 id="photo-pick-title">{t("원하는 사진을 선택해 주세요")}</h2>
+        <p id="photo-pick-body">{t("고른 사진으로 포스터와 영상을 만들어요.")}</p>
+      </div>
+      <div className="photo-pick-options">
+        {options.map(([id, label, url]) => (
+          <button key={id} type="button" data-pick={id} aria-pressed={pick === id} onClick={() => onPick(id)}>
+            <span className="photo-pick-tag">{t(id === "changed" ? "AI 보정" : "원본")}</span>
+            {pick === id && <span className="photo-pick-mark" aria-hidden="true"><Icon name="check" size={18} /></span>}
+            {/* The whole photo stays visible; a blurred copy fills the rest of the tall frame. */}
+            <span className="photo-pick-frame" style={{ backgroundImage: `url("${url}")` }}><img src={url} alt={t(label)} /></span>
+            <strong>{t(label)}</strong>
+          </button>
+        ))}
+      </div>
+      <small className="photo-pick-hint">{t("사진을 누르면 바로 그 사진으로 진행돼요.")}</small>
+    </AppDialog>
+  )
+}
+
+/** The popup frame both dialogs share: inside the app shell, everything behind inert, focus kept inside. */
+function AppDialog({ titleId, bodyId, onClose, className, backdropClass, closeOnBackdrop = true, focusSelector, children }: { titleId: string; bodyId: string; onClose: () => void; className?: string; backdropClass?: string; closeOnBackdrop?: boolean; focusSelector?: string; children: ReactNode }) {
+  const box = useRef<HTMLDivElement | null>(null)
   // Drawn inside the app shell, so on a PC (the phone frame) it stays inside the frame (reference-ui.css).
   const shell = document.querySelector(".reference-app")
   useEffect(() => {
@@ -198,20 +246,22 @@ function BackgroundAskDialog({ easyMode, onAnswer, onClose }: { easyMode: boolea
     // Everything behind the popup is inert while it is open: no taps, no Tab stops, not read out.
     const behind = shell ? [...shell.children].filter((el) => !el.classList.contains("bg-ask-backdrop") && !el.hasAttribute("inert")) : []
     behind.forEach((el) => el.setAttribute("inert", ""))
-    first.current?.focus()
+    const target = (focusSelector && box.current?.querySelector<HTMLElement>(focusSelector)) || box.current?.querySelector<HTMLElement>("button")
+    target?.focus()
     return () => {
       behind.forEach((el) => el.removeAttribute("inert"))
       opener?.focus?.()
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
   const dialog = (
-    <div className="bg-ask-backdrop" onClick={(event) => { if (event.target === event.currentTarget) onClose() }}>
+    <div className={`bg-ask-backdrop${backdropClass ? ` ${backdropClass}` : ""}`} onClick={(event) => { if (closeOnBackdrop && event.target === event.currentTarget) onClose() }}>
       <div
-        className="bg-ask"
+        ref={box}
+        className={`bg-ask${className ? ` ${className}` : ""}`}
         role="dialog"
         aria-modal="true"
-        aria-labelledby="bg-ask-title"
-        aria-describedby="bg-ask-body"
+        aria-labelledby={titleId}
+        aria-describedby={bodyId}
         onKeyDown={(event) => {
           if (event.key === "Escape") onClose()
           if (event.key === "Tab") {
@@ -223,13 +273,7 @@ function BackgroundAskDialog({ easyMode, onAnswer, onClose }: { easyMode: boolea
           }
         }}
       >
-        <h2 id="bg-ask-title">{t("배경을 광고 사진처럼 바꿀까요?")}</h2>
-        <p id="bg-ask-body">{t("AI가 제품은 그대로 두고 주변만 광고 사진처럼 바꿔요. 정보를 적는 동안 만들어 둘게요.")}</p>
-        <div className="bg-ask-actions">
-          <button ref={first} type="button" className="studio-primary" onClick={() => onAnswer(true)}>{t("바꾸기")}</button>
-          <button type="button" className="studio-secondary" onClick={() => onAnswer(false)}>{t("그대로 쓰기")}</button>
-        </div>
-        <small>{t("결과에서 원래 사진으로 되돌릴 수 있어요.")}</small>
+        {children}
       </div>
     </div>
   )
@@ -1749,14 +1793,25 @@ function CreateFlow({
   }
   const asksBackground = asking && Boolean(imageUrl) && (step === 1 || step === 2)
   const ownBg = bgState?.forImage === imageUrl ? bgState.status : undefined
+  // 사진 고르기 popup: opens once per photo when its advertising background is ready, on 정보 입력 or after the
+  // loading screen (never on top of the 배경 question or the progress screen); "사진 다시 고르기" reopens it.
+  const changedUrl = ownBg === "ready" && sceneImage?.forImage === imageUrl ? sceneImage.url : ""
+  const [pickAskedFor, setPickAskedFor] = useState("")
+  const [picking, setPicking] = useState(false)
+  useEffect(() => {
+    if (!changedUrl || pickAskedFor === imageUrl || asking || generating || (step !== 2 && step !== 3)) return
+    setPickAskedFor(imageUrl)
+    setPicking(true)
+  }, [changedUrl, imageUrl, pickAskedFor, asking, generating, step])
+  const picksPhoto = picking && Boolean(changedUrl) && (step === 2 || step === 3) && !generating
   const bgNotice = !ownBg
     ? ""
     : ownBg === "making"
       ? "광고 배경을 만들고 있어요 · 30초 안팎. 다 되면 포스터와 영상이 바뀌어요."
       : ownBg === "ready"
         ? photoPick === "changed"
-          ? "AI가 배경을 광고 사진처럼 바꿨어요. 제품이 달라 보이면 \"원래 사진\"을 골라 주세요."
-          : "원래 사진으로 만들었어요."
+          ? "보정 사진으로 만들었어요."
+          : "원본 사진으로 만들었어요."
         : ownBg === "limit"
           ? "오늘 배경 바꾸기를 다 써서 원래 사진으로 만들었어요."
           : ownBg === "off"
@@ -2096,7 +2151,8 @@ function CreateFlow({
 
     setVideoStatus("preparing")
 
-    setVideoMessage(uiText("확인용 예시 영상을 준비하고 있어요.", easyMode))
+    // QA 2026-10-20: no "준비하고 있어요" line under the result; the preview itself says 불러오는 중...
+    setVideoMessage("")
 
     videoCancelledRef.current = false
 
@@ -2243,7 +2299,7 @@ function CreateFlow({
       setVideoMessage(
         easyMode
           ? "영상이 준비됐어요."
-          : `${extension} 확인용 예시 영상이 준비됐어요.`,
+          : `${extension} 영상이 준비됐어요.`,
       )
 
       if (download) {
@@ -2370,22 +2426,11 @@ function CreateFlow({
           </div>
           {sceneNotice && <p className={`ai-notice scene-notice${sceneState?.status === "ready" ? " is-ai" : ""}`} role="status">{t(sceneNotice)}</p>}
           {bgNotice && <p className={`ai-notice scene-notice${ownBg === "ready" && photoPick === "changed" ? " is-ai" : ""}`} role="status">{t(bgNotice)}</p>}
-          {ownBg === "ready" && sceneImage?.forImage === imageUrl && (
-            <div className="photo-pick" role="radiogroup" aria-label={t("포스터와 영상에 쓸 사진")}>
-              {([["changed", "바뀐 사진"], ["original", "원래 사진"]] as const).map(([id, label], index) => (
-                <button
-                  key={id}
-                  type="button"
-                  role="radio"
-                  aria-checked={photoPick === id}
-                  onClick={() => setPhotoPick(id)}
-                  {...radioNav(index, 2, photoPick === "changed" ? 0 : 1, (next) => setPhotoPick(next === 0 ? "changed" : "original"))}
-                >
-                  <img src={id === "changed" ? sceneImage.url : imageUrl} alt="" width="44" height="44" />
-                  <span>{t(label)}</span>
-                </button>
-              ))}
-            </div>
+          {changedUrl && (
+            <button type="button" className="studio-secondary photo-repick" onClick={() => setPicking(true)}>
+              <img src={photoPick === "changed" ? changedUrl : imageUrl} alt="" width="36" height="36" />
+              <span>{t("사진 다시 고르기")}</span>
+            </button>
           )}
           {/* Owner, 2026-10-21: the results already carry the AI mark, so only the no-AI fallback is said here. */}
           {showCopy && !activePromo && <p className="ai-notice">{t("AI 없이 기본 문구로 만들었어요.")}</p>}
@@ -2422,10 +2467,21 @@ function CreateFlow({
         />
       )}
       {asksBackground && <BackgroundAskDialog easyMode={easyMode} onAnswer={answerBackground} onClose={() => setAsking(false)} />}
+      {picksPhoto && (
+        <PhotoPickDialog
+          easyMode={easyMode}
+          originalUrl={imageUrl}
+          changedUrl={changedUrl}
+          pick={photoPick}
+          onPick={(pick) => { setPhotoPick(pick); setPicking(false) }}
+          onClose={() => setPicking(false)}
+        />
+      )}
       {step === 2 && (
         <div className="details-step step-panel compact-information">
           <div className="information-photo" aria-busy={uploadPending}>
-            <img src={imageUrl} alt={t("선택한 제품 사진")} width="88" height="88" />
+            {/* Only the photo the results will use: the changed one once picked in 사진 고르기, else the original. */}
+            <img src={photoPick === "changed" && changedUrl ? changedUrl : imageUrl} alt={t("선택한 제품 사진")} width="88" height="88" />
             <div>
               <strong>{t("선택한 사진")}</strong>
               <span>{t("다른 사진으로 바꿀 수 있어요.")}</span>
@@ -2450,6 +2506,14 @@ function CreateFlow({
               onChange={upload}
             />
           </div>
+          {/* 보정 중 (QA 2026-10-20): said briefly while the background is made; the 사진 고르기 popup follows. */}
+          {ownBg === "making" && (
+            <p className="bg-working" role="status">
+              <span className="ai-fill-spinner" aria-hidden="true" />
+              {t("사진을 보정하고 있어요. 다 되면 고를 수 있게 보여 드릴게요.")}
+            </p>
+          )}
+          {(ownBg === "failed" || ownBg === "limit" || ownBg === "off") && <p className="bg-working is-done" role="status">{t(bgNotice)}</p>}
           {uploadMessage && (
             <p
               id="details-upload-feedback"
@@ -2960,11 +3024,12 @@ function CreateFlow({
                         <img src={posterPreviewUrl} alt={`${details.name?.trim() || "제품"} 홍보 이미지`} aria-describedby={posterVisibleText ? "poster-visible-text" : undefined} />
                       </div>
                     ) : (
-                      <div className="result-preparation" aria-busy={posterPreviewStatus === "preparing"}>
+                      <div className={`result-preparation result-loading${posterPreviewStatus === "failed" ? " is-failed" : ""}`} aria-busy={posterPreviewStatus === "preparing"}>
+                        {posterPreviewStatus !== "failed" && <span className="result-loading-spinner" aria-hidden="true" />}
                         <p role={posterPreviewStatus === "failed" ? "alert" : "status"}>
                           {t(posterPreviewStatus === "failed"
                             ? "이미지를 준비하지 못했어요. 다시 시도해 주세요."
-                            : "이미지를 준비하고 있어요.")}
+                            : "불러오는 중...")}
                         </p>
                         {posterPreviewStatus === "failed" && (
                           <button type="button" className="studio-secondary" onClick={() => setPosterRetry((value) => value + 1)}>
@@ -3064,15 +3129,18 @@ function CreateFlow({
                         <span className="ai-badge">{t("AI 생성 영상")}</span>
                       </>
                     ) : (
-                    <img
-                      src={imageUrl}
-                      alt={t("영상에 사용할 제품 사진")}
-                      className={playing ? "is-playing" : ""}
-                    />
+                      // QA 2026-10-20: no stand-in picture while the video is made (it looked like a finished example);
+                      // only the loading line, or the failure.
+                      <div className={`result-preparation result-loading${videoStatus === "failed" || videoStatus === "unsupported" ? " is-failed" : ""}`} aria-busy={videoStatus === "preparing" || videoStatus === "idle"}>
+                        {videoStatus !== "failed" && videoStatus !== "unsupported" && <span className="result-loading-spinner" aria-hidden="true" />}
+                        <p role={videoStatus === "failed" || videoStatus === "unsupported" ? "alert" : "status"}>
+                          {videoStatus === "failed" || videoStatus === "unsupported" ? t("영상을 불러오지 못했어요.") : "불러오는 중..."}
+                        </p>
+                      </div>
                     )}
                     {/* Caption band in A_손용범's compose-push layout: headline first, then shop · product and the call to action.
-                        Hidden once the real file plays: its own caption is drawn in. */}
-                    {!previewVideoUrl && <strong className={`video-caption${playing ? " is-playing" : ""}`}>
+                        Only over the AI clip before its captioned file exists (that file has its own caption drawn in). */}
+                    {!previewVideoUrl && showsRealVideo(aiVideo.state) && <strong className={`video-caption${playing ? " is-playing" : ""}`}>
                       <span className="video-caption-headline">{videoCaption.headline}</span>
                       {videoCaption.brand && <span className="video-caption-brand">{videoCaption.brand}</span>}
                       {videoCaption.cta && <span className="video-caption-cta">{videoCaption.cta}</span>}
@@ -3101,7 +3169,7 @@ function CreateFlow({
                   message={t(showsRealVideo(aiVideo.state) && !/^(AI가 만든 영상을 저장|새 창)/.test(videoMessage)
                     ? realVideoFile ? "AI가 만든 영상에 글자를 넣어 준비했어요. 저장하거나 보낼 수 있어요." : "AI 영상에 글자를 넣고 있어요. 잠시만 기다려 주세요."
                     : videoStatus === "preparing"
-                      ? `${videoMessage} 다른 작업으로 이동하면 준비를 취소해요.`
+                      ? ""
                       : videoMessage)}
                 />
                 {nextResultButton("video")}
@@ -3127,7 +3195,7 @@ function CreateFlow({
                   title="홍보 글"
                   extra={
                     <fieldset className="channel-choice" role="radiogroup">
-                      <legend>{t("어디에 올릴까요?")}{promoPending ? <span className="channel-pending"> · {t("글을 맞추는 중")}</span> : null}</legend>
+                      <legend>{t("어디에 올릴까요?")}</legend>
                       <div>
                         {copyChannelOptions.map(([id, label], index) => (
                           <button

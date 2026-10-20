@@ -409,8 +409,6 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,summary:focus-vi
 .reference-social button { position:relative;display:flex;align-items:center;justify-content:center;min-height:48px;border-radius:10px;border:1px solid transparent;font-size:16px;font-weight:700; }
 .reference-social svg { position:absolute;left:16px;width:22px;height:22px; }
 .social-kakao { background:#fee500;color:#191600; }
-.social-naver { background:#fff;color:#2b2420;border-color:#e0d3c6!important; }
-.social-naver svg { color:#03c75a; }
 .social-google { background:#fff;color:#2b2420;border-color:#e0d3c6!important; }
 .reference-login-notice { min-height:20px;margin:10px 0 6px;font-size:14px;line-height:1.45;color:#93390f;text-align:center; }
 .reference-login-notice:empty { margin:4px 0 0;min-height:0; }
@@ -910,11 +908,35 @@ html[data-view=mobile] .easy-offer { top:calc(64px * var(--s) + 34px); }
 .easy-mode .bg-ask p { font-size:calc(18px * var(--s)); }
 .easy-mode .bg-ask-actions button { min-height:calc(62px * var(--s));font-size:calc(21px * var(--s)); }
 /* Result: which photo the poster and video use (바뀐 사진 / 원래 사진). */
-.photo-pick { display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0 4px; }
-.photo-pick button { display:flex;align-items:center;gap:10px;min-height:max(56px,calc(58px * var(--s)));padding:6px 12px 6px 6px;border:1px solid #9a8c81;border-radius:var(--radius-control,10px);background:#fff;color:var(--color-ink);font-size:max(15px,calc(16px * var(--s)));font-weight:800;text-align:left; }
-.photo-pick button img { width:44px;height:44px;border-radius:8px;object-fit:cover;flex:none; }
-.photo-pick button[aria-checked=true] { border-color:var(--color-brand);background:var(--color-brand-soft);box-shadow:inset 0 0 0 1px var(--color-brand);color:var(--color-brand-hover); }
-.easy-mode .photo-pick button { min-height:calc(64px * var(--s));font-size:calc(19px * var(--s)); }
+/* 사진 고르기 popup (QA 2026-10-20): near full screen, brand header, original left / corrected right as framed
+   cards that fill the height, the picked one in the brand color with a check. */
+.bg-ask-backdrop.is-full { align-items:center;padding:max(12px, env(safe-area-inset-top, 0px)) 12px max(12px, env(safe-area-inset-bottom, 0px)); }
+.photo-pick-dialog { max-width:480px;width:100%;max-height:calc(100dvh - 24px);display:flex;flex-direction:column;gap:0;padding:0;overflow-x:hidden;overflow-y:auto;background:var(--color-card,#faf6f1);border:2px solid var(--color-brand); }
+.photo-pick-head { display:grid;justify-items:center;gap:8px;padding:22px 18px 20px;background:linear-gradient(160deg,var(--color-brand) 0%,var(--color-brand-hover) 100%);color:#fff;text-align:center; }
+.photo-pick-chip { display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:999px;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.45);font-size:max(14px,calc(14px * var(--s)));font-weight:800; }
+.photo-pick-dialog .photo-pick-head h2 { color:#fff;font-size:calc(23px * var(--s)); }
+.photo-pick-dialog .photo-pick-head p { color:rgba(255,255,255,.88); }
+.photo-pick-options { display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:20px 14px 10px; }
+.photo-pick-options button { position:relative;display:flex;flex-direction:column;gap:12px;min-height:0;padding:8px 8px 12px;border:2px solid var(--color-control,#d9c7b9);border-radius:16px;background:#fff;color:var(--color-ink);box-shadow:var(--shadow-card);font-size:max(17px,calc(18px * var(--s)));text-align:center;transition:border-color .15s,box-shadow .15s,transform .15s; }
+.photo-pick-options button:active { transform:scale(.98); }
+.photo-pick-frame { position:relative;aspect-ratio:3/4;display:flex;align-items:center;justify-content:center;border-radius:10px;background:#f1e9e2 center/cover no-repeat;overflow:hidden;isolation:isolate; }
+.photo-pick-frame::before { content:"";position:absolute;inset:-20px;z-index:-1;background:inherit;filter:blur(18px) saturate(1.1);opacity:.85; }
+.photo-pick-frame::after { content:"";position:absolute;inset:0;z-index:-1;background:rgba(255,255,255,.18); }
+.photo-pick-frame img { width:100%;height:100%;object-fit:contain;display:block;filter:drop-shadow(0 4px 10px rgba(0,0,0,.18)); }
+.photo-pick-options strong { font-weight:800; }
+.photo-pick-tag { position:absolute;top:14px;left:14px;z-index:1;padding:3px 10px;border-radius:999px;background:rgba(43,36,32,.72);color:#fff;font-size:max(13px,calc(13px * var(--s)));font-weight:800; }
+.photo-pick-options button[data-pick=changed] .photo-pick-tag { background:var(--color-brand); }
+.photo-pick-mark { position:absolute;top:10px;right:10px;z-index:1;display:grid;place-items:center;width:32px;height:32px;border-radius:50%;background:var(--color-brand);color:#fff;box-shadow:0 0 0 3px #fff; }
+.photo-pick-options button[aria-pressed=true] { border-color:var(--color-brand);background:var(--color-brand-soft);box-shadow:0 0 0 3px rgba(180,77,29,.18),var(--shadow-card);color:var(--color-brand-hover); }
+.photo-pick-hint { padding:4px 16px 16px;text-align:center;color:var(--color-muted,#6e625a);font-size:max(14px,calc(15px * var(--s))); }
+.easy-mode .photo-pick-dialog .photo-pick-head h2 { font-size:calc(26px * var(--s)); }
+.easy-mode .photo-pick-options button { font-size:calc(21px * var(--s)); }
+/* 정보 입력: 보정 중 / 보정 못 함 line under the photo. */
+.bg-working { display:flex;align-items:center;gap:8px;margin:8px 0 0;padding:10px 12px;border-radius:10px;background:var(--color-brand-soft,#fbeee6);color:var(--color-brand-hover,#93390f);font-size:max(15px,calc(16px * var(--s)));font-weight:700;word-break:keep-all; }
+.bg-working.is-done { background:#f4efea;color:#5e534c; }
+/* 결과 보기: reopens 사진 고르기. */
+.photo-repick { display:inline-flex !important;align-items:center;gap:10px;width:auto !important;min-height:max(48px,calc(50px * var(--s)));margin:8px 0 4px;padding:6px 14px 6px 6px !important;font-size:max(15px,calc(16px * var(--s)));font-weight:800; }
+.photo-repick img { width:36px;height:36px;border-radius:8px;object-fit:cover;flex:none; }
 /* On a PC the app is a phone frame (.reference-app, position:relative): the popup stays inside it. */
 @media (min-width:768px) {
   html[data-view=mobile] .reference-app > .bg-ask-backdrop { position:absolute;border-radius:38px;overflow:hidden; }
@@ -997,3 +1019,14 @@ html[data-layout=mobile] .results-step:not(.is-single) .result-card > .result-ne
 .easy-mode .voice-mic-button { font-size:18px; }
 .studio-shell .record-delete { font-size:16px; }
 /* 로그인 is the primary button again now that sign-in works (the two rules that made it an outline were removed) */
+
+/* 결과 보기 loading (QA 2026-10-20): fills the preview box, centered, bold, with a brand spinner, so an empty
+   preview reads as "on its way" rather than an error. */
+.result-main-preview > .result-loading { position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;width:100%;height:100%;padding:24px;text-align:center;background:linear-gradient(180deg,var(--color-brand-soft,#fdf0e6) 0%,#fff 100%);border-radius:inherit; }
+.result-loading p { margin:0;color:var(--color-brand-hover,#93390f);font-size:calc(24px * var(--s,1));font-weight:800;line-height:1.4;letter-spacing:-.01em;word-break:keep-all; }
+.easy-mode .result-loading p { font-size:calc(28px * var(--s,1)); }
+.result-loading-spinner { width:56px;height:56px;border-radius:50%;border:5px solid rgba(180,77,29,.18);border-top-color:var(--color-brand,#b44d1d);animation:ai-fill-spin .9s linear infinite; }
+.result-loading.is-failed { background:#faf6f1; }
+.result-loading.is-failed p { color:var(--color-error,#9f302f); }
+@media (prefers-reduced-motion:reduce) { .result-loading-spinner { animation:none;border-color:var(--color-brand,#b44d1d);opacity:.5; } }
+.result-main-preview:has(> .result-loading) { position:relative;min-height:calc(300px * var(--s,1)); }
