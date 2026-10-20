@@ -3195,7 +3195,7 @@ function CreateFlow({
                   title="홍보 글"
                   extra={
                     <fieldset className="channel-choice" role="radiogroup">
-                      <legend>{t("어디에 올릴까요?")}{promoPending ? <span className="channel-pending"> · {t("글을 맞추는 중")}</span> : null}</legend>
+                      <legend>{t("어디에 올릴까요?")}</legend>
                       <div>
                         {copyChannelOptions.map(([id, label], index) => (
                           <button
