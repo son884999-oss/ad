@@ -944,9 +944,6 @@ html[data-view=mobile] .easy-offer { top:calc(64px * var(--s) + 34px); }
 /* 정보 입력: 보정 중 / 보정 못 함 line under the photo. */
 .bg-working { display:flex;align-items:center;gap:8px;margin:8px 0 0;padding:10px 12px;border-radius:10px;background:var(--color-brand-soft,#fbeee6);color:var(--color-brand-hover,#93390f);font-size:max(15px,calc(16px * var(--s)));font-weight:700;word-break:keep-all; }
 .bg-working.is-done { background:#f4efea;color:#5e534c; }
-/* 결과 보기: reopens 사진 고르기. */
-.photo-repick { display:inline-flex !important;align-items:center;gap:10px;width:auto !important;min-height:max(48px,calc(50px * var(--s)));margin:8px 0 4px;padding:6px 14px 6px 6px !important;font-size:max(15px,calc(16px * var(--s)));font-weight:800; }
-.photo-repick img { width:36px;height:36px;border-radius:8px;object-fit:cover;flex:none; }
 /* On a PC the app is a phone frame (.reference-app, position:relative): the popup stays inside it. */
 @media (min-width:768px) {
   html[data-view=mobile] .reference-app > .bg-ask-backdrop { position:absolute;border-radius:38px;overflow:hidden; }
@@ -1040,3 +1037,11 @@ html[data-layout=mobile] .results-step:not(.is-single) .result-card > .result-ne
 .result-loading.is-failed p { color:var(--color-error,#9f302f); }
 @media (prefers-reduced-motion:reduce) { .result-loading-spinner { animation:none;border-color:var(--color-brand,#b44d1d);opacity:.5; } }
 .result-main-preview:has(> .result-loading) { position:relative;min-height:calc(300px * var(--s,1)); }
+/* 결과 보기 사진 tab (QA 2026-10-20). Four tabs on one row: smaller type, icons hidden, so none wraps. */
+.result-tabs[data-count="4"] { grid-template-columns:repeat(4,minmax(0,1fr)) !important;gap:5px; }
+.result-tabs[data-count="4"] button { min-width:0;gap:4px;padding-inline:2px;font-size:max(15px,calc(17px * var(--s,1)));white-space:nowrap; }
+.easy-mode .result-tabs[data-count="4"] button { font-size:max(17px,calc(20px * var(--s,1))); }
+.result-tabs[data-count="4"] svg { display:none; }
+.result-photo-preview { position:relative;display:flex;align-items:center;justify-content:center;overflow:hidden;border-radius:14px;background:#f1e9e2; }
+.result-photo-preview > img { display:block;width:100%;height:auto;max-height:70dvh;object-fit:contain; }
+.result-photo-preview .ai-badge { position:absolute;top:12px;right:12px;z-index:2;padding:4px 10px;border-radius:999px;background:#2b2420cc;color:#fff;font-size:14px;font-weight:700;pointer-events:none; }

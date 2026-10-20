@@ -60,6 +60,8 @@ const EMPTY_SUGGESTION: PhotoSuggestion = { productName: "", description: "", hi
 type Page = "login" | "home" | "create" | "records" | "plan"
 
 type CreationType = "all" | "poster" | "video" | "copy"
+/** 결과 보기 tabs: 사진 (the corrected photo, only when 배경 바꾸기 made one) comes first, then the results. */
+type ResultTabId = "photo" | "poster" | "video" | "copy"
 
 type Step = 1 | 2 | 3
 
@@ -829,7 +831,7 @@ function ResultCardHeading({
   extra,
   easyMode = false,
 }: {
-  icon: "picture" | "video" | "copy"
+  icon: "picture" | "video" | "copy" | "camera"
   title: string
   control?: ReactNode
   /** Extra controls under the main one (e.g. the poster shape picker). */
@@ -1186,7 +1188,7 @@ function CreateFlow({
   }, [step, easyMode]) // eslint-disable-line react-hooks/exhaustive-deps
   const [playing, setPlaying] = useState(false)
   const [selectedResultTab, setSelectedResultTab] =
-    useState<"poster" | "video" | "copy">(initialResultTab)
+    useState<ResultTabId>(initialResultTab)
 
   const [copyMessage, setCopyMessage] = useState("")
 
@@ -1408,7 +1410,7 @@ function CreateFlow({
   const videoShareFileRef = useRef<File | null>(null)
   // The finished sample file, also played in the preview so what you see is exactly what is saved.
   const [sampleVideoFile, setSampleVideoFile] = useState<File | null>(null)
-  const [shareMessages, setShareMessages] = useState<Partial<Record<"poster" | "video" | "copy", string>>>({})
+  const [shareMessages, setShareMessages] = useState<Partial<Record<ResultTabId, string>>>({})
   const videoContextRef = useRef(0)
   // 배경 바꾸기 (plan C, 2026-10-19): the owner's answer to the photo popup, the job's status, and which photo the
   // result uses ("원래 사진" when the AI changed how the product looks). The picture itself is sceneImage (kept
@@ -1599,15 +1601,19 @@ function CreateFlow({
 
   const showCopy = type === "copy" || type === "all"
 
-  const resultTabs = [
-    { id: "poster" as const, label: easyMode ? "포스터" : "이미지", available: showPoster },
-    { id: "video" as const, label: easyMode ? "짧은 영상" : "영상", available: showVideo },
-    { id: "copy" as const, label: "홍보 글", available: showCopy },
-  ].filter((tab) => tab.available)
+  // 사진 tab (QA 2026-10-20): the corrected photo itself, to save or share without poster text (배달앱 메뉴,
+  // 플레이스 대표 사진). Only when the owner picked the corrected photo; with four tabs the labels get shorter.
+  const showPhoto = photoPick === "changed" && bgState?.forImage === imageUrl && bgState.status === "ready" && sceneImage?.forImage === imageUrl && (showPoster || showVideo)
+  const resultTabs = ([
+    { id: "photo", label: "사진", available: showPhoto },
+    { id: "poster", label: showPhoto || easyMode ? "포스터" : "이미지", available: showPoster },
+    { id: "video", label: easyMode && !showPhoto ? "짧은 영상" : "영상", available: showVideo },
+    { id: "copy", label: showPhoto && easyMode ? "글" : "홍보 글", available: showCopy },
+  ] as { id: ResultTabId; label: string; available: boolean }[]).filter((tab) => tab.available)
   const activeResultTab = resultTabs.some((tab) => tab.id === selectedResultTab)
     ? selectedResultTab
     : resultTabs[0].id
-  const selectResultTab = (id: "poster" | "video" | "copy", focus = false) => {
+  const selectResultTab = (id: ResultTabId, focus = false) => {
     if (id !== activeResultTab) onResultTabChange()
     setSelectedResultTab(id)
     if (id !== "video") setPlaying(false)
@@ -1618,7 +1624,7 @@ function CreateFlow({
   }
 
   // "다음: 영상 ▶" under a result, so the results can be gone through in order without knowing the tabs are tabs.
-  const nextResultButton = (id: "poster" | "video" | "copy") => {
+  const nextResultButton = (id: ResultTabId) => {
     const next = resultTabs[resultTabs.findIndex((tab) => tab.id === id) + 1]
     if (!next) return null
     return (
@@ -2378,6 +2384,32 @@ function CreateFlow({
   }, [generating])
   const videoReadyForResults = !showVideo || showsRealVideo(aiVideo.state) || Boolean(sampleVideoFile) || videoStatus === "failed" || videoStatus === "unsupported" || videoWaitOver
 
+  // 사진 tab: the photo in use as a file, saved to the gallery or handed to the share sheet (the owner posts it).
+  const savePhoto = async (share: boolean) => {
+    const update = (message: string) => setShareMessages((current) => ({ ...current, photo: message }))
+    const url = changedUrl
+    if (!url) return
+    try {
+      const blob = await (await fetch(url)).blob()
+      const extension = blob.type === "image/png" ? "png" : blob.type === "image/webp" ? "webp" : "jpg"
+      const title = details.shopName?.trim() || details.name?.trim() || "홍보잇다"
+      const file = new File([blob], outputFileName(title, "보정사진", extension), { type: blob.type || "image/jpeg" })
+      if (!share) {
+        triggerFileDownload(file)
+        update(isTouchPhone() ? "저장 창을 열었어요. ‘이미지 저장’을 누르면 사진에 들어가요." : "사진 저장을 요청했어요. 다운로드 목록을 확인하세요.")
+        return
+      }
+      if (typeof navigator.share !== "function" || !navigator.canShare?.({ files: [file] })) {
+        update("이 브라우저는 파일 공유를 지원하지 않아요. 저장한 뒤 원하는 앱에서 올려 주세요.")
+        return
+      }
+      await navigator.share({ title, files: [file] })
+      update("공유 창을 열었어요. 고른 앱에서 직접 올려 주세요.")
+    } catch (error) {
+      update(error instanceof DOMException && error.name === "AbortError" ? "공유를 취소했어요. 사진은 그대로 있어요." : "사진을 가져오지 못했어요. 다시 시도해 주세요.")
+    }
+  }
+
   const shareResult = async (kind: "poster" | "video" | "copy") => {
     const update = (message: string) => setShareMessages(current => ({...current, [kind]: message}))
     if (typeof navigator.share !== "function") {
@@ -2443,13 +2475,8 @@ function CreateFlow({
             <p>{t("사진과 입력한 내용으로 만든 체험 결과예요. ")}</p>
           </div>
           {sceneNotice && <p className={`ai-notice scene-notice${sceneState?.status === "ready" ? " is-ai" : ""}`} role="status">{t(sceneNotice)}</p>}
-          {bgNotice && <p className={`ai-notice scene-notice${ownBg === "ready" && photoPick === "changed" ? " is-ai" : ""}`} role="status">{t(bgNotice)}</p>}
-          {changedUrl && (
-            <button type="button" className="studio-secondary photo-repick" onClick={() => setPicking(true)}>
-              <img src={photoPick === "changed" ? changedUrl : imageUrl} alt="" width="36" height="36" />
-              <span>{t("사진 다시 고르기")}</span>
-            </button>
-          )}
+          {/* The 사진 tab says which photo is used; only a failed 배경 바꾸기 is said here. */}
+          {bgNotice && ownBg !== "ready" && <p className="ai-notice scene-notice" role="status">{t(bgNotice)}</p>}
           {/* Owner, 2026-10-21: the results already carry the AI mark, so only the no-AI fallback is said here. */}
           {showCopy && !activePromo && <p className="ai-notice">{t("AI 없이 기본 문구로 만들었어요.")}</p>}
         </div>
@@ -2926,7 +2953,8 @@ function CreateFlow({
               <PrimaryButton
                 disabled={missingFields.length > 0 || uploadPending}
                 onClick={() => {
-                  setSelectedResultTab(resultTabs[0].id)
+                  // Results open on the first made thing (the 사진 tab is there to go back to).
+                  setSelectedResultTab((resultTabs.find((tab) => tab.id !== "photo") ?? resultTabs[0]).id)
                   if (showCopy) requestPromoText()
                   // Only 고급형 pays: the new advertising scene first (poster + video), then the AI video made from it.
                   // The AI video on screen belongs to an earlier photo or to 고급형: a new 기본형 creation, or 고급형
@@ -2948,6 +2976,7 @@ function CreateFlow({
           <div className="result-tabs-bar">
             <div
               className="result-tabs"
+              data-count={resultTabs.length}
               role="tablist"
               aria-label={t("홍보물 결과 종류")}
             >
@@ -2976,7 +3005,9 @@ function CreateFlow({
                 >
                   <Icon
                     name={
-                      tab.id === "poster"
+                      tab.id === "photo"
+                        ? "camera"
+                        : tab.id === "poster"
                         ? "picture"
                         : tab.id === "video"
                           ? "video"
@@ -2993,6 +3024,35 @@ function CreateFlow({
             className="result-grid result-tab-panels"
             data-result-count={resultTabs.length}
           >
+            {showPhoto && changedUrl && (
+              <article
+                id="result-photo"
+                role="tabpanel"
+                aria-labelledby="result-tab-photo"
+                hidden={activeResultTab !== "photo"}
+                tabIndex={0}
+                className="result-card result-photo"
+              >
+                <ResultCardHeading easyMode={easyMode} icon="camera" title="보정 사진" />
+                <ResultPreview>
+                  <div className="result-main-preview result-photo-preview">
+                    <img src={changedUrl} alt={t("AI로 배경을 바꾼 제품 사진")} />
+                    {/* AI 표시 (인공지능기본법 제31조): the corrected photo says it was made with AI. */}
+                    <span className="ai-badge">{t("AI 보정 사진")}</span>
+                  </div>
+                </ResultPreview>
+                {/* Owner, QA 2026-10-20: only the corrected photo and 저장하기 / 공유하기 here. */}
+                <ResultActionBar
+                  label="저장하기"
+                  accessibleLabel="보정 사진 저장하기"
+                  shareLabel="공유하기"
+                  icon="download"
+                  onClick={() => savePhoto(false)}
+                  onShare={() => savePhoto(true)}
+                  shareMessage={aiNote(t(shareMessages.photo ?? ""))}
+                />
+              </article>
+            )}
             {showPoster && (
               <article
                 id="result-poster"
