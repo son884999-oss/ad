@@ -33,12 +33,21 @@ export function getGeminiConfig() {
 }
 
 /**
- * The second key may be a paid key: it spends at most ₩500 a day (owner's rule: ₩100 on 2026-10-18, raised to ₩500 the same day). Each answer's cost
+ * The second key may be a paid key: it spends at most ₩500 a day (owner's rule: ₩100 on 2026-10-18, raised to ₩500 the same day; ₩1,000 through 2026-10-22). Each answer's cost
  * is estimated from its usageMetadata at list prices rounded up (USD per 1M tokens, ₩1,500 per dollar) and added
  * to a daily ledger: outputs/.gemini-key2-usage.json locally (gitignored), memory where the disk is read-only.
  * A call is only made while one more worst-case call (₩10) still fits.
  */
-export const BACKUP_DAILY_LIMIT_KRW = 500
+const BASE_DAILY_LIMIT_KRW = 500
+// Owner, 2026-10-20: ₩1,000 a day through Thursday 2026-10-22 (Korean day), then back to ₩500 on its own.
+const RAISED_DAILY_LIMIT_KRW = 1000
+const RAISED_UNTIL_DAY = "2026-10-22"
+/** Today's ₩ cap on the paid key (checked on every call, so the raise ends at midnight KST without a deploy). */
+export function dailyLimitKrw() {
+  return today() <= RAISED_UNTIL_DAY ? RAISED_DAILY_LIMIT_KRW : BASE_DAILY_LIMIT_KRW
+}
+/** Today's cap when this module loaded (checks scripts read it; the API itself calls dailyLimitKrw()). */
+export const BACKUP_DAILY_LIMIT_KRW = dailyLimitKrw()
 const BACKUP_CALL_RESERVE_KRW = 10
 const KRW_PER_USD = 1500
 const ledgerPath = () => process.env.GEMINI_KEY2_LEDGER || join(process.cwd(), "outputs", ".gemini-key2-usage.json")
@@ -83,11 +92,11 @@ export function backupSpentToday() {
 
 /** True while one more call of `reserve` ₩ still fits in today's cap on the paid key. */
 export function paidKeyFits(reserve) {
-  return backupSpentToday() + reserve <= BACKUP_DAILY_LIMIT_KRW
+  return backupSpentToday() + reserve <= dailyLimitKrw()
 }
 
 function backupAllowed() {
-  return backupSpentToday() + BACKUP_CALL_RESERVE_KRW <= BACKUP_DAILY_LIMIT_KRW
+  return backupSpentToday() + BACKUP_CALL_RESERVE_KRW <= dailyLimitKrw()
 }
 
 function costKrw(model, usage) {

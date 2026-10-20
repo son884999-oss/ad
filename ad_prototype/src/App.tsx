@@ -215,16 +215,23 @@ function PhotoPickDialog({ easyMode, originalUrl, changedUrl, pick, onPick, onCl
   const options = ([["original", "원본 사진", originalUrl], ["changed", "보정 사진", changedUrl]] as const)
   return (
     <AppDialog titleId="photo-pick-title" bodyId="photo-pick-body" onClose={onClose} className="photo-pick-dialog" backdropClass="is-full" closeOnBackdrop={false} focusSelector={`[data-pick="${pick}"]`}>
-      <h2 id="photo-pick-title">{t("원하는 사진을 선택해 주세요")}</h2>
-      <p id="photo-pick-body">{t("고른 사진으로 포스터와 영상을 만들어요.")}</p>
+      <div className="photo-pick-head">
+        <span className="photo-pick-chip"><Icon name="check" size={16} />{t("보정이 끝났어요")}</span>
+        <h2 id="photo-pick-title">{t("원하는 사진을 선택해 주세요")}</h2>
+        <p id="photo-pick-body">{t("고른 사진으로 포스터와 영상을 만들어요.")}</p>
+      </div>
       <div className="photo-pick-options">
         {options.map(([id, label, url]) => (
           <button key={id} type="button" data-pick={id} aria-pressed={pick === id} onClick={() => onPick(id)}>
-            <img src={url} alt={t(label)} />
-            <span>{t(label)}</span>
+            <span className="photo-pick-tag">{t(id === "changed" ? "AI 보정" : "원본")}</span>
+            {pick === id && <span className="photo-pick-mark" aria-hidden="true"><Icon name="check" size={18} /></span>}
+            {/* The whole photo stays visible; a blurred copy fills the rest of the tall frame. */}
+            <span className="photo-pick-frame" style={{ backgroundImage: `url("${url}")` }}><img src={url} alt={t(label)} /></span>
+            <strong>{t(label)}</strong>
           </button>
         ))}
       </div>
+      <small className="photo-pick-hint">{t("사진을 누르면 바로 그 사진으로 진행돼요.")}</small>
     </AppDialog>
   )
 }
@@ -3017,7 +3024,8 @@ function CreateFlow({
                         <img src={posterPreviewUrl} alt={`${details.name?.trim() || "제품"} 홍보 이미지`} aria-describedby={posterVisibleText ? "poster-visible-text" : undefined} />
                       </div>
                     ) : (
-                      <div className="result-preparation" aria-busy={posterPreviewStatus === "preparing"}>
+                      <div className={`result-preparation result-loading${posterPreviewStatus === "failed" ? " is-failed" : ""}`} aria-busy={posterPreviewStatus === "preparing"}>
+                        {posterPreviewStatus !== "failed" && <span className="result-loading-spinner" aria-hidden="true" />}
                         <p role={posterPreviewStatus === "failed" ? "alert" : "status"}>
                           {t(posterPreviewStatus === "failed"
                             ? "이미지를 준비하지 못했어요. 다시 시도해 주세요."
@@ -3123,7 +3131,8 @@ function CreateFlow({
                     ) : (
                       // QA 2026-10-20: no stand-in picture while the video is made (it looked like a finished example);
                       // only the loading line, or the failure.
-                      <div className="result-preparation" aria-busy={videoStatus === "preparing" || videoStatus === "idle"}>
+                      <div className={`result-preparation result-loading${videoStatus === "failed" || videoStatus === "unsupported" ? " is-failed" : ""}`} aria-busy={videoStatus === "preparing" || videoStatus === "idle"}>
+                        {videoStatus !== "failed" && videoStatus !== "unsupported" && <span className="result-loading-spinner" aria-hidden="true" />}
                         <p role={videoStatus === "failed" || videoStatus === "unsupported" ? "alert" : "status"}>
                           {videoStatus === "failed" || videoStatus === "unsupported" ? t("영상을 불러오지 못했어요.") : "불러오는 중..."}
                         </p>
