@@ -143,10 +143,11 @@ type Tone = "natural" | "premium" | "friendly" | "trendy"
 type PosterRatioKey = "4:5" | "1:1" | "9:16"
 type PosterLayoutKey = "vertical" | "split" | "editorial"
 // Labels say what each shape is for, so nobody has to know what "4:5" means.
-const posterRatioOptions: [PosterRatioKey, string, string][] = [
-  ["4:5", "인스타 피드", "세로"],
-  ["1:1", "카톡·블로그", "정사각"],
-  ["9:16", "스토리·쇼츠", "길쭉"],
+/** Owner, 2026-10-21: channel names (인스타 피드…) read as jargon — the basic screen shows the ratio, the easy screen 1·2·3번. */
+const posterRatioOptions: [PosterRatioKey, string][] = [
+  ["4:5", "세로"],
+  ["1:1", "정사각"],
+  ["9:16", "길쭉한 세로"],
 ]
 /** The old 기본형/고급형 screens, hidden since plan C; open the app with ?premiumui to see them (development, checks). */
 const premiumUi = typeof location !== "undefined" && new URLSearchParams(location.search).has("premiumui")
@@ -830,18 +831,19 @@ function PosterStyleControls({
   const selected = posterRatioOptions.findIndex(([id]) => id === ratio)
   return (
     <fieldset ref={groupRef} className="poster-use" role="radiogroup">
-      <legend className="sr-only">{t("어디에 올릴 포스터인가요?")}</legend>
+      <legend className="sr-only">{t("포스터 크기")}</legend>
       <div>
-        {posterRatioOptions.map(([id, label], index) => (
+        {posterRatioOptions.map(([id, shape], index) => (
           <button
             key={id}
             type="button"
             role="radio"
             aria-checked={ratio === id}
+            aria-label={easyMode ? `${index + 1}번, ${shape}` : `${id}, ${shape}`}
             onClick={() => pick(id)}
             {...radioNav(index, posterRatioOptions.length, selected, (next) => pick(posterRatioOptions[next][0]))}
           >
-            <span>{t(label)}</span>
+            <span>{easyMode ? `${index + 1}번` : id}</span>
           </button>
         ))}
       </div>
