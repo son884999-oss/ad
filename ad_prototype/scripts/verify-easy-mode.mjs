@@ -132,7 +132,7 @@ try {
     assert.ok(!collected.easy.result.some((t) => /다운로드|공유/.test(t)))
   })
 
-  await check("voice: tap starts listening, final result replaces AI text, 되돌리기 restores, Tab focus does not start", async () => {
+  await check("voice: tapping a field only types, 말로 하기 starts listening, final result replaces AI text, 되돌리기 restores, Tab focus does not start", async () => {
     const page = await open({ easy: true, analyze: { productName: "AI가 붙인 이름", description: "", highlights: "", keyFeatures: [], targetAudience: "", tones: [] } })
     await toInfo(page)
     await page.getByRole("button", { name: "자동으로 채워 주기" }).click() // the photo is read only when asked (2026-10-19)
@@ -145,8 +145,10 @@ try {
     assert.equal(await panel(page).count(), 0, "Tab focus must not start listening")
     assert.equal(await page.evaluate(() => window.__voice.instances.length), 0)
     await page.keyboard.press("Shift+Tab")
-    // Pointer tap starts it.
+    // A tap only types (owner, 2026-10-21); the 말로 하기 button starts listening.
     await nameField(page).click()
+    assert.equal(await panel(page).count(), 0, "tapping a field must not start listening")
+    await page.getByRole("button", { name: "제품 이름 말로 하기", exact: true }).click()
     await panel(page).getByText("듣고 있어요. 말씀하세요").waitFor()
     assert.equal(await page.evaluate(() => window.__voice.last.lang), "ko-KR")
     assert.equal(await nameField(page).getAttribute("readonly"), "")
@@ -180,7 +182,7 @@ try {
     assert.equal(await page.getByLabel("가게 이름", { exact: true }).inputValue(), "행복 카페")
     await page.getByRole("button", { name: "다 했어요" }).waitFor({ state: "detached" })
     await page.locator("body").click({ position: { x: 5, y: 300 } })
-    await nameField(page).click()
+    await page.getByRole("button", { name: "제품 이름 말로 하기", exact: true }).click()
     await panel(page).waitFor()
     await page.evaluate(() => window.__voice.last.emit("다른 말", false))
     await page.getByRole("button", { name: "키보드로 쓸게요", exact: true }).click()
@@ -191,7 +193,7 @@ try {
     assert.equal(await nameField(page).inputValue(), "원래 이름!")
     await page.locator("body").click({ position: { x: 5, y: 300 } })
     await nameField(page).click()
-    assert.equal(await panel(page).count(), 0, "after choosing the keyboard, taps type")
+    assert.equal(await panel(page).count(), 0, "taps type")
     // Microphone blocked → short message, typing still works.
     await page.getByRole("button", { name: "가게 이름 말로 하기", exact: true }).click()
     await page.evaluate(() => window.__voice.last.fail("not-allowed"))
@@ -207,18 +209,17 @@ try {
     await page.close()
   })
 
-  await check("voice: unsupported browser shows the message once and typing works", async () => {
+  await check("voice: unsupported browser has no mic button and typing works", async () => {
     const page = await open({ easy: true, speech: false })
     await toInfo(page)
     await nameField(page).click()
-    await page.getByText("이 브라우저는 말로 쓰기가 안 돼요. 키보드의 마이크 버튼으로 말하거나 글자로 써 주세요.").waitFor()
     assert.equal(await page.locator(".voice-mic-button").count(), 0, "no mic button without speech recognition")
     assert.equal(await panel(page).count(), 0)
     await page.keyboard.type("타이핑 이름")
     assert.equal(await nameField(page).inputValue(), "타이핑 이름")
     await page.locator("body").click({ position: { x: 5, y: 300 } })
     await page.getByLabel("가게 이름", { exact: true }).click()
-    assert.equal(await page.getByText("이 브라우저는 말로 쓰기가 안 돼요", { exact: false }).count(), 0, "shown once, not on every tap")
+    assert.equal(await panel(page).count(), 0)
     assert.deepEqual(page.errors, [])
     await page.close()
   })

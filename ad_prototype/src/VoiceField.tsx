@@ -38,7 +38,6 @@ export default function VoiceField({
 }) {
   const hasRecognition = recognitionConstructor() !== null
   const [undo, setUndo] = useState<{ previous: string; applied: string } | null>(null)
-  const [keyboardChosen, setKeyboardChosen] = useState(false)
   const [announcement, setAnnouncement] = useState("")
   const valueRef = useRef(value)
   valueRef.current = value
@@ -97,7 +96,6 @@ export default function VoiceField({
   const chooseKeyboard = () => {
     flushSync(() => {
       voice.cancel()
-      setKeyboardChosen(true)
       setAnnouncement("글자로 써 주세요.")
     })
     document.getElementById(inputId)?.focus()
@@ -113,13 +111,7 @@ export default function VoiceField({
   const bind: VoiceBind = {
     id: inputId,
     readOnly: listening || undefined,
-    onPointerDown:
-      voice.autoStart && !listening && !keyboardChosen
-        ? (event) => {
-            if (event.button > 0 || document.activeElement === event.currentTarget) return
-            startListening("tap")
-          }
-        : undefined,
+    // Owner, 2026-10-21: typing is the default; only [말로 하기] starts listening (a tap used to start it).
   }
 
   return (
