@@ -204,32 +204,46 @@ function BackgroundAskDialog({ easyMode, onAnswer, onClose }: { easyMode: boolea
 }
 
 /**
- * 사진 고르기 popup (QA 2026-10-20): once the advertising background is ready, the original and the changed photo
- * are shown near full screen (original left, corrected right), and only the one picked is used from then on
- * (정보 입력 사진, poster, video). Tapping outside does nothing; Escape keeps the current pick. It reopens from
- * 결과 보기's "사진 다시 고르기".
+ * 사진 고르기 popup (QA 2026-10-20): opens as soon as the owner says 바꾸기, before 정보 입력, so nothing pops up
+ * while they type. The original (left) can be picked at once; the corrected one (right) shows 보정 중 until it
+ * arrives, then becomes pickable. Picking either moves on. Tapping outside does nothing; Escape keeps the current
+ * pick (the original while the correction is still running). It reopens from 결과 보기's "사진 다시 고르기".
  */
-function PhotoPickDialog({ easyMode, originalUrl, changedUrl, pick, onPick, onClose }: { easyMode: boolean; originalUrl: string; changedUrl: string; pick: "changed" | "original"; onPick: (pick: "changed" | "original") => void; onClose: () => void }) {
+function PhotoPickDialog({ easyMode, originalUrl, changedUrl, status, pick, onPick, onClose }: { easyMode: boolean; originalUrl: string; changedUrl: string; status: "making" | "ready" | "failed"; pick: "changed" | "original"; onPick: (pick: "changed" | "original") => void; onClose: () => void }) {
   const t = (text: string) => uiText(text, easyMode)
-  // Left the original, right the corrected one (owner, QA 2026-10-20). Focus starts on the current pick.
-  const options = ([["original", "원본 사진", originalUrl], ["changed", "보정 사진", changedUrl]] as const)
+  const ready = status === "ready" && Boolean(changedUrl)
+  const shown = ready ? pick : "original"
   return (
-    <AppDialog titleId="photo-pick-title" bodyId="photo-pick-body" onClose={onClose} className="photo-pick-dialog" backdropClass="is-full" closeOnBackdrop={false} focusSelector={`[data-pick="${pick}"]`}>
+    <AppDialog titleId="photo-pick-title" bodyId="photo-pick-body" onClose={onClose} className="photo-pick-dialog" backdropClass="is-full" closeOnBackdrop={false} focusSelector={`[data-pick="${shown}"]`}>
       <div className="photo-pick-head">
-        <span className="photo-pick-chip"><Icon name="check" size={16} />{t("보정이 끝났어요")}</span>
+        <span className="photo-pick-chip" role="status">
+          {status === "making" ? <span className="photo-pick-chip-spinner" aria-hidden="true" /> : <Icon name={ready ? "check" : "close"} size={16} />}
+          {t(status === "making" ? "사진을 보정하고 있어요" : ready ? "보정이 끝났어요" : "보정하지 못했어요")}
+        </span>
         <h2 id="photo-pick-title">{t("원하는 사진을 선택해 주세요")}</h2>
-        <p id="photo-pick-body">{t("고른 사진으로 포스터와 영상을 만들어요.")}</p>
+        <p id="photo-pick-body">{t(status === "making" ? "기다리지 않으려면 원본 사진을 눌러 주세요." : ready ? "고른 사진으로 포스터와 영상을 만들어요." : "원본 사진으로 만들어요.")}</p>
       </div>
       <div className="photo-pick-options">
-        {options.map(([id, label, url]) => (
-          <button key={id} type="button" data-pick={id} aria-pressed={pick === id} onClick={() => onPick(id)}>
-            <span className="photo-pick-tag">{t(id === "changed" ? "AI 보정" : "원본")}</span>
-            {pick === id && <span className="photo-pick-mark" aria-hidden="true"><Icon name="check" size={18} /></span>}
-            {/* The whole photo stays visible; a blurred copy fills the rest of the tall frame. */}
-            <span className="photo-pick-frame" style={{ backgroundImage: `url("${url}")` }}><img src={url} alt={t(label)} /></span>
-            <strong>{t(label)}</strong>
-          </button>
-        ))}
+        <button type="button" data-pick="original" aria-pressed={shown === "original"} onClick={() => onPick("original")}>
+          <span className="photo-pick-tag">{t("원본")}</span>
+          {shown === "original" && <span className="photo-pick-mark" aria-hidden="true"><Icon name="check" size={18} /></span>}
+          {/* The whole photo stays visible; a blurred copy fills the rest of the frame. */}
+          <span className="photo-pick-frame" style={{ backgroundImage: `url("${originalUrl}")` }}><img src={originalUrl} alt={t("원본 사진")} /></span>
+          <strong>{t("원본 사진")}</strong>
+        </button>
+        <button type="button" data-pick="changed" aria-pressed={ready && shown === "changed"} disabled={!ready} aria-busy={status === "making"} onClick={() => onPick("changed")}>
+          <span className="photo-pick-tag">{t("AI 보정")}</span>
+          {ready && shown === "changed" && <span className="photo-pick-mark" aria-hidden="true"><Icon name="check" size={18} /></span>}
+          {ready ? (
+            <span className="photo-pick-frame" style={{ backgroundImage: `url("${changedUrl}")` }}><img src={changedUrl} alt={t("보정 사진")} /></span>
+          ) : (
+            <span className={`photo-pick-frame photo-pick-waiting${status === "failed" ? " is-failed" : ""}`}>
+              {status === "making" && <span className="result-loading-spinner" aria-hidden="true" />}
+              <em>{t(status === "making" ? "보정 중..." : "보정하지 못했어요")}</em>
+            </span>
+          )}
+          <strong>{t("보정 사진")}</strong>
+        </button>
       </div>
       <small className="photo-pick-hint">{t("사진을 누르면 바로 그 사진으로 진행돼요.")}</small>
     </AppDialog>
@@ -265,7 +279,7 @@ function AppDialog({ titleId, bodyId, onClose, className, backdropClass, closeOn
         onKeyDown={(event) => {
           if (event.key === "Escape") onClose()
           if (event.key === "Tab") {
-            const buttons = [...event.currentTarget.querySelectorAll("button")]
+            const buttons = [...event.currentTarget.querySelectorAll<HTMLButtonElement>("button:not(:disabled)")]
             const index = buttons.indexOf(document.activeElement as HTMLButtonElement)
             const next = buttons[(index + (event.shiftKey ? buttons.length - 1 : 1)) % buttons.length]
             next?.focus()
@@ -1784,26 +1798,30 @@ function CreateFlow({
   const answerBackground = (change: boolean) => {
     setAsking(false)
     setBgChoice({ forImage: imageUrl, change })
-    if (change) startBackground(imageUrl)
-    else {
-      bgControllerRef.current?.abort()
-      setBgState(null)
+    if (change) {
+      // QA 2026-10-20: the 사진 고르기 popup opens now (보정 중 on the right) and 정보 입력 follows the pick.
+      startBackground(imageUrl)
+      setPhotoPick("changed")
+      setPicking(true)
+      return
     }
+    bgControllerRef.current?.abort()
+    setBgState(null)
     if (step === 1) setStep(2)
   }
   const asksBackground = asking && Boolean(imageUrl) && (step === 1 || step === 2)
   const ownBg = bgState?.forImage === imageUrl ? bgState.status : undefined
-  // 사진 고르기 popup: opens once per photo when its advertising background is ready, on 정보 입력 or after the
-  // loading screen (never on top of the 배경 question or the progress screen); "사진 다시 고르기" reopens it.
+  // 사진 고르기 popup: opened by 바꾸기 (never on its own while the owner types); "사진 다시 고르기" reopens it.
   const changedUrl = ownBg === "ready" && sceneImage?.forImage === imageUrl ? sceneImage.url : ""
-  const [pickAskedFor, setPickAskedFor] = useState("")
   const [picking, setPicking] = useState(false)
-  useEffect(() => {
-    if (!changedUrl || pickAskedFor === imageUrl || asking || generating || (step !== 2 && step !== 3)) return
-    setPickAskedFor(imageUrl)
-    setPicking(true)
-  }, [changedUrl, imageUrl, pickAskedFor, asking, generating, step])
-  const picksPhoto = picking && Boolean(changedUrl) && (step === 2 || step === 3) && !generating
+  useEffect(() => setPicking(false), [imageUrl])
+  const pickStatus: "making" | "ready" | "failed" = changedUrl ? "ready" : ownBg === "making" ? "making" : "failed"
+  const picksPhoto = picking && Boolean(imageUrl) && Boolean(ownBg) && (step === 1 || step === 2 || step === 3) && !generating
+  const finishPick = (pick: "changed" | "original") => {
+    setPhotoPick(pick)
+    setPicking(false)
+    if (step === 1) setStep(2)
+  }
   const bgNotice = !ownBg
     ? ""
     : ownBg === "making"
@@ -2472,9 +2490,10 @@ function CreateFlow({
           easyMode={easyMode}
           originalUrl={imageUrl}
           changedUrl={changedUrl}
+          status={pickStatus}
           pick={photoPick}
-          onPick={(pick) => { setPhotoPick(pick); setPicking(false) }}
-          onClose={() => setPicking(false)}
+          onPick={(pick) => finishPick(pick === "changed" && !changedUrl ? "original" : pick)}
+          onClose={() => finishPick(changedUrl ? photoPick : "original")}
         />
       )}
       {step === 2 && (
@@ -2506,13 +2525,7 @@ function CreateFlow({
               onChange={upload}
             />
           </div>
-          {/* 보정 중 (QA 2026-10-20): said briefly while the background is made; the 사진 고르기 popup follows. */}
-          {ownBg === "making" && (
-            <p className="bg-working" role="status">
-              <span className="ai-fill-spinner" aria-hidden="true" />
-              {t("사진을 보정하고 있어요. 다 되면 고를 수 있게 보여 드릴게요.")}
-            </p>
-          )}
+          {/* 보정 failed (QA 2026-10-20): said under the photo; 보정 중 itself is shown in the 사진 고르기 popup. */}
           {(ownBg === "failed" || ownBg === "limit" || ownBg === "off") && <p className="bg-working is-done" role="status">{t(bgNotice)}</p>}
           {uploadMessage && (
             <p
