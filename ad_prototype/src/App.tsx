@@ -2385,11 +2385,8 @@ function CreateFlow({
               ))}
             </div>
           )}
-          {showCopy && (
-            <p className={`ai-notice${activePromo ? " is-ai" : ""}`}>
-              {t(activePromo ? "AI가 쓴 글이 들어 있어요. 올리기 전에 읽어 봐 주세요." : "AI 없이 기본 문구로 만들었어요.")}
-            </p>
-          )}
+          {/* Owner, 2026-10-21: the results already carry the AI mark, so only the no-AI fallback is said here. */}
+          {showCopy && !activePromo && <p className="ai-notice">{t("AI 없이 기본 문구로 만들었어요.")}</p>}
         </div>
       ) : (
         <StepHeader step={step} onBack={setStep} easyMode={easyMode} />
@@ -2870,14 +2867,6 @@ function CreateFlow({
       {step === 3 && !generating && (
         <div className={`results-step step-panel${resultTabs.length === 1 ? " is-single" : ""}`}>
           <div className="result-tabs-bar">
-            {/* Tab references (KRDS tabs and step indicator, NN/g, GOV.UK; 2026-10-20): tabs hide content, so one line says
-                that all results were made together, and "n/N" says which one is open. No thumbnails (owner rejected them). */}
-            {resultTabs.length > 1 && (
-              <div className="result-made">
-                <strong>{t(`${resultTabs.map((tab) => tab.label).join("·")}, ${resultTabs.length}가지를 만들었어요`)}</strong>
-                <span>{t("눌러서 바꿔 보세요")} <b>{resultTabs.findIndex((tab) => tab.id === activeResultTab) + 1}/{resultTabs.length}</b></span>
-              </div>
-            )}
             <div
               className="result-tabs"
               role="tablist"
