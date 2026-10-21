@@ -32,6 +32,7 @@ import { drawStoryFrame } from "./videoFrame"
 import { makeScene } from "./scene"
 import { outputFolder, saveToComputer } from "./localSave"
 import { drawMotionFrame, MOTION_CUES, MOTION_SECONDS, motionEffectFor, motionToneFor, type MotionScene } from "./motionVideo"
+import { encodeFastVideo, fastVideoPlan } from "./fastVideo"
 import { plainMp4File } from "./mp4Flatten"
 import { musicFor, prepareVideoSound } from "./videoSound"
 import { makeAdBackground } from "./background"
@@ -2115,13 +2116,14 @@ function CreateFlow({
   const createVideoFile = async (download: boolean) => {
     const canvas = document.createElement("canvas")
 
-    const captureStream = canvas.captureStream
+    const canRecord =
+      typeof canvas.captureStream === "function" &&
+      typeof window.MediaRecorder !== "undefined"
 
-    if (
-      !imageUrl ||
-      typeof captureStream !== "function" ||
-      typeof window.MediaRecorder === "undefined"
-    ) {
+    // WebCodecs first (src/fastVideo.ts): H.264 + AAC encoded faster than real time. null = MediaRecorder as before.
+    const fastPlan = imageUrl ? await fastVideoPlan() : null
+
+    if (!imageUrl || (!fastPlan && !canRecord)) {
       setVideoStatus("unsupported")
 
       setVideoMessage(
@@ -2148,11 +2150,11 @@ function CreateFlow({
       "video/webm",
     ]
 
-    const mimeType = mimeCandidates.find((candidate) =>
-      MediaRecorder.isTypeSupported(candidate),
-    )
+    const mimeType = canRecord
+      ? mimeCandidates.find((candidate) => MediaRecorder.isTypeSupported(candidate))
+      : undefined
 
-    if (!mimeType) {
+    if (!mimeType && !fastPlan) {
       setVideoStatus("unsupported")
 
       setVideoMessage(
@@ -2172,6 +2174,23 @@ function CreateFlow({
     setVideoMessage("")
 
     videoCancelledRef.current = false
+
+    // Shared by the fast (WebCodecs) and the MediaRecorder path.
+    const finishVideo = (result: File, saveNow: boolean) => {
+      setVideoStatus("ready")
+      videoShareFileRef.current = result
+      setSampleVideoFile(result)
+
+      // QA 2026-10-20: no "준비됐어요" line; the video on screen says so. Errors and save results still show.
+      setVideoMessage("")
+
+      if (saveNow) {
+        triggerFileDownload(result)
+        notify("download")
+      }
+
+      return result
+    }
 
     try {
       // The advertising background when there is one (배경 바꾸기), else the photo.
@@ -2193,6 +2212,67 @@ function CreateFlow({
       const context = canvas.getContext("2d")
 
       if (!context) throw new Error("canvas-unavailable")
+
+      // The photo framed exactly like the one sent for the AI clip (src/videoFrame.ts), so the product is never
+      // cut at the sides and both videos look the same.
+      const framed = document.createElement("canvas")
+      framed.width = canvas.width
+      framed.height = canvas.height
+      const framedContext = framed.getContext("2d")
+      if (!framedContext || !drawStoryFrame(framedContext, image, !sceneUrl && photoBox?.image === imageUrl ? photoBox.box : null)) framedContext?.drawImage(image, 0, 0, framed.width, framed.height)
+
+      // 10-second motion graphic (src/motionVideo.ts): push-in, close-up with a light sweep and the key points,
+      // end card with the price and the call to action.
+      const motion: MotionScene = {
+        framed,
+        caption: sampleCaption,
+        points: (details.keywords ?? "").split(",").map((item) => item.trim()).filter(Boolean),
+        // The photo's own deep colour (as on the poster) for the shop pill and the call to action; the channel
+        // colour (navy for 파일만 저장) clashed with warm food photos.
+        accent: (() => {
+          const ink = photoPalette(image)?.ink
+          return ink ? [1, 3, 5].map((i) => parseInt(ink.slice(i, i + 2), 16)).join(", ") : channelTheme.rgb
+        })(),
+        effect: motionEffectFor([details.name, details.description, details.features, details.keywords].filter(Boolean).join(" ")),
+        tone: motionToneFor([details.name, details.description, details.features, details.keywords].filter(Boolean).join(" ")),
+        // One "AI 활용" mark when an AI wrote the copy or drew the background, as on the poster.
+        aiMark: Boolean(activePromo) || Boolean(sceneUrl),
+      }
+
+      const musicUrl = musicFor([details.name, details.description, details.features, details.keywords].filter(Boolean).join(" "), tones)
+
+      // Fast path: frames are drawn by time and encoded at once (WebCodecs), sound rendered offline. Any failure
+      // (not cancelled) falls through to the real-time MediaRecorder recording below.
+      let fastFile: File | null = null
+      if (fastPlan) {
+        try {
+          fastFile = await encodeFastVideo({
+            plan: fastPlan,
+            canvas,
+            draw: (fastContext, seconds) => drawMotionFrame(fastContext, seconds, motion),
+            seconds: MOTION_SECONDS,
+            musicUrl,
+            cues: MOTION_CUES,
+            fileName: outputFileName(posterContent.productName, "영상", "mp4"),
+            isCancelled: () => videoCancelledRef.current,
+          })
+        } catch (error) {
+          // Seen in the console on a phone that cannot use the fast path; the recording below takes over.
+          console.warn("fast video failed, recording instead", error)
+          fastFile = null
+          if (!mimeType) throw new Error("fast-video-failed")
+        }
+        if (videoCancelledRef.current) {
+          setVideoStatus("cancelled")
+
+          setVideoMessage(uiText("영상 준비를 취소했어요.", easyMode))
+
+          return null
+        }
+        if (fastFile) return finishVideo(fastFile, download)
+      }
+
+      if (!mimeType) throw new Error("no-recorder")
 
       const stream = canvas.captureStream(30)
 
@@ -2260,32 +2340,7 @@ function CreateFlow({
 
         const startedAt = performance.now()
 
-        // The photo framed exactly like the one sent for the AI clip (src/videoFrame.ts), so the product is never
-        // cut at the sides and both videos look the same.
-        const framed = document.createElement("canvas")
-        framed.width = canvas.width
-        framed.height = canvas.height
-        const framedContext = framed.getContext("2d")
-        if (!framedContext || !drawStoryFrame(framedContext, image, !sceneUrl && photoBox?.image === imageUrl ? photoBox.box : null)) framedContext?.drawImage(image, 0, 0, framed.width, framed.height)
-
-        // 10-second motion graphic (src/motionVideo.ts): push-in, close-up with a light sweep and the key points,
-        // end card with the price and the call to action.
         const duration = MOTION_SECONDS * 1000
-        const motion: MotionScene = {
-          framed,
-          caption: sampleCaption,
-          points: (details.keywords ?? "").split(",").map((item) => item.trim()).filter(Boolean),
-          // The photo's own deep colour (as on the poster) for the shop pill and the call to action; the channel
-          // colour (navy for 파일만 저장) clashed with warm food photos.
-          accent: (() => {
-            const ink = photoPalette(image)?.ink
-            return ink ? [1, 3, 5].map((i) => parseInt(ink.slice(i, i + 2), 16)).join(", ") : channelTheme.rgb
-          })(),
-          effect: motionEffectFor([details.name, details.description, details.features, details.keywords].filter(Boolean).join(" ")),
-          tone: motionToneFor([details.name, details.description, details.features, details.keywords].filter(Boolean).join(" ")),
-          // One "AI 활용" mark when an AI wrote the copy or drew the background, as on the poster.
-          aiMark: Boolean(activePromo) || Boolean(sceneUrl),
-        }
 
         const drawFrame = (now: number) => {
           if (videoCancelledRef.current) return
@@ -2308,22 +2363,7 @@ function CreateFlow({
 
       if (!result) return null
 
-      setVideoStatus("ready")
-      videoShareFileRef.current = result
-      setSampleVideoFile(result)
-
-      const extension = result.name.endsWith(".mp4") ? "MP4" : "WebM"
-
-      // QA 2026-10-20: no "준비됐어요" line; the video on screen says so. Errors and save results still show.
-      void extension
-      setVideoMessage("")
-
-      if (download) {
-        triggerFileDownload(result)
-        notify("download")
-      }
-
-      return result
+      return finishVideo(result, download)
     } catch {
       setVideoStatus("failed")
 

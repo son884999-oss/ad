@@ -34,10 +34,90 @@ export function musicFor(text: string, tones: readonly string[] = []) {
   return AUDIO + list[Math.abs(hash) % list.length]
 }
 
-async function loadBuffer(audio: AudioContext, url: string) {
+async function loadBuffer(audio: BaseAudioContext, url: string) {
   const response = await fetch(url)
   if (!response.ok) throw new Error("audio-load")
   return audio.decodeAudioData(await response.arrayBuffer())
+}
+
+/** The shared mix rules (live recording and offline render): warm shelf and safety limiter into `output`. */
+function buildChain(context: BaseAudioContext, output: AudioNode) {
+  // The owner heard the mix as sharp and piercing (2026-10-19). Measured: the transition chime put its energy in
+  // 2–4 kHz (only 7 dB under its total, peaks at -15 dB in that band) and the Vivaldi violins are bright above
+  // 4 kHz. So: everything passes a high shelf (-8 dB above 3 kHz) for a warmer sound, the effect is low-passed
+  // and softened below, and the limiter is only a safety catch near full scale (the old -10 dB / 8:1 setting
+  // pressed on every piano attack).
+  const limiter = context.createDynamicsCompressor()
+  limiter.threshold.value = -3
+  limiter.knee.value = 3
+  limiter.ratio.value = 12
+  limiter.attack.value = 0.005
+  limiter.release.value = 0.3
+  const warmth = context.createBiquadFilter()
+  warmth.type = "highshelf"
+  warmth.frequency.value = 3000
+  warmth.gain.value = -8
+  warmth.connect(limiter)
+  limiter.connect(output)
+  return warmth
+}
+
+/** Schedules the bed and the effects starting at `at` seconds of the context's clock. */
+function scheduleMix(context: BaseAudioContext, warmth: AudioNode, music: AudioBuffer, effect: AudioBuffer | null, at: number, seconds: number, cues: number[]) {
+  const bed = context.createBufferSource()
+  bed.buffer = music
+  const bedGain = context.createGain()
+  bedGain.gain.setValueAtTime(0.0001, at)
+  bedGain.gain.linearRampToValueAtTime(0.15, at + 0.3)
+  bedGain.gain.setValueAtTime(0.15, at + Math.max(0.4, seconds - 1))
+  bedGain.gain.linearRampToValueAtTime(0.0001, at + seconds)
+  bedGain.connect(warmth)
+  // The clips are about 7.6 s; a longer video (10 s since 2026-10-21) cross-fades a second copy in over 1.2 s.
+  const join = 1.2
+  const first = context.createGain()
+  bed.connect(first).connect(bedGain)
+  bed.start(at)
+  bed.stop(at + seconds + 0.05)
+  if (music.duration < seconds) {
+    const from = at + music.duration - join
+    first.gain.setValueAtTime(1, from)
+    first.gain.linearRampToValueAtTime(0.0001, from + join)
+    const again = context.createBufferSource()
+    again.buffer = music
+    const second = context.createGain()
+    second.gain.setValueAtTime(0.0001, from)
+    second.gain.linearRampToValueAtTime(1, from + join)
+    again.connect(second).connect(bedGain)
+    again.start(from)
+    again.stop(at + seconds + 0.05)
+  }
+  if (!effect) return
+  for (const cue of cues) {
+    if (cue >= seconds) continue
+    const shimmer = context.createBufferSource()
+    shimmer.buffer = effect
+    // Low-passed (the chime's 2–4 kHz edge goes), quieter, and a 40 ms fade-in instead of a sharp onset.
+    const soften = context.createBiquadFilter()
+    soften.type = "lowpass"
+    soften.frequency.value = 1800
+    soften.Q.value = 0.5
+    const shimmerGain = context.createGain()
+    shimmerGain.gain.setValueAtTime(0.0001, at + cue)
+    shimmerGain.gain.linearRampToValueAtTime(0.05, at + cue + 0.04)
+    shimmer.connect(soften).connect(shimmerGain).connect(warmth)
+    shimmer.start(at + cue)
+  }
+}
+
+/**
+ * Renders the same mix faster than real time (OfflineAudioContext) for the WebCodecs path (src/fastVideo.ts).
+ * Throws when the audio cannot be loaded or decoded.
+ */
+export async function renderVideoSoundOffline({ musicUrl, seconds, cues, sampleRate = 48000 }: { musicUrl: string; seconds: number; cues: number[]; sampleRate?: number }) {
+  const context = new OfflineAudioContext(2, Math.ceil(seconds * sampleRate), sampleRate)
+  const [music, effect] = await Promise.all([loadBuffer(context, musicUrl), loadBuffer(context, AUDIO + TRANSITION).catch(() => null)])
+  scheduleMix(context, buildChain(context, context.destination), music, effect, 0, seconds, cues)
+  return context.startRendering()
 }
 
 /**
@@ -51,71 +131,12 @@ export async function prepareVideoSound(stream: MediaStream, { musicUrl, seconds
     audio = new AudioContext()
     const [music, effect] = await Promise.all([loadBuffer(audio, musicUrl), loadBuffer(audio, AUDIO + TRANSITION).catch(() => null)])
     const destination = audio.createMediaStreamDestination()
-    // The owner heard the mix as sharp and piercing (2026-10-19). Measured: the transition chime put its energy in
-    // 2–4 kHz (only 7 dB under its total, peaks at -15 dB in that band) and the Vivaldi violins are bright above
-    // 4 kHz. So: everything passes a high shelf (-8 dB above 3 kHz) for a warmer sound, the effect is low-passed
-    // and softened below, and the limiter is only a safety catch near full scale (the old -10 dB / 8:1 setting
-    // pressed on every piano attack).
-    const limiter = audio.createDynamicsCompressor()
-    limiter.threshold.value = -3
-    limiter.knee.value = 3
-    limiter.ratio.value = 12
-    limiter.attack.value = 0.005
-    limiter.release.value = 0.3
-    const warmth = audio.createBiquadFilter()
-    warmth.type = "highshelf"
-    warmth.frequency.value = 3000
-    warmth.gain.value = -8
-    warmth.connect(limiter)
-    limiter.connect(destination)
+    const warmth = buildChain(audio, destination)
     destination.stream.getAudioTracks().forEach((track) => stream.addTrack(track))
     const context = audio
     const start = () => {
       void context.resume().catch(() => undefined)
-      const at = context.currentTime + 0.03
-      const bed = context.createBufferSource()
-      bed.buffer = music
-      const bedGain = context.createGain()
-      bedGain.gain.setValueAtTime(0.0001, at)
-      bedGain.gain.linearRampToValueAtTime(0.15, at + 0.3)
-      bedGain.gain.setValueAtTime(0.15, at + Math.max(0.4, seconds - 1))
-      bedGain.gain.linearRampToValueAtTime(0.0001, at + seconds)
-      bedGain.connect(warmth)
-      // The clips are about 7.6 s; a longer video (10 s since 2026-10-21) cross-fades a second copy in over 1.2 s.
-      const join = 1.2
-      const first = context.createGain()
-      bed.connect(first).connect(bedGain)
-      bed.start(at)
-      bed.stop(at + seconds + 0.05)
-      if (music.duration < seconds) {
-        const from = at + music.duration - join
-        first.gain.setValueAtTime(1, from)
-        first.gain.linearRampToValueAtTime(0.0001, from + join)
-        const again = context.createBufferSource()
-        again.buffer = music
-        const second = context.createGain()
-        second.gain.setValueAtTime(0.0001, from)
-        second.gain.linearRampToValueAtTime(1, from + join)
-        again.connect(second).connect(bedGain)
-        again.start(from)
-        again.stop(at + seconds + 0.05)
-      }
-      if (!effect) return
-      for (const cue of cues) {
-        if (cue >= seconds) continue
-        const shimmer = context.createBufferSource()
-        shimmer.buffer = effect
-        // Low-passed (the chime's 2–4 kHz edge goes), quieter, and a 40 ms fade-in instead of a sharp onset.
-        const soften = context.createBiquadFilter()
-        soften.type = "lowpass"
-        soften.frequency.value = 1800
-        soften.Q.value = 0.5
-        const shimmerGain = context.createGain()
-        shimmerGain.gain.setValueAtTime(0.0001, at + cue)
-        shimmerGain.gain.linearRampToValueAtTime(0.05, at + cue + 0.04)
-        shimmer.connect(soften).connect(shimmerGain).connect(warmth)
-        shimmer.start(at + cue)
-      }
+      scheduleMix(context, warmth, music, effect, context.currentTime + 0.03, seconds, cues)
     }
     return { audio, start }
   } catch {
