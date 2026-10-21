@@ -7,7 +7,7 @@
 // The photo is the same 9:16 frame as the one sent for the AI clip (src/videoFrame.ts), and the captions use the
 // poster style (src/videoCaption.ts). Reels / Shorts cover about the top 240 px and the bottom 340 px.
 
-import { drawVideoCaption, wrap, type VideoCaption } from "./videoCaption"
+import { drawVideoCaption, drawWords, wrap, type VideoCaption } from "./videoCaption"
 
 export const MOTION_SECONDS = 10
 const SCENE_2 = 3.5
@@ -236,7 +236,7 @@ function drawPoints(ctx: CanvasRenderingContext2D, scene: MotionScene, seconds: 
 }
 
 /** The last scene: blurred photo, dark veil, centred shop · product · price · call to action. */
-function drawEndCard(ctx: CanvasRenderingContext2D, scene: MotionScene, seconds: number) {
+function drawEndCardBackdrop(ctx: CanvasRenderingContext2D, scene: MotionScene, seconds: number) {
   const t = progress(seconds, END_CARD, 0.35)
   if (t <= 0) return
   const { width, height } = ctx.canvas
@@ -249,7 +249,12 @@ function drawEndCard(ctx: CanvasRenderingContext2D, scene: MotionScene, seconds:
   ctx.fillStyle = "rgba(20,14,10,.35)"
   ctx.fillRect(0, 0, width, height)
   ctx.restore()
+}
 
+function drawEndCardText(ctx: CanvasRenderingContext2D, scene: MotionScene, seconds: number) {
+  if (progress(seconds, END_CARD, 0.35) <= 0) return
+  const { width, height } = ctx.canvas
+  const { caption } = scene
   const center = width / 2
   const textWidth = width - 72 * 2
   // The big title is the product name since 2026-10-22 (the sub line is the short 포스터·영상 문구).
@@ -257,7 +262,7 @@ function drawEndCard(ctx: CanvasRenderingContext2D, scene: MotionScene, seconds:
   ctx.font = font(800, 112)
   const title = wrap(ctx, product, textWidth, 2)
   // Stack the lines around the middle of the safe area.
-  const blocks: { height: number; draw: (y: number) => void; at: number }[] = []
+  const blocks: { height: number; draw: (y: number) => void; at: number; words?: boolean }[] = []
   if (caption.eyebrow) {
     blocks.push({ height: 76, at: END_CARD + 0.15, draw: (y) => {
       ctx.font = font(800, 40)
@@ -271,10 +276,10 @@ function drawEndCard(ctx: CanvasRenderingContext2D, scene: MotionScene, seconds:
       ctx.fillText(line, center, y + 52)
     } })
   }
-  blocks.push({ height: title.length * 124, at: END_CARD + 0.35, draw: (y) => {
+  blocks.push({ height: title.length * 124, at: END_CARD + 0.35, words: true, draw: (y) => {
     ctx.font = font(800, 112)
     ctx.fillStyle = "#ffffff"
-    title.forEach((line, index) => ctx.fillText(line, center, y + 104 + index * 124))
+    title.forEach((line, index) => drawWords(ctx, line, center, y + 104 + index * 124, seconds, END_CARD + 0.35 + index * 0.2, "center"))
   } })
   if (caption.price) {
     blocks.push({ height: 96, at: END_CARD + 0.6, draw: (y) => {
@@ -304,10 +309,12 @@ function drawEndCard(ctx: CanvasRenderingContext2D, scene: MotionScene, seconds:
   let y = top
   for (const block of blocks) {
     const appear = progress(seconds, block.at, 0.4)
-    if (appear > 0) {
+    if (appear > 0 || block.words) {
       ctx.save()
-      ctx.globalAlpha = appear
-      ctx.translate(0, (1 - easeInOut(appear)) * 36)
+      if (!block.words) {
+        ctx.globalAlpha = appear
+        ctx.translate(0, (1 - easeInOut(appear)) * 36)
+      }
       block.draw(y)
       ctx.restore()
     }
@@ -316,12 +323,93 @@ function drawEndCard(ctx: CanvasRenderingContext2D, scene: MotionScene, seconds:
   ctx.textAlign = "left"
 }
 
+
+// --- Finishing (free, canvas only): warm grade, vignette, film grain, light leak. All cheap fills, no pixel reads. ---
+let grainTile: HTMLCanvasElement | null = null
+const patterns = new WeakMap<CanvasRenderingContext2D, CanvasPattern | null>()
+/** A 256 px noise tile made once from the seeded generator, so every render has the same grain. */
+function grainPattern(ctx: CanvasRenderingContext2D) {
+  if (patterns.has(ctx)) return patterns.get(ctx) ?? null
+  if (!grainTile) {
+    grainTile = document.createElement("canvas")
+    grainTile.width = grainTile.height = 256
+    const g = grainTile.getContext("2d")
+    if (g) {
+      const image = g.createImageData(256, 256)
+      for (let i = 0; i < 256 * 256; i += 1) {
+        const v = Math.round(seeded(i + 1) * 255)
+        image.data.set([v, v, v, 255], i * 4)
+      }
+      g.putImageData(image, 0, 0)
+    }
+  }
+  const pattern = ctx.createPattern(grainTile, "repeat")
+  patterns.set(ctx, pattern)
+  return pattern
+}
+
+/** Warm advertising tone: a soft-light amber wash over the picture (the text is drawn after, so it stays white). */
+function drawGrade(ctx: CanvasRenderingContext2D) {
+  const { width, height } = ctx.canvas
+  ctx.save()
+  ctx.globalCompositeOperation = "soft-light"
+  ctx.fillStyle = "rgba(255,176,98,.22)"
+  ctx.fillRect(0, 0, width, height)
+  ctx.restore()
+}
+
+/** Darkened corners pulling the eye to the middle. */
+function drawVignette(ctx: CanvasRenderingContext2D) {
+  const { width, height } = ctx.canvas
+  const v = ctx.createRadialGradient(width / 2, height * 0.46, height * 0.3, width / 2, height * 0.46, height * 0.75)
+  v.addColorStop(0, "rgba(20,10,4,0)")
+  v.addColorStop(1, "rgba(20,10,4,.38)")
+  ctx.fillStyle = v
+  ctx.fillRect(0, 0, width, height)
+}
+
+/** Very faint film grain: the noise tile, moved to a new seeded offset every frame so it shimmers. */
+function drawGrain(ctx: CanvasRenderingContext2D, seconds: number) {
+  const pattern = grainPattern(ctx)
+  if (!pattern) return
+  const { width, height } = ctx.canvas
+  const frame = Math.round(seconds * 30)
+  ctx.save()
+  ctx.globalCompositeOperation = "overlay"
+  ctx.globalAlpha = 0.07
+  ctx.translate(Math.floor(seeded(frame + 3) * 256), Math.floor(seeded(frame + 91) * 256))
+  ctx.fillStyle = pattern
+  ctx.fillRect(-256, -256, width + 256, height + 256)
+  ctx.restore()
+}
+
+/** A warm flare breathing in from the edge at each cut (the whip at 3.5 s, the end card at 6.5 s). */
+function drawLightLeak(ctx: CanvasRenderingContext2D, seconds: number) {
+  const bell = (centre: number, half: number) => Math.max(0, 1 - Math.abs(seconds - centre) / half)
+  const k = Math.max(bell(SCENE_2, 0.45), bell(END_CARD + 0.15, 0.5))
+  if (k <= 0) return
+  const { width, height } = ctx.canvas
+  const strength = k * k * (3 - 2 * k)
+  const flip = seconds > END_CARD ? -1 : 1
+  const cx = flip > 0 ? width * 1.02 : -width * 0.02
+  const leak = ctx.createRadialGradient(cx, height * 0.34, 0, cx, height * 0.34, width * 1.25)
+  leak.addColorStop(0, `rgba(255,150,70,${0.62 * strength})`)
+  leak.addColorStop(0.45, `rgba(255,96,80,${0.26 * strength})`)
+  leak.addColorStop(1, "rgba(255,96,80,0)")
+  ctx.save()
+  ctx.globalCompositeOperation = "screen"
+  ctx.fillStyle = leak
+  ctx.fillRect(0, 0, width, height)
+  ctx.restore()
+}
+
 /** Draws the frame at `seconds` (0 … MOTION_SECONDS) on a 1080 × 1920 canvas. */
 export function drawMotionFrame(ctx: CanvasRenderingContext2D, seconds: number, scene: MotionScene) {
   const { width, height } = ctx.canvas
   ctx.clearRect(0, 0, width, height)
   ctx.imageSmoothingQuality = "high"
   drawPhoto(ctx, scene, seconds)
+  drawGrade(ctx)
   const effect = scene.effect ?? "sheen"
   if (effect === "steam") drawSteam(ctx, seconds)
   else if (effect === "sparkle") drawSparkles(ctx, seconds)
@@ -329,16 +417,21 @@ export function drawMotionFrame(ctx: CanvasRenderingContext2D, seconds: number, 
   else if (effect === "glow") drawGlow(ctx, seconds)
   // The light sweep runs for every kind except flowers (petals already move across the picture).
   if (effect !== "petals") drawSheen(ctx, seconds)
+  drawEndCardBackdrop(ctx, scene, seconds)
+  // Finishing sits under all the text, so the letters stay clean.
+  drawVignette(ctx)
+  drawGrain(ctx, seconds)
+  drawLightLeak(ctx, seconds)
   if (seconds < END_CARD + 0.35) {
     // Scenes 1–2: shop name and headline only; price and call to action wait for the end card.
     const fade = 1 - progress(seconds, END_CARD, 0.35)
     ctx.save()
     ctx.globalAlpha = fade
-    drawVideoCaption(ctx, seconds, { eyebrow: scene.caption.eyebrow, headline: scene.caption.headline, subline: scene.caption.subline }, scene.accent)
+    drawVideoCaption(ctx, seconds, { eyebrow: scene.caption.eyebrow, headline: scene.caption.headline, subline: scene.caption.subline }, scene.accent, { words: true })
     ctx.restore()
     drawPoints(ctx, scene, seconds)
   }
-  drawEndCard(ctx, scene, seconds)
+  drawEndCardText(ctx, scene, seconds)
   if (scene.aiMark) drawAiMark(ctx)
 }
 

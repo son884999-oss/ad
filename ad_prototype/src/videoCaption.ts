@@ -71,10 +71,35 @@ export function balancedLines(ctx: CanvasRenderingContext2D, text: string, maxWi
 const appear = (seconds: number, from: number) => Math.min(Math.max((seconds - from) / 0.45, 0), 1)
 
 /**
+ * One line drawn word by word: each word fades and rises into place 0.12 s after the one before it (ease-out),
+ * so a title reads as it arrives. `align` "center" puts the whole line's middle at x. Text only, no filters.
+ */
+export function drawWords(ctx: CanvasRenderingContext2D, line: string, x: number, baseline: number, seconds: number, from: number, align: "left" | "center" = "left") {
+  const words = line.split(" ")
+  const space = ctx.measureText(" ").width
+  const total = ctx.measureText(line).width
+  const prev = ctx.textAlign
+  ctx.textAlign = "left"
+  let cursor = align === "center" ? x - total / 2 : x
+  words.forEach((word, index) => {
+    const t = Math.min(Math.max((seconds - from - index * 0.12) / 0.5, 0), 1)
+    if (t > 0) {
+      const e = 1 - (1 - t) ** 3
+      ctx.save()
+      ctx.globalAlpha *= e
+      ctx.fillText(word, cursor, baseline + (1 - e) * 34)
+      ctx.restore()
+    }
+    cursor += ctx.measureText(word).width + space
+  })
+  ctx.textAlign = prev
+}
+
+/**
  * Draws the caption for the frame at `seconds` on a 1080 × 1920 canvas (call after drawing the picture).
  * `accent` is the shop's colour for the call-to-action text, as "r, g, b".
  */
-export function drawVideoCaption(ctx: CanvasRenderingContext2D, seconds: number, caption: VideoCaption, accent = "150, 55, 16") {
+export function drawVideoCaption(ctx: CanvasRenderingContext2D, seconds: number, caption: VideoCaption, accent = "150, 55, 16", options: { words?: boolean } = {}) {
   const { width, height } = ctx.canvas
   const textWidth = width - SIDE * 2
 
@@ -139,11 +164,17 @@ export function drawVideoCaption(ctx: CanvasRenderingContext2D, seconds: number,
       ctx.fillText(line, SIDE + 28, TOP_SAFE + 52)
     })
   }
-  rise(appear(seconds, 0.4), () => {
+  if (options.words) {
     ctx.font = font(800, headSize)
     ctx.fillStyle = "#ffffff"
-    headline.forEach((line, index) => ctx.fillText(line, SIDE, headlineTop + headSize + index * headStep))
-  })
+    headline.forEach((line, index) => drawWords(ctx, line, SIDE, headlineTop + headSize + index * headStep, seconds, 0.4 + index * 0.25))
+  } else {
+    rise(appear(seconds, 0.4), () => {
+      ctx.font = font(800, headSize)
+      ctx.fillStyle = "#ffffff"
+      headline.forEach((line, index) => ctx.fillText(line, SIDE, headlineTop + headSize + index * headStep))
+    })
+  }
   if (subline.length) {
     rise(appear(seconds, 1.1), () => {
       ctx.font = font(600, 46)
