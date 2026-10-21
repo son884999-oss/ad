@@ -25,7 +25,7 @@ import { hasPremiumCode } from "./premiumAccess"
 import { AiVideoPlayer, AiVideoStatus, PremiumSteps, saveRealVideo, shareRealVideo, showsRealVideo, type PremiumStepState } from "./AiVideoPanel"
 import { isVideoUnavailable, prepareAiVideoFile, toVideoDetails } from "./video"
 import { buildPosterContent, loadPosterFonts, posterThemeFor, renderPosterToCanvas } from "./poster"
-import { photoPalette } from "./poster/photoColor"
+import { FALLBACK_PALETTE, photoPalette } from "./poster/photoColor"
 import { localBody, localCopy } from "./localCopy"
 import { type VideoCaption } from "./videoCaption"
 import { drawStoryFrame } from "./videoFrame"
@@ -2005,7 +2005,8 @@ function CreateFlow({
         // AI 표시 when an AI wrote the copy or drew the background (인공지능기본법 제31조).
         aiMark: Boolean(activePromo) || Boolean(sceneUrl),
         // "색: 분위기대로" follows the product photo; a colour the user picked is kept as is.
-        photoColors: details.posterTheme ? null : photoPalette(image),
+        // A grey photo gives no colour: the app's warm orange then (QA 2026-10-22).
+        photoColors: details.posterTheme ? null : photoPalette(image) ?? FALLBACK_PALETTE,
         // An AI background is drawn with the product about 25–60% from the top (api/_lib/background.js): the wide
         // 사진 먼저 panel centres that band instead of the middle, so the top of the product is not cut
         // ([사진먼저-잘림], 2026-10-19: macaron fully shown, cake shows more). Full width, so it never zooms in.

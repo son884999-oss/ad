@@ -13,6 +13,9 @@ export type PosterTheme = {
   shortName: string
   tag: string
   bgGradient: [string, string, string]
+  /** From the photo (QA 2026-10-22): a light tint for 스타일 2's text panel, a deep tone for 스타일 3's field. */
+  tint?: string
+  deep?: string
   ink: string
   sub: string
   accent: string
@@ -380,7 +383,7 @@ function renderPanelPoster({ ctx, image, content, theme, width, height }: Render
   const drawn: string[] = []
   const isStory = height > 1500
   const isSquare = width === height
-  const paper = theme.id === "luxury" ? theme.paper : "#fdf8f3"
+  const paper = theme.id === "luxury" ? theme.paper : theme.tint ?? "#fdf8f3"
   const ink = readableOn(paper, [theme.ink, DARK, "#ffffff"])
   const sub = readableOn(paper, [theme.sub, "#5b4f47", ink])
   const accent = readableOn(paper, [theme.accent, theme.ink, ink])
@@ -413,11 +416,9 @@ function renderPanelPoster({ ctx, image, content, theme, width, height }: Render
   ctx.fillStyle = paper
   ctx.fillRect(0, 0, width, height)
   drawPhotoCover(ctx, image, 0, 0, width, photoHeight)
-  const fade = ctx.createLinearGradient(0, photoHeight - 220, 0, photoHeight)
-  fade.addColorStop(0, `${paper}00`)
-  fade.addColorStop(1, paper)
-  ctx.fillStyle = fade
-  ctx.fillRect(0, photoHeight - 220, width, 220)
+  // A clean edge between photo and panel (QA 2026-10-22: the white fade ate the plate and looked broken).
+  ctx.fillStyle = readableOn(paper, [theme.accent, theme.ink])
+  ctx.fillRect(0, photoHeight - 4, width, 8)
 
   const center = width / 2
   ctx.textAlign = "center"
@@ -553,7 +554,7 @@ export type RenderPosterOptions = {
   /** Product box from the photo analysis; the photo is cropped around it so the product reads larger. */
   focusBox?: FocusBox | null
   /** Colours taken from the product photo; they replace the theme's accent, tints and ink. */
-  photoColors?: { accent: string; bg: [string, string, string]; ink: string; sub: string } | null
+  photoColors?: { accent: string; bg: [string, string, string]; ink: string; sub: string; tint?: string; deep?: string } | null
   /** Small visible "AI 활용" mark (인공지능기본법 제31조) when an AI wrote part of the poster text. */
   aiMark?: boolean
 }
@@ -562,12 +563,18 @@ export type RenderPosterOptions = {
 function renderCardPoster({ ctx, image, content, theme, width, height }: RenderArgs) {
   const { eyebrow = "", productName, productDescription = "", keySellingPoint = "" } = content
   const drawn: string[] = []
+  // A deep field from the photo's main colour, so the white frame stands out; text is white or dark by contrast.
+  const field = theme.deep ?? theme.ink
   const bg = ctx.createLinearGradient(0, 0, 0, height)
-  bg.addColorStop(0, theme.bgGradient[0])
-  bg.addColorStop(1, theme.bgGradient[2])
+  bg.addColorStop(0, field)
+  bg.addColorStop(1, DARK)
+  ctx.fillStyle = field
+  ctx.fillRect(0, 0, width, height)
+  ctx.globalAlpha = 0.35
   ctx.fillStyle = bg
   ctx.fillRect(0, 0, width, height)
-  const ink = readableOn(theme.bgGradient[1], [theme.ink, DARK, "#ffffff"])
+  ctx.globalAlpha = 1
+  const ink = readableOn(field, ["#ffffff", theme.paper, DARK])
   // Frame: 74% of the width, square photo, a soft shadow, turned -3°.
   const frameW = Math.round(width * 0.74)
   const photo = frameW - 48
@@ -593,7 +600,8 @@ function renderCardPoster({ ctx, image, content, theme, width, height }: RenderA
   if (eyebrow) {
     ctx.font = font(800, 38)
     const [line] = wrapText(ctx, eyebrow, width - 200, 1)
-    drawPill(ctx, line, 64, 48, { size: 38, background: theme.accent, color: readableOn(theme.accent, [theme.accentText, "#ffffff", DARK]) })
+    const pillBg = theme.tint ?? theme.bgGradient[0]
+    drawPill(ctx, line, 64, 48, { size: 38, background: pillBg, color: readableOn(pillBg, [field, theme.ink, DARK]) })
     drawn.push(line)
   }
   const side = 80
@@ -623,7 +631,7 @@ function renderCardPoster({ ctx, image, content, theme, width, height }: RenderA
     ctx.font = font(800, 44)
     const [line] = wrapText(ctx, pill, textWidth - 60, 1)
     const w = ctx.measureText(line).width + 44 * 1.4
-    drawPill(ctx, line, cx - w / 2, y + 26, { size: 44, background: DARK, color: "#ffffff" })
+    drawPill(ctx, line, cx - w / 2, y + 26, { size: 44, background: "#ffffff", color: readableOn("#ffffff", [field, DARK]) })
     drawn.push(line)
   }
   return drawn
@@ -665,7 +673,7 @@ export function renderPosterToCanvas({
   const baseTheme: PosterTheme = POSTER_THEMES[themeKey] ?? POSTER_THEMES.nature
   // Photo colours apply to the light themes only; the dark luxury theme keeps its own palette.
   const theme: PosterTheme = photoColors && themeKey !== "luxury"
-    ? { ...baseTheme, accent: photoColors.accent, accentText: photoColors.ink, bgGradient: photoColors.bg, ink: photoColors.ink, sub: photoColors.sub, paper: "#ffffff" }
+    ? { ...baseTheme, accent: photoColors.accent, accentText: photoColors.ink, bgGradient: photoColors.bg, ink: photoColors.ink, sub: photoColors.sub, paper: "#ffffff", tint: photoColors.tint, deep: photoColors.deep }
     : baseTheme
   const ratio = POSTER_RATIOS[ratioKey] ?? POSTER_RATIOS["4:5"]
   const { width, height } = ratio
