@@ -148,13 +148,12 @@ type AiPromo = PromoTextResult & { signature: string; /** Index of the first lin
 type Tone = "natural" | "premium" | "friendly" | "trendy"
 
 type PosterRatioKey = "4:5" | "1:1" | "9:16"
-type PosterLayoutKey = "vertical" | "split" | "editorial"
-// Labels say what each shape is for, so nobody has to know what "4:5" means.
-/** Owner, 2026-10-21: channel names (인스타 피드…) read as jargon — the basic screen shows the ratio, the easy screen 1·2·3번. */
-const posterRatioOptions: [PosterRatioKey, string][] = [
-  ["4:5", "세로"],
-  ["1:1", "정사각"],
-  ["9:16", "길쭉한 세로"],
+type PosterLayoutKey = "vertical" | "split" | "editorial" | "card"
+/** 포스터 스타일 (QA 2026-10-22): three designs to pick from, always 4:5 (the size choice is gone). */
+const posterStyleOptions: [PosterLayoutKey, string][] = [
+  ["vertical", "스타일 1"],
+  ["editorial", "스타일 2"],
+  ["card", "스타일 3"],
 ]
 /** The old 기본형/고급형 screens, hidden since plan C; open the app with ?premiumui to see them (development, checks). */
 const premiumUi = typeof location !== "undefined" && new URLSearchParams(location.search).has("premiumui")
@@ -877,38 +876,35 @@ function radioNav(index: number, count: number, selected: number, pick: (index: 
  * follows the photo; records saved with another layout or colour still draw as saved until a size is picked.
  */
 function PosterStyleControls({
-  ratio,
+  layout,
   easyMode,
   onChange,
 }: {
-  ratio: PosterRatioKey
+  layout: PosterLayoutKey
   easyMode: boolean
   onChange: (next: { posterRatio: PosterRatioKey; posterLayout: PosterLayoutKey; posterTheme: "" }) => void
 }) {
   const t = (text: string) => uiText(text, easyMode)
   const groupRef = useRef<HTMLFieldSetElement>(null)
-  // The new size changes the poster's height, which pushed the choices out of view on the basic screen (UX audit
-  // 2026-10-20): once the new poster is drawn, the choices are brought back into view.
-  const pick = (posterRatio: PosterRatioKey) => {
-    onChange({ posterRatio, posterLayout: "vertical", posterTheme: "" })
+  const pick = (posterLayout: PosterLayoutKey) => {
+    onChange({ posterRatio: "4:5", posterLayout, posterTheme: "" })
     for (const wait of [250, 700]) window.setTimeout(() => groupRef.current?.scrollIntoView({ block: "nearest" }), wait)
   }
-  const selected = posterRatioOptions.findIndex(([id]) => id === ratio)
+  const selected = Math.max(0, posterStyleOptions.findIndex(([id]) => id === layout))
   return (
     <fieldset ref={groupRef} className="poster-use" role="radiogroup">
-      <legend className="sr-only">{t("포스터 크기")}</legend>
+      <legend className="sr-only">{t("포스터 스타일")}</legend>
       <div>
-        {posterRatioOptions.map(([id, shape], index) => (
+        {posterStyleOptions.map(([id, label], index) => (
           <button
             key={id}
             type="button"
             role="radio"
-            aria-checked={ratio === id}
-            aria-label={easyMode ? `${index + 1}번, ${shape}` : `${id}, ${shape}`}
+            aria-checked={selected === index}
             onClick={() => pick(id)}
-            {...radioNav(index, posterRatioOptions.length, selected, (next) => pick(posterRatioOptions[next][0]))}
+            {...radioNav(index, posterStyleOptions.length, selected, (next) => pick(posterStyleOptions[next][0]))}
           >
-            <span>{easyMode ? `${index + 1}번` : id}</span>
+            <span>{label}</span>
           </button>
         ))}
       </div>
@@ -1969,9 +1965,9 @@ function CreateFlow({
     const scene = sceneImage?.forImage === imageUrl ? sceneImage.url : ""
     if (outputFolderName && scene) void fetch(scene).then((r) => r.blob()).then((blob) => saveToComputer(outputFolderName, [{ name: "고급형_배경.jpg", blob }])).catch(() => undefined)
   }, [outputFolderName, sceneImage]) // eslint-disable-line react-hooks/exhaustive-deps
-  const posterRatio: PosterRatioKey = details.posterRatio ?? "4:5"
-  // D's renderer has no side-by-side layout for a square; it would quietly fall back.
-  const posterLayout: PosterLayoutKey = posterRatio === "1:1" && details.posterLayout === "split" ? "vertical" : details.posterLayout ?? "vertical"
+  // Always 4:5 since 2026-10-22; an older record's other size or the old 사이드 분할 opens as 스타일 1.
+  const posterRatio: PosterRatioKey = "4:5"
+  const posterLayout: PosterLayoutKey = posterStyleOptions.some(([id]) => id === details.posterLayout) ? details.posterLayout ?? "vertical" : "vertical"
   const posterTheme: PosterThemeKey = details.posterTheme || posterThemeFor(tones)
   // The poster is drawn from the advertising background once it is back (sceneUrl, see 배경 바꾸기 above).
   const posterKey = JSON.stringify([posterContent, posterTheme, posterRatio, posterLayout, photoBox?.image === imageUrl ? photoBox.box : null, sceneUrl.length])
@@ -3095,7 +3091,7 @@ function CreateFlow({
                     // The first-line choice lives on the 홍보 글 tab only (owner, 2026-10-19): on the poster it changes one small
                     // line under the product name, too little to see.
                     <PosterStyleControls
-                      ratio={posterRatio}
+                      layout={posterLayout}
                       easyMode={easyMode}
                       onChange={(next) => updateDetails({ ...details, ...next })}
                     />

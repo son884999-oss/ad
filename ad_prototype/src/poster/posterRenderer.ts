@@ -50,6 +50,8 @@ export const POSTER_COMPOSITIONS = {
   vertical: { id: "vertical", name: "세로 집중", tag: "큰 제품 사진과 핵심 정보" },
   split: { id: "split", name: "사이드 분할", tag: "문구와 사진을 나란히" },
   editorial: { id: "editorial", name: "에디토리얼", tag: "사진을 먼저 보여주기" },
+  // 스타일 3 (QA 2026-10-22, 4:5 only): the photo in a white frame on a colour field.
+  card: { id: "card", name: "사진 카드", tag: "색 바탕 위 액자 사진" },
 } as const
 
 export type PosterCompositionKey = keyof typeof POSTER_COMPOSITIONS
@@ -556,6 +558,77 @@ export type RenderPosterOptions = {
   aiMark?: boolean
 }
 
+/** 스타일 3 (사진 카드): a warm colour field, the photo in a white frame tilted a little, the name big under it. */
+function renderCardPoster({ ctx, image, content, theme, width, height }: RenderArgs) {
+  const { eyebrow = "", productName, productDescription = "", keySellingPoint = "" } = content
+  const drawn: string[] = []
+  const bg = ctx.createLinearGradient(0, 0, 0, height)
+  bg.addColorStop(0, theme.bgGradient[0])
+  bg.addColorStop(1, theme.bgGradient[2])
+  ctx.fillStyle = bg
+  ctx.fillRect(0, 0, width, height)
+  const ink = readableOn(theme.bgGradient[1], [theme.ink, DARK, "#ffffff"])
+  // Frame: 74% of the width, square photo, a soft shadow, turned -3°.
+  const frameW = Math.round(width * 0.74)
+  const photo = frameW - 48
+  const frameH = photo + 48
+  const cx = width / 2
+  const cy = 96 + frameH / 2
+  ctx.save()
+  ctx.translate(cx, cy)
+  ctx.rotate((-3 * Math.PI) / 180)
+  ctx.shadowColor = "rgba(40,20,10,.28)"
+  ctx.shadowBlur = 40
+  ctx.shadowOffsetY = 16
+  ctx.fillStyle = "#ffffff"
+  roundedRect(ctx, -frameW / 2, -frameH / 2, frameW, frameH, 18)
+  ctx.fill()
+  ctx.shadowColor = "transparent"
+  ctx.save()
+  roundedRect(ctx, -photo / 2, -photo / 2, photo, photo, 10)
+  ctx.clip()
+  drawCoverImage(ctx, image, -photo / 2, -photo / 2, photo, photo)
+  ctx.restore()
+  ctx.restore()
+  if (eyebrow) {
+    ctx.font = font(800, 38)
+    const [line] = wrapText(ctx, eyebrow, width - 200, 1)
+    drawPill(ctx, line, 64, 48, { size: 38, background: theme.accent, color: readableOn(theme.accent, [theme.accentText, "#ffffff", DARK]) })
+    drawn.push(line)
+  }
+  const side = 80
+  const textWidth = width - side * 2
+  let y = 96 + frameH + 96
+  const title = fitTitle(ctx, productName, textWidth, 2, 104, 64)
+  // Centred line by line (drawLines draws from the left).
+  const centred = (lines: string[], top: number, value: string, color: string, lineHeight: number) => {
+    ctx.font = value
+    lines.forEach((line, index) => drawLines(ctx, [line], { x: cx - ctx.measureText(line).width / 2, y: top + index * lineHeight, font: value, color, lineHeight }))
+  }
+  setTitleTracking(ctx, title.size)
+  centred(title.lines, y + title.size * 0.2, font(900, title.size), ink, title.size * 1.12)
+  resetTracking(ctx)
+  drawn.push(title.lines.join(" "))
+  y += title.size * 0.2 + (title.lines.length - 1) * title.size * 1.12 + 70
+  if (productDescription) {
+    ctx.font = font(600, 46)
+    const [line] = wrapText(ctx, productDescription, textWidth, 1)
+    centred([line], y, font(600, 46), ink, 56)
+    drawn.push(line)
+    y += 40
+  }
+  const { price, others } = splitPoint(keySellingPoint)
+  const pill = price || content.callToAction?.trim() || others[0] || ""
+  if (pill && y + 110 < height) {
+    ctx.font = font(800, 44)
+    const [line] = wrapText(ctx, pill, textWidth - 60, 1)
+    const w = ctx.measureText(line).width + 44 * 1.4
+    drawPill(ctx, line, cx - w / 2, y + 26, { size: 44, background: DARK, color: "#ffffff" })
+    drawn.push(line)
+  }
+  return drawn
+}
+
 function drawAiMark(ctx: Ctx, width: number, height: number, isStory: boolean, atTop = false) {
   const label = "AI 활용"
   ctx.save()
@@ -601,8 +674,8 @@ export function renderPosterToCanvas({
   const ctx = canvas.getContext("2d")
   if (!ctx) return null
 
-  if (compositionKey === "vertical" || compositionKey === "editorial") {
-    const render = compositionKey === "vertical" ? renderFullBleedPoster : renderPanelPoster
+  if (compositionKey === "vertical" || compositionKey === "editorial" || compositionKey === "card") {
+    const render = { vertical: renderFullBleedPoster, editorial: renderPanelPoster, card: renderCardPoster }[compositionKey]
     const drawn = render({ ctx, image: productImage, background: backgroundImage, content, theme, width, height })
     if (aiMark) drawAiMark(ctx, width, height, ratioKey === "9:16", compositionKey === "editorial")
     return drawn
