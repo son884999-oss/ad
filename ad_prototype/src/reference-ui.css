@@ -1073,3 +1073,22 @@ html[data-layout=mobile] .results-step:not(.is-single) .result-card > .result-ne
 .easy-mode .reference-header .mode-switch button { min-width:44px;padding:0 8px;font-size:calc(16px * var(--s)); }
 /* 4. 말로 하기 takes less of the row, so the field (and its example) has room. */
 .easy-mode .voice-mic-button { width:calc(62px * var(--s));font-size:14px; }
+
+/* 홈 예시 줄 (2026-10-22): 상품 사진만 받는 앱 — 상품 예시·문구 카드 9장을 손으로 넘기는 가로 줄 (자동 회전 없음). */
+.reference-home .home-samples { overflow-x:auto;overflow-y:hidden;justify-content:flex-start;scroll-snap-type:x proximity;scrollbar-width:none;overscroll-behavior-x:contain; }
+.reference-home .home-samples::-webkit-scrollbar { display:none; }
+.home-samples-track { display:flex;align-items:center;gap:2.4cqw;height:100%;padding:0 calc(20px * var(--s));width:max-content; }
+.reference-home .home-samples .home-sample { margin-inline:0;scroll-snap-align:center; }
+.reference-home .home-samples .home-sample:nth-child(odd) { transform:rotate(-2deg); }
+.reference-home .home-samples .home-sample:nth-child(even) { transform:rotate(2deg) translateY(-3%); }
+.home-sample.is-price img,.home-sample.is-photo img { width:100%;height:100%;object-fit:cover; }
+.home-price-tag { position:absolute;left:6%;right:6%;bottom:6%;padding:5% 6%;border-radius:8px;background:#fffffff2;box-shadow:0 2px 8px #0002;display:grid;line-height:1.25;color:#2b2420;container-type:inline-size; }
+.home-price-tag b { font-size:10cqw;font-weight:800;white-space:nowrap; }
+.home-price-tag s { font-size:9cqw;color:#8a7d75; }
+.home-price-tag strong { font-size:15cqw;font-weight:900;color:#c0391b; }
+.home-price-tag em { font-style:normal;font-size:8.5cqw;font-weight:700;color:#b44d1d; }
+.home-photo-label { position:absolute;left:6%;bottom:6%;padding:2px 7px;border-radius:999px;background:#2b2420cc;color:#fff;font-size:11px;font-weight:700;white-space:nowrap; }
+.home-sample.is-tags { justify-content:center;background:#fdf6ef; }
+.home-tags-title { font-size:10.5cqw;font-weight:800;color:#2b2420;margin-bottom:5cqh; }
+.home-sample.is-tags .home-copy-tags { margin-top:0;line-height:1.55; }
+.home-sample.is-blog p { font-size:10cqw; }
