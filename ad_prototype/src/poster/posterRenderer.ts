@@ -253,6 +253,37 @@ function drawPhotoCover(ctx: Ctx, image: Img, x: number, y: number, width: numbe
 }
 
 /** "5,500원 · 직접 만든 크림" → the price (shown large) and the other short points (shown as a badge). */
+/**
+ * 스타일 2 photo (QA 2026-10-22): the whole width of the product, never cut at the sides. A tall photo is shown
+ * from its full width (only plain background above and below is left out, centred on the product box), and the
+ * space left at the sides is the same photo, blurred and darkened a little.
+ */
+function drawPhotoFit(ctx: Ctx, image: Img, x: number, y: number, width: number, height: number) {
+  const size = imageSize(image)
+  if (!image || !size) return false
+  const focus = sourceRect(size, currentFocus)
+  // Show at least 60% of a tall photo's height, so the product (25–60% from the top on an AI background) fits.
+  const cropHeight = Math.min(size.height, Math.max(size.width * (height / width), size.height * 0.6))
+  const scale = height / cropHeight
+  const drawWidth = Math.min(width, size.width * scale)
+  if (drawWidth >= width - 2) return drawPhotoCover(ctx, image, x, y, width, height)
+  ctx.save()
+  ctx.beginPath()
+  ctx.rect(x, y, width, height)
+  ctx.clip()
+  ctx.filter = "blur(36px) brightness(.9)"
+  drawCoverImage(ctx, image, x - 60, y - 60, width + 120, height + 120)
+  ctx.filter = "none"
+  const centerY = focus.y + focus.height / 2
+  const sy = Math.min(size.height - cropHeight, Math.max(0, centerY - cropHeight / 2))
+  const dx = x + (width - drawWidth) / 2
+  ctx.shadowColor = "rgba(0,0,0,.18)"
+  ctx.shadowBlur = 30
+  ctx.drawImage(image, 0, sy, size.width, cropHeight, dx, y, drawWidth, height)
+  ctx.restore()
+  return true
+}
+
 function splitPoint(point: string) {
   const items = point.split("·").map((item) => item.trim()).filter(Boolean)
   const price = items.find((item) => /\d/.test(item) && /원|₩|만/.test(item)) ?? ""
@@ -415,7 +446,7 @@ function renderPanelPoster({ ctx, image, content, theme, width, height }: Render
 
   ctx.fillStyle = paper
   ctx.fillRect(0, 0, width, height)
-  drawPhotoCover(ctx, image, 0, 0, width, photoHeight)
+  drawPhotoFit(ctx, image, 0, 0, width, photoHeight)
   // A clean edge between photo and panel (QA 2026-10-22: the white fade ate the plate and looked broken).
   ctx.fillStyle = readableOn(paper, [theme.accent, theme.ink])
   ctx.fillRect(0, photoHeight - 4, width, 8)
