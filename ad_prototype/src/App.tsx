@@ -98,8 +98,8 @@ type GeneratedRecord = {
 
     keywords?: string
 
-    /** 포스터·영상 문구 (QA 2026-10-21): the poster title / first video line and the closing invitation, ≤16
-     *  characters each. 자동으로 채워 주기 fills them; the owner sees and can change them under 더 자세히. */
+    /** 포스터·영상 문구 (QA 2026-10-21): the short line under the product name, ≤16 characters. 자동으로 채워 주기
+     *  fills it; the owner sees and can change it under 더 자세히. mediaCta is no longer asked (2026-10-22). */
     mediaHeadline?: string
     mediaCta?: string
 
@@ -1320,7 +1320,6 @@ function CreateFlow({
       ["keywords", suggestion.keyFeatures.join(", ")],
       ["audience", suggestion.targetAudience],
       ["mediaHeadline", suggestion.mediaHeadline ?? ""],
-      ["mediaCta", suggestion.mediaCta ?? ""],
     ]
     let changed = false
     for (const [key, value] of textFields) {
@@ -1689,7 +1688,7 @@ function CreateFlow({
   const posterContent = {
     // Product name = big title; the short 포스터·영상 문구 (or the 홍보 글 AI's line) is the line under it.
     ...buildPosterContent(details, details.mediaHeadline?.trim() || chosenHeadline || body, Boolean(details.mediaHeadline?.trim() || chosenHeadline)),
-    callToAction: details.mediaCta?.trim() || activePromo?.cta || (details.shopName?.trim() ? `${details.shopName.trim()}에서 만나보세요` : ""),
+    callToAction: activePromo?.cta || (details.shopName?.trim() ? `${details.shopName.trim()}에서 만나보세요` : ""),
   }
   const videoCaption = (() => {
     const name = details.name?.trim() ?? ""
@@ -1700,7 +1699,7 @@ function CreateFlow({
       headline,
       // A name the headline already contains ("오늘 만든 크림 커피") is not repeated underneath.
       brand: [shop, name].filter((value) => value && !headline.includes(value)).join(" · "),
-      cta: details.mediaCta?.trim() || activePromo?.cta || (shop ? `${shop}에서 만나요` : ""),
+      cta: activePromo?.cta || (shop ? `${shop}에서 만나요` : ""),
     }
   })()
   // The same caption drawn into the 9:16 video file.
@@ -2728,7 +2727,7 @@ function CreateFlow({
                 <fieldset className="media-copy-fields">
                   <legend>{t("포스터·영상 문구")} <span className="field-tag">{t("선택")}</span></legend>
                   <label>
-                    {t("큰 제목 한 줄")}
+                    {t("짧은 문구 한 줄")}
                     <input
                       id="field-media-headline"
                       value={details.mediaHeadline ?? ""}
@@ -2738,18 +2737,7 @@ function CreateFlow({
                       className="mt-2 w-full rounded-[12px] border p-4"
                     />
                   </label>
-                  <label>
-                    {t("마지막 권유 한 줄")}
-                    <input
-                      id="field-media-cta"
-                      value={details.mediaCta ?? ""}
-                      maxLength={16}
-                      placeholder={t("예) 오늘 들러 맛보세요")}
-                      onChange={(event) => updateDetails({ ...details, mediaCta: event.target.value })}
-                      className="mt-2 w-full rounded-[12px] border p-4"
-                    />
-                  </label>
-                  <span className="field-hint">{t("포스터 제목과 영상 첫 장면, 영상 마지막 화면에 들어가요. 16자까지 적을 수 있어요.")}</span>
+                  <span className="field-hint">{t("포스터와 영상에서 제품 이름 바로 아래에 들어가요. 16자까지 적을 수 있어요.")}</span>
                 </fieldset>
                 <label className="block text-[18px] font-bold">
                   {t("주요 고객층")}

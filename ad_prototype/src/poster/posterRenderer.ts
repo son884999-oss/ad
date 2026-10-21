@@ -335,8 +335,9 @@ function renderFullBleedPoster({ ctx, image, content, theme, width, height }: Re
   ctx.font = font(600, 50)
   const descriptionLines = productDescription ? wrapText(ctx, productDescription, textWidth, 2) : []
   // No price to close on: the poster ends with what to do (a white pill), not with who it suits.
-  const cta = !price && content.callToAction ? content.callToAction.trim() : ""
-  const audience = cta ? "" : targetAudience ? `${targetAudience}에게 추천해요` : ""
+  // Under the product: the shop name in the white pill (QA 2026-10-22, instead of "오늘 들러 맛보세요").
+  const cta = eyebrow.trim()
+  const audience = cta || price ? "" : targetAudience ? `${targetAudience}에게 추천해요` : ""
   const priceSize = 76
   let y = height - bottomSafe
   const priceY = price ? y : 0
@@ -350,8 +351,7 @@ function renderFullBleedPoster({ ctx, image, content, theme, width, height }: Re
   const titleBottom = y
   const titleTop = titleBottom - (title.lines.length - 1) * titleLineHeight - title.size
   // Shop name: small, right above the title (QA 2026-10-22, the same place on every style).
-  const eyebrowBaseline = titleTop - 22
-  const eyebrowTop = eyebrow ? eyebrowBaseline - 40 : titleTop
+  const eyebrowTop = titleTop
   const badgeY = badge ? eyebrowTop - 30 - 80 : 0
   const blockTop = badge ? badgeY : eyebrowTop
   // The product is not hidden under the text: the photo moves up so the product (about 45% down an AI
@@ -367,12 +367,6 @@ function renderFullBleedPoster({ ctx, image, content, theme, width, height }: Re
   fade.addColorStop(1, "rgba(20,14,10,.9)")
   ctx.fillStyle = fade
   ctx.fillRect(0, 0, width, height)
-  if (eyebrow) {
-    ctx.font = font(700, 40)
-    const [line] = wrapText(ctx, eyebrow, textWidth, 1)
-    drawLines(ctx, [line], { x: side, y: eyebrowBaseline, font: font(700, 40), color: "#f4eee8", lineHeight: 44 })
-    drawn.push(line)
-  }
 
   if (badge) {
     drawPill(ctx, badge, side, badgeY, { size: 42, background: "#ffffff", color: readableOn("#ffffff", [theme.accent, theme.ink, DARK]) })
@@ -391,12 +385,14 @@ function renderFullBleedPoster({ ctx, image, content, theme, width, height }: Re
     const priceColor = readableOn(DARK, ["#ffc79e", "#ffd9bd", "#ffffff"])
     drawLines(ctx, [price], { x: side, y: priceY, font: font(800, priceSize), color: priceColor, lineHeight: priceSize })
     drawn.push(price)
-  } else if (cta) {
+  }
+  if (cta) {
     ctx.font = font(800, 44)
     const [line] = wrapText(ctx, cta, textWidth - 56, 1)
     drawPill(ctx, line, side, ctaY, { size: 44, background: "#ffffff", color: readableOn("#ffffff", [theme.accent, theme.ink, DARK]) })
     drawn.push(line)
-  } else if (audience) {
+  }
+  if (!price && !cta && audience) {
     ctx.font = font(600, 34)
     const [line] = wrapText(ctx, audience, textWidth, 1)
     drawLines(ctx, [line], { x: side, y: audienceY, font: font(600, 34), color: "#f4eee8", lineHeight: 40 })
@@ -636,14 +632,7 @@ function renderCardPoster({ ctx, image, content, theme, width, height }: RenderA
   let y = 96 + frameH + 96
   const title = fitTitle(ctx, productName, textWidth, 2, 104, 64)
   // Shop name: small, right above the title (QA 2026-10-22, the same place on every style).
-  if (eyebrow) {
-    y += 58
-    ctx.font = font(700, 40)
-    const [line] = wrapText(ctx, eyebrow, textWidth, 1)
-    const baseline = y + title.size * 0.2 - title.size * 0.85 - 22
-    drawLines(ctx, [line], { x: cx - ctx.measureText(line).width / 2, y: baseline, font: font(700, 40), color: ink, lineHeight: 44 })
-    drawn.push(line)
-  }
+
   // Centred line by line (drawLines draws from the left).
   const centred = (lines: string[], top: number, value: string, color: string, lineHeight: number) => {
     ctx.font = value
@@ -662,7 +651,9 @@ function renderCardPoster({ ctx, image, content, theme, width, height }: RenderA
     y += 40
   }
   const { price, others } = splitPoint(keySellingPoint)
-  const pill = price || content.callToAction?.trim() || others[0] || ""
+  // Under the product: the shop name (QA 2026-10-22), or the price when there is no shop name.
+  void others
+  const pill = eyebrow.trim() || price || ""
   if (pill && y + 110 < height) {
     ctx.font = font(800, 44)
     const [line] = wrapText(ctx, pill, textWidth - 60, 1)
