@@ -1045,3 +1045,13 @@ html[data-layout=mobile] .results-step:not(.is-single) .result-card > .result-ne
 .result-photo-preview { position:relative;display:flex;align-items:center;justify-content:center;overflow:hidden;border-radius:14px;background:#f1e9e2; }
 .result-photo-preview > img { display:block;width:100%;height:auto;max-height:70dvh;object-fit:contain; }
 .result-photo-preview .ai-badge { position:absolute;top:12px;right:12px;z-index:2;padding:4px 10px;border-radius:999px;background:#2b2420cc;color:#fff;font-size:14px;font-weight:700;pointer-events:none; }
+/* QA 2026-10-20 결과 화면 정리 */
+/* 쉬운 화면: [듣기] in the header beside 기본/쉬운. */
+.reference-header-actions { display:flex;align-items:center;gap:6px;flex:none; }
+.easy-mode .reference-header .reference-header-actions .reference-read.is-icon { min-width:0;min-height:calc(48px * var(--s));padding:0 12px;font-size:calc(17px * var(--s)); }
+/* 재생하기 on the video: a pill in the middle while paused, small in the corner while playing. */
+.studio-shell .results-step .result-motion-preview .video-play-overlay { position:absolute;z-index:3;left:50%;top:50%;transform:translate(-50%,-50%);display:inline-flex;align-items:center;gap:8px;width:auto;min-width:0;height:auto;min-height:calc(56px * var(--s));padding:0 calc(22px * var(--s));border:0;border-radius:999px;background:rgba(43,36,32,.74) !important;color:#fff !important;font-size:calc(19px * var(--s));font-weight:800;box-shadow:0 6px 18px rgba(0,0,0,.25);backdrop-filter:blur(4px); }
+.studio-shell .results-step .result-motion-preview .video-play-overlay.is-playing { left:12px;top:auto;bottom:12px;transform:none;min-height:44px;padding:0 14px;font-size:15px;background:rgba(43,36,32,.55) !important; }
+.studio-shell .results-step .result-motion-preview .video-play-overlay svg { display:block !important;flex:none; }
+.studio-shell.easy-mode .results-step .result-motion-preview .video-play-overlay:not(.is-playing) { font-size:calc(22px * var(--s));min-height:calc(62px * var(--s)); }
+.studio-shell .results-step .result-motion-preview .video-play-overlay > span { color:#fff !important;display:inline !important;white-space:nowrap; }

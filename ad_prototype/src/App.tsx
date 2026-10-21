@@ -1623,23 +1623,7 @@ function CreateFlow({
         ?.focus({ preventScroll: true })
   }
 
-  // "다음: 영상 ▶" under a result, so the results can be gone through in order without knowing the tabs are tabs.
-  const nextResultButton = (id: ResultTabId) => {
-    const next = resultTabs[resultTabs.findIndex((tab) => tab.id === id) + 1]
-    if (!next) return null
-    return (
-      <button
-        type="button"
-        className="result-next"
-        onClick={() => {
-          selectResultTab(next.id, true)
-          document.querySelector(".result-tabs-bar")?.scrollIntoView({ block: "start" })
-        }}
-      >
-        {t("다음")}: {next.label} <span aria-hidden="true">▶</span>
-      </button>
-    )
-  }
+  // No "다음: ○○ ▶" under the results (QA 2026-10-21): the tabs above do the same.
 
   const finalText = `${copyText.trim()}\n\n${hashtags.join(" ")}`.trim()
   const updateDetails = (nextDetails: GeneratedRecord["details"]) => {
@@ -2320,11 +2304,9 @@ function CreateFlow({
 
       const extension = result.name.endsWith(".mp4") ? "MP4" : "WebM"
 
-      setVideoMessage(
-        easyMode
-          ? "영상이 준비됐어요."
-          : `${extension} 영상이 준비됐어요.`,
-      )
+      // QA 2026-10-20: no "준비됐어요" line; the video on screen says so. Errors and save results still show.
+      void extension
+      setVideoMessage("")
 
       if (download) {
         triggerFileDownload(result)
@@ -3140,7 +3122,6 @@ function CreateFlow({
                           : ""
                   )}
                 />
-                {nextResultButton("poster")}
                 {RESULT_SECONDARY_FEATURES_ENABLED && <details className="media-full-copy">
                   <summary>이미지 문구 원문 보기</summary>
                   <p>{details.name}</p>
@@ -3162,18 +3143,6 @@ function CreateFlow({
                   easyMode={easyMode}
                   icon="video"
                   title={easyMode ? "짧은 영상" : "영상"}
-                  control={
-                      <button
-                        type="button"
-                        className="result-preview-action"
-                        aria-controls="result-video-preview"
-                        aria-pressed={playing}
-                        onClick={() => setPlaying(!playing)}
-                      >
-                        <Icon name={playing ? "pause" : "play"} size={34} />
-                        <span>{t(playing ? "일시 정지" : "재생하기")}</span>
-                      </button>
-                  }
                 />
                 <ResultPreview>
                   <div
@@ -3211,6 +3180,20 @@ function CreateFlow({
                         </p>
                       </div>
                     )}
+                    {/* 재생하기 on the video itself (QA 2026-10-20, one row fewer): large in the middle while paused,
+                        small in the corner while playing. Only once there is something to play. */}
+                    {(previewVideoUrl || showsRealVideo(aiVideo.state)) && (
+                      <button
+                        type="button"
+                        className={`result-preview-action video-play-overlay${playing ? " is-playing" : ""}`}
+                        aria-controls="result-video-preview"
+                        aria-pressed={playing}
+                        onClick={() => setPlaying(!playing)}
+                      >
+                        <Icon name={playing ? "pause" : "play"} size={playing ? 22 : 30} />
+                        <span>{t(playing ? "일시 정지" : "재생하기")}</span>
+                      </button>
+                    )}
                     {/* Caption band in A_손용범's compose-push layout: headline first, then shop · product and the call to action.
                         Only over the AI clip before its captioned file exists (that file has its own caption drawn in). */}
                     {!previewVideoUrl && showsRealVideo(aiVideo.state) && <strong className={`video-caption${playing ? " is-playing" : ""}`}>
@@ -3240,12 +3223,11 @@ function CreateFlow({
                   error={videoStatus === "failed" || videoStatus === "unsupported"}
                   // The AI clip: after 저장 its own result message; before, whether the captioned file is ready.
                   message={t(showsRealVideo(aiVideo.state) && !/^(AI가 만든 영상을 저장|새 창)/.test(videoMessage)
-                    ? realVideoFile ? "AI가 만든 영상에 글자를 넣어 준비했어요. 저장하거나 보낼 수 있어요." : "AI 영상에 글자를 넣고 있어요. 잠시만 기다려 주세요."
+                    ? realVideoFile ? "" : "AI 영상에 글자를 넣고 있어요. 잠시만 기다려 주세요."
                     : videoStatus === "preparing"
                       ? ""
                       : videoMessage)}
                 />
-                {nextResultButton("video")}
                 {RESULT_SECONDARY_FEATURES_ENABLED && <details className="media-full-copy">
                   <summary>영상 문구 원문 보기</summary>
                   <p>{details.features}</p>
@@ -3328,9 +3310,7 @@ function CreateFlow({
             </p>
             <PublishingGuide channel={channel} hasVideo={showVideo} />
           </details>}
-          <div className="result-followup-actions">
-            <button className="studio-secondary" onClick={onDashboard}><Icon name="home" size={22} />{t("홈으로")}</button>
-          </div>
+          {/* No 홈으로 here (QA 2026-10-20): the bottom menu's 홈 does the same. */}
         </div>
       )}
     </section>
@@ -3898,7 +3878,7 @@ export default function App() {
       return "만드는 중입니다. 잠시만 기다려 주세요. 다 만들어지면 결과 화면으로 넘어가요. 멈추려면 취소 버튼을 누르세요."
     }
 
-    return `결과 보기 화면입니다. ${details.shopName?.trim() || details.name?.trim() || details.description.trim()}. 이미지와 영상은 다운로드 버튼으로 저장하고, 홍보 글은 복사하기 버튼으로 가져가세요. 공유하기 버튼으로 바로 보낼 수도 있어요. 홈으로 버튼을 누르면 첫 화면으로 돌아가요.`
+    return `결과 보기 화면입니다. ${details.shopName?.trim() || details.name?.trim() || details.description.trim()}. 이미지와 영상은 다운로드 버튼으로 저장하고, 홍보 글은 복사하기 버튼으로 가져가세요. 공유하기 버튼으로 바로 보낼 수도 있어요. 아래 메뉴의 홈을 누르면 첫 화면으로 돌아가요.`
   })()
 
   const stopSpeech = () => {
