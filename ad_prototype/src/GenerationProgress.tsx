@@ -154,7 +154,7 @@ export default function GenerationProgress({
           {Math.floor(percent)}%
         </span>
       </div>
-      <p className="generation-eta" role="status">{t(slow ? "조금 더 걸리고 있어요. 곧 나와요." : "보통 15초쯤 걸려요.")}</p>
+      <p className="generation-eta" role="status">{t(slow ? "조금 더 걸리고 있어요. 곧 나와요." : "보통 20~30초쯤 걸려요.")}</p>
       <button type="button" className="studio-secondary generation-cancel" onClick={onCancel}>
         {t("취소")}
       </button>

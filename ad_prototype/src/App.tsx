@@ -2378,6 +2378,14 @@ function CreateFlow({
   // Cancelled work settles before another preparation can reuse its recorder refs.
   const prepareVideoDownload = async (download = true) => {
     const context = videoContextRef.current
+    // 저장 with the video already made: hand that file over at once. Making it again first (10 s, or a few with
+    // the fast path) let the phone's "right after the tap" window close, so the save sheet never opened (QA 2026-10-22).
+    const ready = videoShareFileRef.current
+    if (download && ready && !videoTaskRef.current) {
+      triggerFileDownload(ready)
+      notify("download")
+      return ready
+    }
     const previous = videoTaskRef.current
     if (previous) {
       if (!videoCancelledRef.current) return previous
@@ -2769,14 +2777,18 @@ function CreateFlow({
                   <legend>{t("포스터·영상 문구")} <span className="field-tag">{t("선택")}</span></legend>
                   <label>
                     {t("짧은 문구 한 줄")}
-                    <input
-                      id="field-media-headline"
+                    {/* 말로 하기 like the other fields (QA 2026-10-22). */}
+                    <VoiceField voice={voice} field="mediaHeadline" label={t("짧은 문구 한 줄")} inputId="field-media-headline" value={details.mediaHeadline ?? ""} maxLength={16} easyMode={easyMode} onVoiceText={(text) => updateDetails({ ...details, mediaHeadline: text.slice(0, 16) })}>
+                    {(bind) => <input
+                      {...bind}
+                      aria-label={t("짧은 문구 한 줄")}
                       value={details.mediaHeadline ?? ""}
                       maxLength={16}
                       placeholder={t("예) 생크림을 층층이 올렸어요")}
                       onChange={(event) => updateDetails({ ...details, mediaHeadline: event.target.value })}
                       className="mt-2 w-full rounded-[12px] border p-4"
-                    />
+                    />}
+                    </VoiceField>
                   </label>
                   <span className="field-hint">{t("포스터와 영상에서 제품 이름 바로 아래에 들어가요. 16자까지 적을 수 있어요.")}</span>
                 </fieldset>

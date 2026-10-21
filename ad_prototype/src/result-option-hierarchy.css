@@ -3,7 +3,7 @@
 /* Tabs: underline style. */
 :root .studio-shell.studio-shell.studio-shell .result-tabs { gap:0; padding:0; border:0; border-bottom:1px solid #D9CEC4; border-radius:0; background:transparent; box-shadow:none; }
 :root .studio-shell.studio-shell.studio-shell .result-tabs button { min-height:52px; padding:8px 4px 12px; border:0; border-radius:0; background:transparent; color:var(--color-muted); font-weight:600; box-shadow:none; }
-:root .studio-shell.studio-shell.studio-shell.easy-mode .result-tabs button { min-height:56px; }
+:root .studio-shell.studio-shell.studio-shell.easy-mode .result-tabs button { min-height:60px; }
 :root .studio-shell.studio-shell.studio-shell .result-tabs button[aria-selected=true] { background:transparent; color:var(--color-brand-hover); font-weight:800; box-shadow:none; }
 :root .studio-shell.studio-shell.studio-shell .result-tabs button[aria-selected=true]::after { content:""; position:absolute; left:8%; right:8%; bottom:-1px; height:4px; border-radius:2px 2px 0 0; background:var(--color-brand); }
 :root .studio-shell.studio-shell.studio-shell .result-tabs button:not([aria-selected=true]):hover { background:#faf6f2; color:var(--color-ink); }
