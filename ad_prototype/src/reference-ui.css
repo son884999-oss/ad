@@ -1072,7 +1072,7 @@ html[data-layout=mobile] .results-step:not(.is-single) .result-card > .result-ne
 .easy-mode .reference-header .reference-header-actions .reference-read.is-icon { padding:0 10px;font-size:calc(16px * var(--s)); }
 .easy-mode .reference-header .mode-switch button { min-width:44px;padding:0 8px;font-size:calc(16px * var(--s)); }
 /* 4. 말로 하기 takes less of the row, so the field (and its example) has room. */
-.easy-mode .voice-mic-button { width:calc(62px * var(--s));font-size:14px; }
+.easy-mode .voice-mic-button { width:calc(62px * var(--s));min-width:60px;font-size:14px; }
 
 /* 홈 예시 줄 (2026-10-22): 상품 사진만 받는 앱 — 상품 예시·문구 카드 9장을 손으로 넘기는 가로 줄 (자동 회전 없음). */
 .reference-home .home-samples { overflow-x:auto;overflow-y:hidden;justify-content:flex-start;scroll-snap-type:x proximity;scrollbar-width:none;overscroll-behavior-x:contain; }
