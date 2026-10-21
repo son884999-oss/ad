@@ -7,7 +7,7 @@
 // The photo is the same 9:16 frame as the one sent for the AI clip (src/videoFrame.ts), and the captions use the
 // poster style (src/videoCaption.ts). Reels / Shorts cover about the top 240 px and the bottom 340 px.
 
-import { drawVideoCaption, wrap, type VideoCaption } from "./videoCaption"
+import { drawVideoCaption, drawWords, wrap, type VideoCaption } from "./videoCaption"
 
 export const MOTION_SECONDS = 10
 const SCENE_2 = 3.5
@@ -251,97 +251,75 @@ function drawEndCardBackdrop(ctx: CanvasRenderingContext2D, scene: MotionScene, 
   ctx.restore()
 }
 
-/**
- * The end card (QA 2026-10-22): a white card over the blurred photo, like an ad's last frame — the product photo
- * on top, then the shop name, the product name, the price in a badge and the invitation. The card rises in; its
- * lines follow one after another.
- */
 function drawEndCardText(ctx: CanvasRenderingContext2D, scene: MotionScene, seconds: number) {
-  const show = progress(seconds, END_CARD + 0.05, 0.45)
-  if (show <= 0) return
+  if (progress(seconds, END_CARD, 0.35) <= 0) return
   const { width, height } = ctx.canvas
   const { caption } = scene
-  const accent = `rgb(${scene.accent})`
-  const ink = "#2b2420"
   const center = width / 2
-  const cardW = 860
-  const pad = 50
-  const inner = cardW - pad * 2
-  const photoH = 540
+  const textWidth = width - 72 * 2
+  // The big title is the product name since 2026-10-22 (the sub line is the short 포스터·영상 문구).
   const product = caption.headline
-  ctx.font = font(800, 92)
-  const title = wrap(ctx, product, inner, 2)
-  const rows: { h: number; at: number; draw: (y: number) => void }[] = []
-  if (caption.eyebrow) rows.push({ h: 58, at: END_CARD + 0.35, draw: (y) => {
-    ctx.font = font(800, 42)
-    ctx.fillStyle = accent
-    ctx.fillText(wrap(ctx, caption.eyebrow ?? "", inner, 1)[0], center, y + 44)
-  } })
-  rows.push({ h: title.length * 104, at: END_CARD + 0.45, draw: (y) => {
-    ctx.font = font(900, 92)
-    ctx.fillStyle = ink
-    title.forEach((line, index) => ctx.fillText(line, center, y + 86 + index * 104))
-  } })
-  if (caption.price) rows.push({ h: 120, at: END_CARD + 0.7, draw: (y) => {
-    ctx.font = font(900, 64)
-    const [line] = wrap(ctx, caption.price ?? "", inner - 80, 1)
-    const w = ctx.measureText(line).width + 80
-    ctx.fillStyle = accent
-    ctx.beginPath()
-    ctx.roundRect(center - w / 2, y + 12, w, 100, 50)
-    ctx.fill()
+  ctx.font = font(800, 112)
+  const title = wrap(ctx, product, textWidth, 2)
+  // Stack the lines around the middle of the safe area.
+  const blocks: { height: number; draw: (y: number) => void; at: number; words?: boolean }[] = []
+  if (caption.eyebrow) {
+    blocks.push({ height: 76, at: END_CARD + 0.15, draw: (y) => {
+      ctx.font = font(800, 40)
+      const [line] = wrap(ctx, caption.eyebrow ?? "", textWidth - 56, 1)
+      const pill = ctx.measureText(line).width + 56
+      ctx.fillStyle = `rgb(${scene.accent})`
+      ctx.beginPath()
+      ctx.roundRect(center - pill / 2, y, pill, 76, 38)
+      ctx.fill()
+      ctx.fillStyle = "#ffffff"
+      ctx.fillText(line, center, y + 52)
+    } })
+  }
+  blocks.push({ height: title.length * 124, at: END_CARD + 0.35, words: true, draw: (y) => {
+    ctx.font = font(800, 112)
     ctx.fillStyle = "#ffffff"
-    ctx.fillText(line, center, y + 84)
+    title.forEach((line, index) => drawWords(ctx, line, center, y + 104 + index * 124, seconds, END_CARD + 0.35 + index * 0.2, "center"))
   } })
-  if (caption.cta) rows.push({ h: 66, at: END_CARD + 0.95, draw: (y) => {
-    ctx.font = font(700, 44)
-    ctx.fillStyle = "#5e534c"
-    ctx.fillText(wrap(ctx, caption.cta ?? "", inner, 1)[0], center, y + 50)
-  } })
-  const gap = 18
-  const textH = rows.reduce((sum, row) => sum + row.h, 0) + gap * (rows.length - 1)
-  const cardH = pad + photoH + 40 + textH + pad
-  // Centred in the safe area (Reels/Shorts cover ~240 px at the top and ~340 px at the bottom).
-  const cardY = 240 + Math.max(0, (height - 240 - 340 - cardH) / 2)
-  const cardX = center - cardW / 2
-  const rise = (1 - easeInOut(show)) * 60
-  ctx.save()
-  ctx.globalAlpha = show
-  ctx.translate(0, rise)
-  ctx.shadowColor = "rgba(0,0,0,.35)"
-  ctx.shadowBlur = 50
-  ctx.shadowOffsetY = 20
-  ctx.fillStyle = "#ffffff"
-  ctx.beginPath()
-  ctx.roundRect(cardX, cardY, cardW, cardH, 36)
-  ctx.fill()
-  ctx.shadowColor = "transparent"
-  // The product, cut from the framed photo around where the product sits (a little below the middle).
-  const sw = width * 0.86
-  const sh = sw * (photoH / inner)
-  const sx = (width - sw) / 2
-  const sy = Math.min(height - sh, Math.max(0, height * 0.45 - sh / 2))
-  ctx.save()
-  ctx.beginPath()
-  ctx.roundRect(cardX + pad, cardY + pad, inner, photoH, 22)
-  ctx.clip()
-  ctx.drawImage(scene.framed, sx, sy, sw, sh, cardX + pad, cardY + pad, inner, photoH)
-  ctx.restore()
+  if (caption.price) {
+    blocks.push({ height: 96, at: END_CARD + 0.6, draw: (y) => {
+      ctx.font = font(800, 88)
+      ctx.fillStyle = "#ffc79e"
+      ctx.fillText(wrap(ctx, caption.price ?? "", textWidth, 1)[0], center, y + 80)
+    } })
+  }
+  if (caption.cta) {
+    blocks.push({ height: 96, at: END_CARD + 0.85, draw: (y) => {
+      ctx.font = font(800, 48)
+      const [line] = wrap(ctx, caption.cta ?? "", textWidth - 96, 1)
+      const pill = ctx.measureText(line).width + 96
+      ctx.fillStyle = "#ffffff"
+      ctx.beginPath()
+      ctx.roundRect(center - pill / 2, y, pill, 96, 48)
+      ctx.fill()
+      ctx.fillStyle = `rgb(${scene.accent})`
+      ctx.fillText(line, center, y + 64)
+    } })
+  }
+  const gap = 40
+  const total = blocks.reduce((sum, block) => sum + block.height, 0) + gap * (blocks.length - 1)
+  const top = 240 + (height - 240 - 340 - total) / 2
   ctx.textAlign = "center"
   ctx.textBaseline = "alphabetic"
-  let y = cardY + pad + photoH + 40
-  for (const row of rows) {
-    const appear = progress(seconds, row.at, 0.4)
-    if (appear > 0) {
+  let y = top
+  for (const block of blocks) {
+    const appear = progress(seconds, block.at, 0.4)
+    if (appear > 0 || block.words) {
       ctx.save()
-      ctx.globalAlpha = show * appear
-      ctx.translate(0, (1 - easeInOut(appear)) * 24)
-      row.draw(y)
+      if (!block.words) {
+        ctx.globalAlpha = appear
+        ctx.translate(0, (1 - easeInOut(appear)) * 36)
+      }
+      block.draw(y)
       ctx.restore()
     }
-    y += row.h + gap
+    y += block.height + gap
   }
-  ctx.restore()
   ctx.textAlign = "left"
 }
 
