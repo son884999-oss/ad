@@ -1691,14 +1691,15 @@ function CreateFlow({
   }
 
   const posterContent = {
-    // The owner's 포스터·영상 문구 first (자동으로 채워 주기 or typed), then the 홍보 글 AI's, then the app's.
+    // Product name = big title; the short 포스터·영상 문구 (or the 홍보 글 AI's line) is the line under it.
     ...buildPosterContent(details, details.mediaHeadline?.trim() || chosenHeadline || body, Boolean(details.mediaHeadline?.trim() || chosenHeadline)),
     callToAction: details.mediaCta?.trim() || activePromo?.cta || (details.shopName?.trim() ? `${details.shopName.trim()}에서 만나보세요` : ""),
   }
   const videoCaption = (() => {
     const name = details.name?.trim() ?? ""
     const shop = details.shopName?.trim() ?? ""
-    const headline = details.mediaHeadline?.trim() || activePromo?.videoHeadline || name || shop || details.description.trim()
+    // The product name is the big line (what is sold, at a glance); the short line goes under it (QA 2026-10-22).
+    const headline = name || details.mediaHeadline?.trim() || activePromo?.videoHeadline || shop || details.description.trim()
     return {
       headline,
       // A name the headline already contains ("오늘 만든 크림 커피") is not repeated underneath.
@@ -1710,7 +1711,11 @@ function CreateFlow({
   const sampleCaption: VideoCaption = {
     eyebrow: details.shopName?.trim() || undefined,
     headline: videoCaption.headline,
-    subline: details.name?.trim() && !videoCaption.headline.includes(details.name.trim()) ? details.name.trim() : undefined,
+    subline: (() => {
+      const short = details.mediaHeadline?.trim() || activePromo?.videoHeadline || ""
+      if (short && short !== videoCaption.headline) return short
+      return details.name?.trim() && !videoCaption.headline.includes(details.name.trim()) ? details.name.trim() : undefined
+    })(),
     price: details.priceInfo?.trim() || undefined,
     cta: videoCaption.cta || undefined,
   }

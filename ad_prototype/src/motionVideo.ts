@@ -229,7 +229,8 @@ function drawEndCard(ctx: CanvasRenderingContext2D, scene: MotionScene, seconds:
 
   const center = width / 2
   const textWidth = width - 72 * 2
-  const product = caption.subline || caption.headline
+  // The big title is the product name since 2026-10-22 (the sub line is the short 포스터·영상 문구).
+  const product = caption.headline
   ctx.font = font(800, 112)
   const title = wrap(ctx, product, textWidth, 2)
   // Stack the lines around the middle of the safe area.
@@ -322,9 +323,9 @@ export function drawMotionFrame(ctx: CanvasRenderingContext2D, seconds: number, 
 function drawAiMark(ctx: CanvasRenderingContext2D) {
   const label = "AI 활용"
   ctx.save()
-  ctx.font = `700 26px "Pretendard Variable", Pretendard, "Noto Sans KR", sans-serif`
-  const w = ctx.measureText(label).width + 30
-  const h = 44
+  ctx.font = `700 32px "Pretendard Variable", Pretendard, "Noto Sans KR", sans-serif`
+  const w = ctx.measureText(label).width + 34
+  const h = 52
   const x = ctx.canvas.width - w - 32
   const y = 262
   ctx.fillStyle = "rgba(29,26,23,.62)"

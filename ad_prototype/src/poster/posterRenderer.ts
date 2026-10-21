@@ -290,11 +290,15 @@ function renderFullBleedPoster({ ctx, image, content, theme, width, height }: Re
   // Measure the text block first (bottom-up) so the dark fade sits exactly behind it.
   const { price, others } = splitPoint(keySellingPoint)
   // Every other point goes in the badge (a second price, "당일 예약" …), cut to one line.
-  ctx.font = font(800, 34)
-  const badge = others.length ? wrapText(ctx, others.join("  ·  "), textWidth - 48, 1)[0] : ""
+  // QA 2026-10-22: phone-readable sizes (badge 42, line 50, invitation 44) and no "…" in the badge: points that
+  // do not fit are left out, last first.
+  ctx.font = font(800, 42)
+  const fitting = [...others]
+  while (fitting.length > 1 && ctx.measureText(fitting.join("  ·  ")).width > textWidth - 60) fitting.pop()
+  const badge = fitting.length && ctx.measureText(fitting.join("  ·  ")).width <= textWidth - 60 ? fitting.join("  ·  ") : ""
   const title = fitTitle(ctx, productName, textWidth, 2, isStory ? 124 : 112, 64)
   const titleLineHeight = title.size * 1.12
-  ctx.font = font(500, 44)
+  ctx.font = font(600, 50)
   const descriptionLines = productDescription ? wrapText(ctx, productDescription, textWidth, 2) : []
   // No price to close on: the poster ends with what to do (a white pill), not with who it suits.
   const cta = !price && content.callToAction ? content.callToAction.trim() : ""
@@ -303,15 +307,15 @@ function renderFullBleedPoster({ ctx, image, content, theme, width, height }: Re
   let y = height - bottomSafe
   const priceY = price ? y : 0
   if (price) y -= priceSize + 30
-  const ctaY = cta ? y - 76 : 0
-  if (cta) y -= 76 + 34
+  const ctaY = cta ? y - 88 : 0
+  if (cta) y -= 88 + 34
   const audienceY = !price && audience ? y : 0
   if (!price && audience) y -= 34 + 28
-  const descriptionY = descriptionLines.length ? y - (descriptionLines.length - 1) * 56 : 0
-  if (descriptionLines.length) y -= descriptionLines.length * 56 + 18
+  const descriptionY = descriptionLines.length ? y - (descriptionLines.length - 1) * 62 : 0
+  if (descriptionLines.length) y -= descriptionLines.length * 62 + 22
   const titleBottom = y
   const titleTop = titleBottom - (title.lines.length - 1) * titleLineHeight - title.size
-  const badgeY = badge ? titleTop - 36 - 64 : 0
+  const badgeY = badge ? titleTop - 36 - 76 : 0
   const blockTop = badge ? badgeY : titleTop
 
   // Dark fade from well above the text to the bottom; a light one at the top keeps the shop name readable.
@@ -335,7 +339,7 @@ function renderFullBleedPoster({ ctx, image, content, theme, width, height }: Re
   }
 
   if (badge) {
-    drawPill(ctx, badge, side, badgeY, { size: 34, background: "#ffffff", color: readableOn("#ffffff", [theme.accent, theme.ink, DARK]) })
+    drawPill(ctx, badge, side, badgeY, { size: 42, background: "#ffffff", color: readableOn("#ffffff", [theme.accent, theme.ink, DARK]) })
     drawn.push(badge)
   }
   setTitleTracking(ctx, title.size)
@@ -343,7 +347,7 @@ function renderFullBleedPoster({ ctx, image, content, theme, width, height }: Re
   resetTracking(ctx)
   drawn.push(title.lines.join(" "))
   if (descriptionLines.length) {
-    drawLines(ctx, descriptionLines, { x: side, y: descriptionY, font: font(500, 44), color: "#f4eee8", lineHeight: 56 })
+    drawLines(ctx, descriptionLines, { x: side, y: descriptionY, font: font(600, 50), color: "#f4eee8", lineHeight: 62 })
     drawn.push(descriptionLines.join(" "))
   }
   if (price) {
@@ -352,9 +356,9 @@ function renderFullBleedPoster({ ctx, image, content, theme, width, height }: Re
     drawLines(ctx, [price], { x: side, y: priceY, font: font(800, priceSize), color: priceColor, lineHeight: priceSize })
     drawn.push(price)
   } else if (cta) {
-    ctx.font = font(800, 36)
+    ctx.font = font(800, 44)
     const [line] = wrapText(ctx, cta, textWidth - 56, 1)
-    drawPill(ctx, line, side, ctaY, { size: 36, background: "#ffffff", color: readableOn("#ffffff", [theme.accent, theme.ink, DARK]) })
+    drawPill(ctx, line, side, ctaY, { size: 44, background: "#ffffff", color: readableOn("#ffffff", [theme.accent, theme.ink, DARK]) })
     drawn.push(line)
   } else if (audience) {
     ctx.font = font(600, 34)
@@ -555,9 +559,9 @@ export type RenderPosterOptions = {
 function drawAiMark(ctx: Ctx, width: number, height: number, isStory: boolean, atTop = false) {
   const label = "AI 활용"
   ctx.save()
-  ctx.font = font(700, 24)
-  const w = ctx.measureText(label).width + 28
-  const h = 40
+  ctx.font = font(700, 30)
+  const w = ctx.measureText(label).width + 32
+  const h = 48
   const x = width - w - 24
   // Stories: above Instagram's bottom UI band (340px); otherwise near the bottom-right corner.
   const y = atTop ? (isStory ? 260 : 24) : height - h - (isStory ? 352 : 24)

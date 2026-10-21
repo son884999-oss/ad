@@ -1062,3 +1062,14 @@ html[data-layout=mobile] .results-step:not(.is-single) .result-card > .result-ne
 .media-copy-fields input { background:#fff; }
 .easy-mode .media-copy-fields legend { font-size:21px; }
 .easy-mode .media-copy-fields label { font-size:20px; }
+/* QA 2026-10-22 디자인 검토 */
+/* 3. The sticky 홍보물 만들기 bar is opaque: the form scrolled under it no longer shows through. */
+.studio-shell .compact-information .details-actions { z-index:5;margin-inline:calc(-20px * var(--s,1));padding-inline:calc(20px * var(--s,1));background:var(--color-canvas,#fff);box-shadow:0 -14px 14px -10px rgba(255,255,255,.95),0 -1px 0 var(--color-line,#e8dfd6),0 24px 0 0 var(--color-canvas,#fff); }
+/* 1. 쉬운 화면 header: title, [듣기] and 기본/쉬운 fit on one row at 360–390 px. */
+.easy-mode .reference-header { gap:6px;padding-inline:calc(14px * var(--s)); }
+.easy-mode .reference-header > strong { font-size:calc(18px * var(--s));margin:0 2px; }
+.easy-mode .reference-header .reference-header-actions { gap:4px; }
+.easy-mode .reference-header .reference-header-actions .reference-read.is-icon { padding:0 10px;font-size:calc(16px * var(--s)); }
+.easy-mode .reference-header .mode-switch button { min-width:44px;padding:0 8px;font-size:calc(16px * var(--s)); }
+/* 4. 말로 하기 takes less of the row, so the field (and its example) has room. */
+.easy-mode .voice-mic-button { width:calc(62px * var(--s));font-size:14px; }
