@@ -368,9 +368,10 @@ function renderFullBleedPoster({ ctx, image, content, theme, width, height }: Re
     ctx.fillStyle = top
     ctx.fillRect(0, 0, width, topSafe + 200)
     // On a dark see-through pill so the shop name stays readable on a bright photo.
-    ctx.font = font(800, 38)
-    const [line] = wrapText(ctx, eyebrow, textWidth - 56, 1)
-    drawPill(ctx, line, side, topSafe, { size: 38, background: "rgba(20,14,10,.62)", color: "#ffffff" })
+    // Shop name a little larger (QA 2026-10-22).
+    ctx.font = font(800, 46)
+    const [line] = wrapText(ctx, eyebrow, textWidth - 64, 1)
+    drawPill(ctx, line, side, topSafe, { size: 46, background: "rgba(20,14,10,.62)", color: "#ffffff" })
     drawn.push(line)
   }
 
@@ -414,7 +415,7 @@ function renderPanelPoster({ ctx, image, content, theme, width, height }: Render
   const drawn: string[] = []
   const isStory = height > 1500
   const isSquare = width === height
-  const paper = theme.id === "luxury" ? theme.paper : theme.tint ?? "#fdf8f3"
+  const paper = theme.id === "luxury" ? theme.paper : "#fdf8f3"
   const ink = readableOn(paper, [theme.ink, DARK, "#ffffff"])
   const sub = readableOn(paper, [theme.sub, "#5b4f47", ink])
   const accent = readableOn(paper, [theme.accent, theme.ink, ink])
@@ -446,10 +447,13 @@ function renderPanelPoster({ ctx, image, content, theme, width, height }: Render
 
   ctx.fillStyle = paper
   ctx.fillRect(0, 0, width, height)
+  // The whole product, never cut at the sides (QA 2026-10-22); the look is otherwise as before.
   drawPhotoFit(ctx, image, 0, 0, width, photoHeight)
-  // A clean edge between photo and panel (QA 2026-10-22: the white fade ate the plate and looked broken).
-  ctx.fillStyle = readableOn(paper, [theme.accent, theme.ink])
-  ctx.fillRect(0, photoHeight - 4, width, 8)
+  const fade = ctx.createLinearGradient(0, photoHeight - 220, 0, photoHeight)
+  fade.addColorStop(0, `${paper}00`)
+  fade.addColorStop(1, paper)
+  ctx.fillStyle = fade
+  ctx.fillRect(0, photoHeight - 220, width, 220)
 
   const center = width / 2
   ctx.textAlign = "center"
@@ -629,10 +633,18 @@ function renderCardPoster({ ctx, image, content, theme, width, height }: RenderA
   ctx.restore()
   ctx.restore()
   if (eyebrow) {
-    ctx.font = font(800, 38)
-    const [line] = wrapText(ctx, eyebrow, width - 200, 1)
+    // A sticker on the frame's corner: larger and turned the same way as the photo (QA 2026-10-22).
+    ctx.font = font(800, 46)
+    const [line] = wrapText(ctx, eyebrow, width - 240, 1)
     const pillBg = theme.tint ?? theme.bgGradient[0]
-    drawPill(ctx, line, 64, 48, { size: 38, background: pillBg, color: readableOn(pillBg, [field, theme.ink, DARK]) })
+    ctx.save()
+    ctx.translate(56, 70)
+    ctx.rotate((-5 * Math.PI) / 180)
+    ctx.shadowColor = "rgba(0,0,0,.25)"
+    ctx.shadowBlur = 14
+    ctx.shadowOffsetY = 4
+    drawPill(ctx, line, 0, 0, { size: 46, background: pillBg, color: readableOn(pillBg, [field, theme.ink, DARK]) })
+    ctx.restore()
     drawn.push(line)
   }
   const side = 80
