@@ -15,6 +15,9 @@ export type PhotoSuggestion = {
   highlights: string
   keyFeatures: string[]
   targetAudience: string
+  /** Poster title / first video line and the closing invitation, ≤16 chars each ("" when the AI had none). */
+  mediaHeadline?: string
+  mediaCta?: string
   tones: AiTone[]
   /** What the photo visibly shows (color, texture, plating, setting): 0–5 short phrases, ≤30 chars, no claims.
    *  Pass it on as PromoTextRequest.visualDetails. */
@@ -162,6 +165,8 @@ export async function analyzePhoto(source: Blob | string, options: RequestOption
     highlights: text(value.highlights, 300),
     keyFeatures: textList(value.keyFeatures, 5, 20).map((item) => item.replace(/,/g, " ")),
     targetAudience: text(value.targetAudience, 100),
+    mediaHeadline: text(value.mediaHeadline, 16),
+    mediaCta: text(value.mediaCta, 16),
     tones: textList(value.tones, 4, 20).filter((tone): tone is AiTone => AI_TONES.includes(tone as AiTone)),
     visualDetails: textList(value.visualDetails, 5, 30),
     subjectBox: box(value.subjectBox),

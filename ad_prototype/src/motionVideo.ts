@@ -184,7 +184,11 @@ function drawSheen(ctx: CanvasRenderingContext2D, seconds: number) {
 function drawPoints(ctx: CanvasRenderingContext2D, scene: MotionScene, seconds: number) {
   const fadeOut = 1 - progress(seconds, END_CARD - 0.25, 0.25)
   let y = 340
-  scene.points.slice(0, 3).forEach((point, index) => {
+  // A tag too long for one line is left out, never cut with "…" (QA 2026-10-21).
+  const maxText = ctx.canvas.width - 72 * 2 - 64
+  ctx.font = font(800, 42)
+  const points = scene.points.filter((point) => ctx.measureText(point).width <= maxText)
+  points.slice(0, 3).forEach((point, index) => {
     const t = progress(seconds, SCENE_2 + 0.4 + index * 0.4, 0.35)
     if (t <= 0 || fadeOut <= 0) return
     ctx.font = font(800, 42)

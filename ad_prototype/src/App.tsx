@@ -98,6 +98,11 @@ type GeneratedRecord = {
 
     keywords?: string
 
+    /** 포스터·영상 문구 (QA 2026-10-21): the poster title / first video line and the closing invitation, ≤16
+     *  characters each. 자동으로 채워 주기 fills them; the owner sees and can change them under 더 자세히. */
+    mediaHeadline?: string
+    mediaCta?: string
+
     /** Shop info (B_이창훈 prompt fields): 위치, 가격, 주문·연락 방법. ≤60 characters each. */
     location?: string
     priceInfo?: string
@@ -1318,6 +1323,8 @@ function CreateFlow({
       ["features", suggestion.highlights],
       ["keywords", suggestion.keyFeatures.join(", ")],
       ["audience", suggestion.targetAudience],
+      ["mediaHeadline", suggestion.mediaHeadline ?? ""],
+      ["mediaCta", suggestion.mediaCta ?? ""],
     ]
     let changed = false
     for (const [key, value] of textFields) {
@@ -1684,18 +1691,19 @@ function CreateFlow({
   }
 
   const posterContent = {
-    ...buildPosterContent(details, chosenHeadline || body, Boolean(chosenHeadline)),
-    callToAction: activePromo?.cta || (details.shopName?.trim() ? `${details.shopName.trim()}에서 만나보세요` : ""),
+    // The owner's 포스터·영상 문구 first (자동으로 채워 주기 or typed), then the 홍보 글 AI's, then the app's.
+    ...buildPosterContent(details, details.mediaHeadline?.trim() || chosenHeadline || body, Boolean(details.mediaHeadline?.trim() || chosenHeadline)),
+    callToAction: details.mediaCta?.trim() || activePromo?.cta || (details.shopName?.trim() ? `${details.shopName.trim()}에서 만나보세요` : ""),
   }
   const videoCaption = (() => {
     const name = details.name?.trim() ?? ""
     const shop = details.shopName?.trim() ?? ""
-    const headline = activePromo?.videoHeadline || name || shop || details.description.trim()
+    const headline = details.mediaHeadline?.trim() || activePromo?.videoHeadline || name || shop || details.description.trim()
     return {
       headline,
       // A name the headline already contains ("오늘 만든 크림 커피") is not repeated underneath.
       brand: [shop, name].filter((value) => value && !headline.includes(value)).join(" · "),
-      cta: activePromo?.cta || (shop ? `${shop}에서 만나요` : ""),
+      cta: details.mediaCta?.trim() || activePromo?.cta || (shop ? `${shop}에서 만나요` : ""),
     }
   })()
   // The same caption drawn into the 9:16 video file.
@@ -2713,6 +2721,34 @@ function CreateFlow({
                     </span>
                   )}
                 </label>
+                {/* 포스터·영상 문구 (QA 2026-10-21): filled by 자동으로 채워 주기, shown here so nothing the owner never
+                    saw goes into the poster or the video. Empty → the app picks a line as before. */}
+                <fieldset className="media-copy-fields">
+                  <legend>{t("포스터·영상 문구")} <span className="field-tag">{t("선택")}</span></legend>
+                  <label>
+                    {t("큰 제목 한 줄")}
+                    <input
+                      id="field-media-headline"
+                      value={details.mediaHeadline ?? ""}
+                      maxLength={16}
+                      placeholder={t("예) 생크림을 층층이 올렸어요")}
+                      onChange={(event) => updateDetails({ ...details, mediaHeadline: event.target.value })}
+                      className="mt-2 w-full rounded-[12px] border p-4"
+                    />
+                  </label>
+                  <label>
+                    {t("마지막 권유 한 줄")}
+                    <input
+                      id="field-media-cta"
+                      value={details.mediaCta ?? ""}
+                      maxLength={16}
+                      placeholder={t("예) 오늘 들러 맛보세요")}
+                      onChange={(event) => updateDetails({ ...details, mediaCta: event.target.value })}
+                      className="mt-2 w-full rounded-[12px] border p-4"
+                    />
+                  </label>
+                  <span className="field-hint">{t("포스터 제목과 영상 첫 장면, 영상 마지막 화면에 들어가요. 16자까지 적을 수 있어요.")}</span>
+                </fieldset>
                 <label className="block text-[18px] font-bold">
                   {t("주요 고객층")}
                   <VoiceField voice={voice} field="audience" label={t("주요 고객층")} inputId="field-audience" value={details.audience} maxLength={200} easyMode={easyMode} onVoiceText={(text) => updateDetails({ ...details, audience: text })}>

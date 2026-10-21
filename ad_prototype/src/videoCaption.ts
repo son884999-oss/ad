@@ -79,8 +79,16 @@ export function drawVideoCaption(ctx: CanvasRenderingContext2D, seconds: number,
   const textWidth = width - SIDE * 2
 
   // Measure bottom-up so the fade sits exactly behind the text block.
-  ctx.font = font(800, 104)
-  const headline = balancedLines(ctx, caption.headline, textWidth)
+  // A long headline gets smaller type rather than "…" (QA 2026-10-21): 104 → 88 → 76 px, two lines each.
+  let headSize = 104
+  let headline: string[] = []
+  for (const size of [104, 88, 76]) {
+    headSize = size
+    ctx.font = font(800, size)
+    headline = balancedLines(ctx, caption.headline, textWidth)
+    if (!headline.at(-1)?.endsWith("…")) break
+  }
+  const headStep = Math.round(headSize * 1.115)
   ctx.font = font(600, 46)
   const subline = caption.subline ? wrap(ctx, caption.subline, textWidth, 1) : []
   let y = height - BOTTOM_SAFE
@@ -91,7 +99,7 @@ export function drawVideoCaption(ctx: CanvasRenderingContext2D, seconds: number,
   const sublineY = subline.length ? y : 0
   if (subline.length) y -= 46 + 26
   const headlineBottom = y
-  const headlineTop = headlineBottom - (headline.length - 1) * 116 - 104
+  const headlineTop = headlineBottom - (headline.length - 1) * headStep - headSize
 
   // Clear above the text, already dark at the headline (white text on a white cup must stay readable).
   const fadeStart = Math.max(0, headlineTop - 320)
@@ -132,9 +140,9 @@ export function drawVideoCaption(ctx: CanvasRenderingContext2D, seconds: number,
     })
   }
   rise(appear(seconds, 0.4), () => {
-    ctx.font = font(800, 104)
+    ctx.font = font(800, headSize)
     ctx.fillStyle = "#ffffff"
-    headline.forEach((line, index) => ctx.fillText(line, SIDE, headlineTop + 104 + index * 116))
+    headline.forEach((line, index) => ctx.fillText(line, SIDE, headlineTop + headSize + index * headStep))
   })
   if (subline.length) {
     rise(appear(seconds, 1.1), () => {

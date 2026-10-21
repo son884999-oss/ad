@@ -1055,3 +1055,10 @@ html[data-layout=mobile] .results-step:not(.is-single) .result-card > .result-ne
 .studio-shell .results-step .result-motion-preview .video-play-overlay svg { display:block !important;flex:none; }
 .studio-shell.easy-mode .results-step .result-motion-preview .video-play-overlay:not(.is-playing) { font-size:calc(22px * var(--s));min-height:calc(62px * var(--s)); }
 .studio-shell .results-step .result-motion-preview .video-play-overlay > span { color:#fff !important;display:inline !important;white-space:nowrap; }
+/* 포스터·영상 문구 (QA 2026-10-21) under 더 자세히 알려주기. */
+.media-copy-fields { display:grid;gap:12px;margin:0;padding:14px;border:1px solid var(--color-line,#e8dfd6);border-radius:var(--radius-card,14px);background:var(--color-card,#faf6f1); }
+.media-copy-fields legend { padding:0 6px;font-size:18px;font-weight:800; }
+.media-copy-fields label { display:block;font-size:17px;font-weight:700; }
+.media-copy-fields input { background:#fff; }
+.easy-mode .media-copy-fields legend { font-size:21px; }
+.easy-mode .media-copy-fields label { font-size:20px; }
