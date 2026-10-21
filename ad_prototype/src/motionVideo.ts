@@ -28,6 +28,21 @@ export type MotionScene = {
   /** "AI 활용" in the corner when an AI wrote the copy or drew the background (one mark for both; the
    *  institution's advice 2026-10-19: combine it, or mark conservatively). Same look as the poster's. */
   aiMark?: boolean
+  /** Colour finish by product (motionToneFor): warm for baked and hot food, none for fresh food and non-food. */
+  tone?: MotionTone
+}
+
+/**
+ * QA 2026-10-22: the warm amber finish suits bread, cake, coffee and hot dishes, but makes raw fish, salad or a
+ * green shampoo bottle look muddy. "fresh" and "neutral" keep the photo's own colours (a white flare at the cuts).
+ */
+export type MotionTone = "warm" | "fresh" | "neutral"
+export function motionToneFor(text: string): MotionTone {
+  if (/화장품|세럼|로션|스킨케어|립스틱|향수|샴푸|비누|꽃|플라워|부케|화분|안경|선글라스|이어폰|전자|생활용품|머그|텀블러|수건|\b(cosmetic|serum|lotion|skincare|lipstick|perfume|shampoo|soap|flower|glasses|earphone)\b/i.test(text)) return "neutral"
+  // A cake with strawberries is still a baked good: desserts are checked first.
+  if (/케이크|마카롱|쿠키|타르트|머핀|브라우니|빵|\b(cake|macaron|cookie|tart|muffin|bread)\b/i.test(text)) return "warm"
+  if (/초밥|스시|사시미|회덮밥|물회|생선회|(?:^|\s)회(?:$|\s)|샐러드|포케|과일|주스|에이드|스무디|빙수|요거트|\b(sushi|sashimi|salad|poke|fruit|juice|smoothie)\b/i.test(text)) return "fresh"
+  return "warm"
 }
 
 export type MotionEffect = "steam" | "sparkle" | "petals" | "glow" | "sheen"
@@ -38,10 +53,13 @@ export type MotionEffect = "steam" | "sparkle" | "petals" | "glow" | "sheen"
  */
 export function motionEffectFor(text: string): MotionEffect {
   if (/꽃|플라워|부케|화분|\b(flower|flowers|bouquet)\b/i.test(text)) return "petals"
+  // Clearly non-food first, so "녹차 샴푸" is a shampoo, not a tea (QA 2026-10-22). ("크림" alone stays below.)
+  if (/화장품|세럼|로션|스킨케어|립스틱|향수|샴푸|비누|\b(cosmetic|serum|lotion|skincare|lipstick|perfume|shampoo|soap)\b/i.test(text)) return "sparkle"
   // A baked or cold dessert is never steamed, even with a flavour word ("녹차 필링" on a 마카롱, 2026-10-18 phone photo).
   if (/케이크|마카롱|쿠키|베이글|타르트|머핀|브라우니|아이스크림|디저트|\b(cake|macaron|cookie|bagel|tart|muffin|brownie|dessert)\b/i.test(text)) return "sheen"
   // Steam only for hot dishes and drinks; cakes, bread and cookies get the light sweep (round 1: steam on a cake).
-  if (/커피|라떼|라테|녹차|홍차|밀크티|국밥|국수|라면|찌개|전골|떡볶이|\b(coffee|latte|tea|soup)\b/i.test(text)) return "steam"
+  // Fried and hot dishes steam too (QA 2026-10-22: 돈까스 got the light sweep).
+  if (/커피|라떼|라테|녹차|홍차|밀크티|국밥|국수|라면|찌개|전골|떡볶이|돈까스|돈가스|카츠|튀김|덮밥|우동|짬뽕|짜장|만두|찜|(?:^|\s)\S*탕(?:$|\s)|\b(coffee|latte|tea|soup|katsu|tempura|udon)\b/i.test(text)) return "steam"
   // Cold or room-temperature food before beauty: "생크림 케이크" has "크림" but is no cosmetic (2026-10-18 showcase).
   if (/빵|과자|떡|초콜릿|초코|생크림|크림치즈|식품|반찬|김치|도시락|\b(bread|chocolate|food)\b/i.test(text)) return "sheen"
   if (/화장품|세럼|로션|크림|스킨케어|립스틱|향수|샴푸|비누|\b(cosmetic|serum|lotion|skincare|lipstick|perfume|shampoo|soap)\b/i.test(text)) return "sparkle"
@@ -349,7 +367,8 @@ function grainPattern(ctx: CanvasRenderingContext2D) {
 }
 
 /** Warm advertising tone: a soft-light amber wash over the picture (the text is drawn after, so it stays white). */
-function drawGrade(ctx: CanvasRenderingContext2D) {
+function drawGrade(ctx: CanvasRenderingContext2D, tone: MotionTone) {
+  if (tone !== "warm") return
   const { width, height } = ctx.canvas
   ctx.save()
   ctx.globalCompositeOperation = "soft-light"
@@ -384,7 +403,8 @@ function drawGrain(ctx: CanvasRenderingContext2D, seconds: number) {
 }
 
 /** A warm flare breathing in from the edge at each cut (the whip at 3.5 s, the end card at 6.5 s). */
-function drawLightLeak(ctx: CanvasRenderingContext2D, seconds: number) {
+function drawLightLeak(ctx: CanvasRenderingContext2D, seconds: number, tone: MotionTone) {
+  const warm = tone === "warm"
   const bell = (centre: number, half: number) => Math.max(0, 1 - Math.abs(seconds - centre) / half)
   const k = Math.max(bell(SCENE_2, 0.45), bell(END_CARD + 0.15, 0.5))
   if (k <= 0) return
@@ -393,9 +413,9 @@ function drawLightLeak(ctx: CanvasRenderingContext2D, seconds: number) {
   const flip = seconds > END_CARD ? -1 : 1
   const cx = flip > 0 ? width * 1.02 : -width * 0.02
   const leak = ctx.createRadialGradient(cx, height * 0.34, 0, cx, height * 0.34, width * 1.25)
-  leak.addColorStop(0, `rgba(255,150,70,${0.62 * strength})`)
-  leak.addColorStop(0.45, `rgba(255,96,80,${0.26 * strength})`)
-  leak.addColorStop(1, "rgba(255,96,80,0)")
+  leak.addColorStop(0, warm ? `rgba(255,150,70,${0.62 * strength})` : `rgba(255,255,255,${0.45 * strength})`)
+  leak.addColorStop(0.45, warm ? `rgba(255,96,80,${0.26 * strength})` : `rgba(235,242,255,${0.18 * strength})`)
+  leak.addColorStop(1, warm ? "rgba(255,96,80,0)" : "rgba(235,242,255,0)")
   ctx.save()
   ctx.globalCompositeOperation = "screen"
   ctx.fillStyle = leak
@@ -409,7 +429,7 @@ export function drawMotionFrame(ctx: CanvasRenderingContext2D, seconds: number, 
   ctx.clearRect(0, 0, width, height)
   ctx.imageSmoothingQuality = "high"
   drawPhoto(ctx, scene, seconds)
-  drawGrade(ctx)
+  drawGrade(ctx, scene.tone ?? "warm")
   const effect = scene.effect ?? "sheen"
   if (effect === "steam") drawSteam(ctx, seconds)
   else if (effect === "sparkle") drawSparkles(ctx, seconds)
@@ -421,7 +441,7 @@ export function drawMotionFrame(ctx: CanvasRenderingContext2D, seconds: number, 
   // Finishing sits under all the text, so the letters stay clean.
   drawVignette(ctx)
   drawGrain(ctx, seconds)
-  drawLightLeak(ctx, seconds)
+  drawLightLeak(ctx, seconds, scene.tone ?? "warm")
   if (seconds < END_CARD + 0.35) {
     // Scenes 1–2: shop name and headline only; price and call to action wait for the end card.
     const fade = 1 - progress(seconds, END_CARD, 0.35)

@@ -31,7 +31,7 @@ import { type VideoCaption } from "./videoCaption"
 import { drawStoryFrame } from "./videoFrame"
 import { makeScene } from "./scene"
 import { outputFolder, saveToComputer } from "./localSave"
-import { drawMotionFrame, MOTION_CUES, MOTION_SECONDS, motionEffectFor, type MotionScene } from "./motionVideo"
+import { drawMotionFrame, MOTION_CUES, MOTION_SECONDS, motionEffectFor, motionToneFor, type MotionScene } from "./motionVideo"
 import { plainMp4File } from "./mp4Flatten"
 import { musicFor, prepareVideoSound } from "./videoSound"
 import { makeAdBackground } from "./background"
@@ -2282,6 +2282,7 @@ function CreateFlow({
             return ink ? [1, 3, 5].map((i) => parseInt(ink.slice(i, i + 2), 16)).join(", ") : channelTheme.rgb
           })(),
           effect: motionEffectFor([details.name, details.description, details.features, details.keywords].filter(Boolean).join(" ")),
+          tone: motionToneFor([details.name, details.description, details.features, details.keywords].filter(Boolean).join(" ")),
           // One "AI 활용" mark when an AI wrote the copy or drew the background, as on the poster.
           aiMark: Boolean(activePromo) || Boolean(sceneUrl),
         }
