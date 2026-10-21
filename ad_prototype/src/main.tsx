@@ -9,6 +9,7 @@ import FeedbackProvider from "./FeedbackProvider"
 import "./index.css"
 import "./reference-ui.css"
 import "./photo-step.css"
+import "./result-option-hierarchy.css"
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
