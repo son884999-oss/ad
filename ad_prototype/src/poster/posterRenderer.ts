@@ -316,12 +316,10 @@ function renderFullBleedPoster({ ctx, image, content, theme, width, height }: Re
   const isStory = height > 1500
   const side = 72
   const bottomSafe = isStory ? 360 : 76
-  const topSafe = isStory ? 260 : 64
   const textWidth = width - side * 2
 
-  ctx.fillStyle = theme.bgGradient[1]
+  ctx.fillStyle = DARK
   ctx.fillRect(0, 0, width, height)
-  drawPhotoCover(ctx, image, 0, 0, width, height)
 
   // Measure the text block first (bottom-up) so the dark fade sits exactly behind it.
   const { price, others } = splitPoint(keySellingPoint)
@@ -351,8 +349,16 @@ function renderFullBleedPoster({ ctx, image, content, theme, width, height }: Re
   if (descriptionLines.length) y -= descriptionLines.length * 62 + 22
   const titleBottom = y
   const titleTop = titleBottom - (title.lines.length - 1) * titleLineHeight - title.size
-  const badgeY = badge ? titleTop - 36 - 76 : 0
-  const blockTop = badge ? badgeY : titleTop
+  // Shop name: small, right above the title (QA 2026-10-22, the same place on every style).
+  const eyebrowBaseline = titleTop - 22
+  const eyebrowTop = eyebrow ? eyebrowBaseline - 40 : titleTop
+  const badgeY = badge ? eyebrowTop - 30 - 80 : 0
+  const blockTop = badge ? badgeY : eyebrowTop
+  // The product is not hidden under the text: the photo moves up so the product (about 45% down an AI
+  // background) sits in the middle of the free space above the text block. The strip it leaves at the bottom is
+  // under the dark fade. Drawn into a taller box so no edge shows at the bottom.
+  const shift = Math.max(0, Math.min(height * 0.22, height * 0.45 - blockTop * 0.5))
+  drawPhotoCover(ctx, image, 0, -shift, width, height + shift)
 
   // Dark fade from well above the text to the bottom; a light one at the top keeps the shop name readable.
   const fade = ctx.createLinearGradient(0, Math.max(0, blockTop - 420), 0, height)
@@ -362,16 +368,9 @@ function renderFullBleedPoster({ ctx, image, content, theme, width, height }: Re
   ctx.fillStyle = fade
   ctx.fillRect(0, 0, width, height)
   if (eyebrow) {
-    const top = ctx.createLinearGradient(0, 0, 0, topSafe + 200)
-    top.addColorStop(0, "rgba(20,14,10,.55)")
-    top.addColorStop(1, "rgba(20,14,10,0)")
-    ctx.fillStyle = top
-    ctx.fillRect(0, 0, width, topSafe + 200)
-    // On a dark see-through pill so the shop name stays readable on a bright photo.
-    // Shop name a little larger (QA 2026-10-22).
-    ctx.font = font(800, 46)
-    const [line] = wrapText(ctx, eyebrow, textWidth - 64, 1)
-    drawPill(ctx, line, side, topSafe, { size: 46, background: "rgba(20,14,10,.62)", color: "#ffffff" })
+    ctx.font = font(700, 40)
+    const [line] = wrapText(ctx, eyebrow, textWidth, 1)
+    drawLines(ctx, [line], { x: side, y: eyebrowBaseline, font: font(700, 40), color: "#f4eee8", lineHeight: 44 })
     drawn.push(line)
   }
 
@@ -632,25 +631,19 @@ function renderCardPoster({ ctx, image, content, theme, width, height }: RenderA
   drawCoverImage(ctx, image, -photo / 2, -photo / 2, photo, photo)
   ctx.restore()
   ctx.restore()
-  if (eyebrow) {
-    // A sticker on the frame's corner: larger and turned the same way as the photo (QA 2026-10-22).
-    ctx.font = font(800, 46)
-    const [line] = wrapText(ctx, eyebrow, width - 240, 1)
-    const pillBg = theme.tint ?? theme.bgGradient[0]
-    ctx.save()
-    ctx.translate(56, 70)
-    ctx.rotate((-5 * Math.PI) / 180)
-    ctx.shadowColor = "rgba(0,0,0,.25)"
-    ctx.shadowBlur = 14
-    ctx.shadowOffsetY = 4
-    drawPill(ctx, line, 0, 0, { size: 46, background: pillBg, color: readableOn(pillBg, [field, theme.ink, DARK]) })
-    ctx.restore()
-    drawn.push(line)
-  }
   const side = 80
   const textWidth = width - side * 2
   let y = 96 + frameH + 96
   const title = fitTitle(ctx, productName, textWidth, 2, 104, 64)
+  // Shop name: small, right above the title (QA 2026-10-22, the same place on every style).
+  if (eyebrow) {
+    y += 58
+    ctx.font = font(700, 40)
+    const [line] = wrapText(ctx, eyebrow, textWidth, 1)
+    const baseline = y + title.size * 0.2 - title.size * 0.85 - 22
+    drawLines(ctx, [line], { x: cx - ctx.measureText(line).width / 2, y: baseline, font: font(700, 40), color: ink, lineHeight: 44 })
+    drawn.push(line)
+  }
   // Centred line by line (drawLines draws from the left).
   const centred = (lines: string[], top: number, value: string, color: string, lineHeight: number) => {
     ctx.font = value
