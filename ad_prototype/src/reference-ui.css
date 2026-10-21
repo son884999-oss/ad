@@ -1045,3 +1045,50 @@ html[data-layout=mobile] .results-step:not(.is-single) .result-card > .result-ne
 .result-photo-preview { position:relative;display:flex;align-items:center;justify-content:center;overflow:hidden;border-radius:14px;background:#f1e9e2; }
 .result-photo-preview > img { display:block;width:100%;height:auto;max-height:70dvh;object-fit:contain; }
 .result-photo-preview .ai-badge { position:absolute;top:12px;right:12px;z-index:2;padding:4px 10px;border-radius:999px;background:#2b2420cc;color:#fff;font-size:14px;font-weight:700;pointer-events:none; }
+/* QA 2026-10-20 결과 화면 정리 */
+/* 쉬운 화면: [듣기] in the header beside 기본/쉬운. */
+.reference-header-actions { display:flex;align-items:center;gap:6px;flex:none; }
+.easy-mode .reference-header .reference-header-actions .reference-read.is-icon { min-width:0;min-height:calc(48px * var(--s));padding:0 12px;font-size:calc(17px * var(--s)); }
+/* 재생하기 on the video: a pill in the middle while paused, small in the corner while playing. */
+.studio-shell .results-step .result-motion-preview .video-play-overlay { position:absolute;z-index:3;left:50%;top:50%;transform:translate(-50%,-50%);display:inline-flex;align-items:center;gap:8px;width:auto;min-width:0;height:auto;min-height:calc(56px * var(--s));padding:0 calc(22px * var(--s));border:0;border-radius:999px;background:rgba(43,36,32,.74) !important;color:#fff !important;font-size:calc(19px * var(--s));font-weight:800;box-shadow:0 6px 18px rgba(0,0,0,.25);backdrop-filter:blur(4px); }
+.studio-shell .results-step .result-motion-preview .video-play-overlay.is-playing { left:12px;top:auto;bottom:12px;transform:none;min-height:44px;padding:0 14px;font-size:15px;background:rgba(43,36,32,.55) !important; }
+.studio-shell .results-step .result-motion-preview .video-play-overlay svg { display:block !important;flex:none; }
+.studio-shell.easy-mode .results-step .result-motion-preview .video-play-overlay:not(.is-playing) { font-size:calc(22px * var(--s));min-height:calc(62px * var(--s)); }
+.studio-shell .results-step .result-motion-preview .video-play-overlay > span { color:#fff !important;display:inline !important;white-space:nowrap; }
+/* 포스터·영상 문구 (QA 2026-10-21) under 더 자세히 알려주기. */
+.media-copy-fields { display:grid;gap:12px;margin:0;padding:14px;border:1px solid var(--color-line,#e8dfd6);border-radius:var(--radius-card,14px);background:var(--color-card,#faf6f1); }
+.media-copy-fields legend { padding:0 6px;font-size:18px;font-weight:800; }
+.media-copy-fields label { display:block;font-size:17px;font-weight:700; }
+.media-copy-fields input { background:#fff; }
+.easy-mode .media-copy-fields legend { font-size:21px; }
+.easy-mode .media-copy-fields label { font-size:20px; }
+/* QA 2026-10-22 디자인 검토 */
+/* 3. The sticky 홍보물 만들기 bar is opaque: the form scrolled under it no longer shows through. */
+.studio-shell .compact-information .details-actions { z-index:5;margin-inline:calc(-20px * var(--s,1));padding-inline:calc(20px * var(--s,1));background:var(--color-canvas,#fff);box-shadow:0 -14px 14px -10px rgba(255,255,255,.95),0 -1px 0 var(--color-line,#e8dfd6),0 24px 0 0 var(--color-canvas,#fff); }
+/* 1. 쉬운 화면 header: title, [듣기] and 기본/쉬운 fit on one row at 360–390 px. */
+.easy-mode .reference-header { gap:6px;padding-inline:calc(14px * var(--s)); }
+.easy-mode .reference-header > strong { font-size:calc(18px * var(--s));margin:0 2px; }
+.easy-mode .reference-header .reference-header-actions { gap:4px; }
+.easy-mode .reference-header .reference-header-actions .reference-read.is-icon { padding:0 10px;font-size:calc(16px * var(--s)); }
+.easy-mode .reference-header .mode-switch button { min-width:44px;padding:0 8px;font-size:calc(16px * var(--s)); }
+/* 4. 말로 하기 takes less of the row, so the field (and its example) has room. */
+.easy-mode .voice-mic-button { width:calc(62px * var(--s));min-width:60px;font-size:14px; }
+
+/* 홈 예시 줄 (2026-10-22): 상품 사진만 받는 앱 — 상품 예시·문구 카드 9장을 손으로 넘기는 가로 줄 (자동 회전 없음). */
+.reference-home .home-samples { overflow-x:auto;overflow-y:hidden;justify-content:flex-start;scroll-snap-type:x proximity;scrollbar-width:none;overscroll-behavior-x:contain; }
+.reference-home .home-samples::-webkit-scrollbar { display:none; }
+.home-samples-track { display:flex;align-items:center;gap:2.4cqw;height:100%;padding:0 calc(20px * var(--s));width:max-content; }
+.reference-home .home-samples .home-sample { margin-inline:0;scroll-snap-align:center; }
+.reference-home .home-samples .home-sample:nth-child(odd) { transform:rotate(-2deg); }
+.reference-home .home-samples .home-sample:nth-child(even) { transform:rotate(2deg) translateY(-3%); }
+.home-sample.is-price img,.home-sample.is-photo img { width:100%;height:100%;object-fit:cover; }
+.home-price-tag { position:absolute;left:6%;right:6%;bottom:6%;padding:5% 6%;border-radius:8px;background:#fffffff2;box-shadow:0 2px 8px #0002;display:grid;line-height:1.25;color:#2b2420;container-type:inline-size; }
+.home-price-tag b { font-size:10cqw;font-weight:800;white-space:nowrap; }
+.home-price-tag s { font-size:9cqw;color:#8a7d75; }
+.home-price-tag strong { font-size:15cqw;font-weight:900;color:#c0391b; }
+.home-price-tag em { font-style:normal;font-size:8.5cqw;font-weight:700;color:#b44d1d; }
+.home-photo-label { position:absolute;left:6%;bottom:6%;padding:2px 7px;border-radius:999px;background:#2b2420cc;color:#fff;font-size:11px;font-weight:700;white-space:nowrap; }
+.home-sample.is-tags { justify-content:center;background:#fdf6ef; }
+.home-tags-title { font-size:10.5cqw;font-weight:800;color:#2b2420;margin-bottom:5cqh; }
+.home-sample.is-tags .home-copy-tags { margin-top:0;line-height:1.55; }
+.home-sample.is-blog p { font-size:10cqw; }

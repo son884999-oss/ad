@@ -71,16 +71,49 @@ export function balancedLines(ctx: CanvasRenderingContext2D, text: string, maxWi
 const appear = (seconds: number, from: number) => Math.min(Math.max((seconds - from) / 0.45, 0), 1)
 
 /**
+ * One line drawn word by word: each word fades and rises into place 0.12 s after the one before it (ease-out),
+ * so a title reads as it arrives. `align` "center" puts the whole line's middle at x. Text only, no filters.
+ */
+export function drawWords(ctx: CanvasRenderingContext2D, line: string, x: number, baseline: number, seconds: number, from: number, align: "left" | "center" = "left") {
+  const words = line.split(" ")
+  const space = ctx.measureText(" ").width
+  const total = ctx.measureText(line).width
+  const prev = ctx.textAlign
+  ctx.textAlign = "left"
+  let cursor = align === "center" ? x - total / 2 : x
+  words.forEach((word, index) => {
+    const t = Math.min(Math.max((seconds - from - index * 0.12) / 0.5, 0), 1)
+    if (t > 0) {
+      const e = 1 - (1 - t) ** 3
+      ctx.save()
+      ctx.globalAlpha *= e
+      ctx.fillText(word, cursor, baseline + (1 - e) * 34)
+      ctx.restore()
+    }
+    cursor += ctx.measureText(word).width + space
+  })
+  ctx.textAlign = prev
+}
+
+/**
  * Draws the caption for the frame at `seconds` on a 1080 × 1920 canvas (call after drawing the picture).
  * `accent` is the shop's colour for the call-to-action text, as "r, g, b".
  */
-export function drawVideoCaption(ctx: CanvasRenderingContext2D, seconds: number, caption: VideoCaption, accent = "150, 55, 16") {
+export function drawVideoCaption(ctx: CanvasRenderingContext2D, seconds: number, caption: VideoCaption, accent = "150, 55, 16", options: { words?: boolean } = {}) {
   const { width, height } = ctx.canvas
   const textWidth = width - SIDE * 2
 
   // Measure bottom-up so the fade sits exactly behind the text block.
-  ctx.font = font(800, 104)
-  const headline = balancedLines(ctx, caption.headline, textWidth)
+  // A long headline gets smaller type rather than "…" (QA 2026-10-21): 104 → 88 → 76 px, two lines each.
+  let headSize = 104
+  let headline: string[] = []
+  for (const size of [104, 88, 76]) {
+    headSize = size
+    ctx.font = font(800, size)
+    headline = balancedLines(ctx, caption.headline, textWidth)
+    if (!headline.at(-1)?.endsWith("…")) break
+  }
+  const headStep = Math.round(headSize * 1.115)
   ctx.font = font(600, 46)
   const subline = caption.subline ? wrap(ctx, caption.subline, textWidth, 1) : []
   let y = height - BOTTOM_SAFE
@@ -91,7 +124,7 @@ export function drawVideoCaption(ctx: CanvasRenderingContext2D, seconds: number,
   const sublineY = subline.length ? y : 0
   if (subline.length) y -= 46 + 26
   const headlineBottom = y
-  const headlineTop = headlineBottom - (headline.length - 1) * 116 - 104
+  const headlineTop = headlineBottom - (headline.length - 1) * headStep - headSize
 
   // Clear above the text, already dark at the headline (white text on a white cup must stay readable).
   const fadeStart = Math.max(0, headlineTop - 320)
@@ -131,11 +164,17 @@ export function drawVideoCaption(ctx: CanvasRenderingContext2D, seconds: number,
       ctx.fillText(line, SIDE + 28, TOP_SAFE + 52)
     })
   }
-  rise(appear(seconds, 0.4), () => {
-    ctx.font = font(800, 104)
+  if (options.words) {
+    ctx.font = font(800, headSize)
     ctx.fillStyle = "#ffffff"
-    headline.forEach((line, index) => ctx.fillText(line, SIDE, headlineTop + 104 + index * 116))
-  })
+    headline.forEach((line, index) => drawWords(ctx, line, SIDE, headlineTop + headSize + index * headStep, seconds, 0.4 + index * 0.25))
+  } else {
+    rise(appear(seconds, 0.4), () => {
+      ctx.font = font(800, headSize)
+      ctx.fillStyle = "#ffffff"
+      headline.forEach((line, index) => ctx.fillText(line, SIDE, headlineTop + headSize + index * headStep))
+    })
+  }
   if (subline.length) {
     rise(appear(seconds, 1.1), () => {
       ctx.font = font(600, 46)

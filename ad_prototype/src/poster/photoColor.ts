@@ -26,7 +26,14 @@ function hslToRgb(h: number, s: number, l: number): Rgb {
 }
 
 /** Accent, tints and a dark ink in the photo's main hue, or null when the photo has no clear colour. */
-export function photoPalette(image: CanvasImageSource): { accent: string; bg: [string, string, string]; ink: string; sub: string } | null {
+export type PhotoPalette = { accent: string; bg: [string, string, string]; ink: string; sub: string; tint: string; deep: string }
+
+/** The app's warm orange, for a photo with no clear colour (grey, black and white, washed out). */
+export const FALLBACK_PALETTE: PhotoPalette = {
+  accent: "#c4622d", bg: ["#fdf3ea", "#f8e2d0", "#efc9ab"], ink: "#3d1d0c", sub: "#6b4430", tint: "#f9e6d6", deep: "#7a3412",
+}
+
+export function photoPalette(image: CanvasImageSource): PhotoPalette | null {
   const size = 48
   const canvas = document.createElement("canvas")
   canvas.width = size
@@ -65,5 +72,8 @@ export function photoPalette(image: CanvasImageSource): { accent: string; bg: [s
     bg: [hex(hslToRgb(hue, 0.45, 0.96)), hex(hslToRgb(hue, 0.42, 0.9)), hex(hslToRgb(hue, 0.38, 0.8))],
     ink: hex(hslToRgb(hue, 0.5, 0.16)),
     sub: hex(hslToRgb(hue, 0.3, 0.3)),
+    // 스타일 2 글 상자 (light, so the dark text reads) and 스타일 3 바탕 (deep, so the white frame stands out).
+    tint: hex(hslToRgb(hue, 0.42, 0.91)),
+    deep: hex(hslToRgb(hue, Math.min(0.6, saturation), 0.24)),
   }
 }

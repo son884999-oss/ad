@@ -11,14 +11,14 @@ const ISSUE_TEXT: Record<PhotoIssue, string> = {
   dark: "사진이 너무 어두워요. 밝은 곳에서 다시 찍어 주세요.",
   bright: "사진이 너무 밝아요. 빛이 덜 센 곳에서 다시 찍어 주세요.",
   small: "사진이 너무 작아요. 더 크게 찍은 사진을 골라 주세요.",
-  notPhoto: "실제 사진이 아니에요. 가게나 제품을 직접 찍은 사진이 좋아요.",
+  notPhoto: "실제 사진이 아니에요. 파는 상품을 직접 찍은 사진이 좋아요.",
 }
 
 // "이 사진 그대로 쓰기" is remembered for the photo while the page is open (coming back to this
 // step does not warn again).
 let acceptedImage = ""
 
-const EXAMPLES = [["coffee", "커피"], ["cake", "케이크"], ["store", "가게"]] as const
+const EXAMPLES = [["coffee", "커피"], ["cake", "케이크"], ["shampoo", "샴푸"]] as const
 
 /** Phones and tablets (coarse pointer) get a camera button; PC and mouse devices only the file picker. */
 function useCameraChoice(isPc: boolean) {
@@ -119,7 +119,7 @@ export default function PhotoStep({imageUrl,pending,message,onUpload,onDropFile,
   </>:<><div className={`reference-upload-box${dragging?" is-dragging":""}`} aria-busy={pending} {...dragProps}>
     <button className="reference-upload-icon" tabIndex={-1} aria-hidden="true" disabled={pending} onClick={camera?openCamera:openGallery}><span className="reference-upload-badge"><Icon name="camera" size={40}/></span></button>
     {/* Upfront guide = the box headline: a real photo you took yourself, no drawings or screenshots. */}
-    <p className="photo-guide" id="photo-guide"><strong>{t("가게나 제품을 직접 찍은 실사 사진을 넣어 주세요")}</strong><span>{t("그림·캡처·글자 이미지는 피해 주세요")}</span></p>
+    <p className="photo-guide" id="photo-guide"><strong>{t("파는 상품을 직접 찍은 실사 사진을 넣어 주세요")}</strong><span>{t("그림·캡처·글자 이미지는 피해 주세요")}</span></p>
     {!easyMode&&!camera&&<small className="upload-hint">JPG · PNG · WebP / 최대 10MB<span className="upload-drag-hint"> · 끌어다 놓아도 돼요</span></small>}
     {pickers(true)}
    </div>

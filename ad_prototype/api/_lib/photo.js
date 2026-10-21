@@ -26,6 +26,7 @@ export const PHOTO_SYSTEM_PROMPT = `너는 한국 동네 가게 사장님이 홍
 - highlights: 손님에게 알리고 싶은 점 2~3가지를 쉼표로 이은 한 줄, 60자 이내.
 - keyFeatures: 핵심 특징 2~4개. 각 10자 이내, 쉼표 없이.
 - targetAudience: 어울리는 손님 한 구절, 30자 이내. 예) "디저트를 좋아하는 동네 손님"
+- mediaHeadline: 포스터 제목과 영상 첫 장면에 크게 들어갈 한 줄, 공백 포함 14자 이내. 제품 이름만 반복하지 말고 보이는 매력을 짧게. 예) "생크림을 층층이 올렸어요"
 - tones: 사진 분위기에 맞는 홍보 분위기 1~2개. 아래 값만 쓴다.
 ${Object.entries(TONE_NAMES).map(([id, name]) => `  ${id}: ${name}`).join("\n")}
 - visualDetails: 사진에 실제로 보이는 모습 2~5개. 각각 15자 안팎의 짧은 명사구(최대 30자).
@@ -39,9 +40,9 @@ ${Object.entries(TONE_NAMES).map(([id, name]) => `  ${id}: ${name}`).join("\n")}
 
 [출력 형식]
 다른 설명 없이 JSON 객체 하나만 출력한다.
-{"productName":"","description":"","highlights":"","keyFeatures":[],"targetAudience":"","tones":[],"visualDetails":[],"subjectBox":[0,0,1000,1000],"photoCheck":{"isRealPhoto":true,"isBlurry":false,"reason":""}}`
+{"productName":"","description":"","highlights":"","keyFeatures":[],"targetAudience":"","mediaHeadline":"","tones":[],"visualDetails":[],"subjectBox":[0,0,1000,1000],"photoCheck":{"isRealPhoto":true,"isBlurry":false,"reason":""}}`
 
-const PHOTO_FIELDS = ["productName", "description", "highlights", "keyFeatures", "targetAudience", "tones", "visualDetails", "subjectBox", "photoCheck"]
+const PHOTO_FIELDS = ["productName", "description", "highlights", "keyFeatures", "targetAudience", "mediaHeadline", "tones", "visualDetails", "subjectBox", "photoCheck"]
 
 /**
  * Gemini structured output (generationConfig.responseJsonSchema). Shapes the answer only:
@@ -55,6 +56,7 @@ export const PHOTO_RESPONSE_SCHEMA = {
     highlights: { type: "string", description: "알리고 싶은 점, 60자 이내" },
     keyFeatures: { type: "array", items: { type: "string" }, maxItems: 4 },
     targetAudience: { type: "string", description: "어울리는 손님, 30자 이내" },
+    mediaHeadline: { type: "string", description: "포스터 제목·영상 첫 장면 한 줄, 14자 이내" },
     tones: { type: "array", items: { type: "string", enum: Object.keys(TONE_NAMES) }, maxItems: 2 },
     visualDetails: { type: "array", description: "사진에 보이는 색·질감·담음새·장소, 짧은 명사구", items: { type: "string" }, maxItems: 5 },
     subjectBox: { type: "array", description: "제품 영역 [ymin, xmin, ymax, xmax], 0~1000", items: { type: "integer" }, minItems: 4, maxItems: 4 },
@@ -127,6 +129,12 @@ export function parseSubjectBox(value) {
   return area < 0.02 || area > 0.9 ? null : [ymin, xmin, ymax, xmax]
 }
 
+const MEDIA_LINE_MAX = 16
+function shortLine(value, max) {
+  const line = withoutForbidden(cleanText(value, 40))
+  return line && Array.from(line).length <= max ? line : ""
+}
+
 /** Cleans the model output into the response contract; unknown fields are dropped. */
 export function parsePhotoSuggestion(data) {
   const keyFeatures = Array.isArray(data.keyFeatures)
@@ -138,6 +146,8 @@ export function parsePhotoSuggestion(data) {
     highlights: withoutForbidden(cleanText(data.highlights, 200)),
     keyFeatures,
     targetAudience: withoutForbidden(cleanText(data.targetAudience, 60)),
+    // Short lines for the poster and the video (QA 2026-10-21): too long → dropped, never cut mid-word.
+    mediaHeadline: shortLine(data.mediaHeadline, MEDIA_LINE_MAX),
     tones: cleanTones(data.tones, 2),
     visualDetails: visualDetailList(data.visualDetails),
     subjectBox: parseSubjectBox(data.subjectBox),
@@ -152,7 +162,7 @@ export async function analyzeProductPhoto(image, config) {
     parts: [{ text: "첨부한 제품 사진을 보고 입력란 초안을 JSON으로 작성해 줘." }, { inlineData: image }],
     timeoutMs: 15_000,
     temperature: 0.4,
-    maxOutputTokens: 768, // visualDetails added to the answer
+    maxOutputTokens: 832, // visualDetails, then mediaHeadline added to the answer
     responseJsonSchema: PHOTO_RESPONSE_SCHEMA,
   })
   return parsePhotoSuggestion(data)

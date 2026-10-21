@@ -1,0 +1,25 @@
+/* 결과 화면 옵션과 탭 (QA 2026-10-22, 시안 B): tabs read as tabs (underline), options as one grey segmented control,
+   so they no longer look like the orange save / share buttons under them. */
+/* Tabs: underline style. */
+:root .studio-shell.studio-shell.studio-shell .result-tabs { gap:0; padding:0; border:0; border-bottom:1px solid #D9CEC4; border-radius:0; background:transparent; box-shadow:none; }
+:root .studio-shell.studio-shell.studio-shell .result-tabs button { min-height:52px; padding:8px 4px 12px; border:0; border-radius:0; background:transparent; color:var(--color-muted); font-weight:600; box-shadow:none; }
+:root .studio-shell.studio-shell.studio-shell.easy-mode .result-tabs button { min-height:60px; }
+:root .studio-shell.studio-shell.studio-shell .result-tabs button[aria-selected=true] { background:transparent; color:var(--color-brand-hover); font-weight:800; box-shadow:none; }
+:root .studio-shell.studio-shell.studio-shell .result-tabs button[aria-selected=true]::after { content:""; position:absolute; left:8%; right:8%; bottom:-1px; height:4px; border-radius:2px 2px 0 0; background:var(--color-brand); }
+:root .studio-shell.studio-shell.studio-shell .result-tabs button:not([aria-selected=true]):hover { background:#faf6f2; color:var(--color-ink); }
+/* Options (poster size, channel): grey track; the chosen one is filled navy (QA 2026-10-22, 3번) so it reads as a
+   choice, not as one of the orange save / share buttons. A small ✓ in its top-left corner, the same on both. */
+:root .studio-shell.studio-shell.studio-shell :is(.poster-use,.channel-choice) > div { display:grid; grid-auto-flow:column; grid-auto-columns:minmax(0,1fr); grid-template-columns:none; gap:4px; padding:4px; border-radius:12px; background:#E9E4DF; }
+:root .studio-shell.studio-shell.studio-shell :is(.poster-use,.channel-choice) button { position:relative; min-height:48px; padding:0 6px; border:0; border-radius:9px; background:transparent; color:#47433F; font-weight:600; box-shadow:none; white-space:nowrap; }
+:root .studio-shell.studio-shell.studio-shell.easy-mode :is(.poster-use,.channel-choice) button { min-height:56px; }
+:root .studio-shell.studio-shell.studio-shell :is(.poster-use,.channel-choice) button[aria-checked=true] { border:0; background:#24395c; color:#fff; font-weight:800; box-shadow:0 1px 3px #00000030; }
+:root .studio-shell.studio-shell.studio-shell :is(.poster-use,.channel-choice) button[aria-checked=true]::before { content:"✓"; position:absolute; top:3px; left:7px; font-size:15px; font-weight:900; line-height:1; color:#fff; }
+/* A clear gap between the options and the save / share buttons. */
+:root .studio-shell.studio-shell.studio-shell .result-card .result-action-buttons { margin-top:20px; }
+
+/* 쉬운 화면 [듣기] (QA 2026-10-22): a square, tinted button with a large speaker over the word, so it is seen. */
+:root .studio-shell.easy-mode .reference-header .reference-header-actions .reference-read.is-icon { display:flex !important; flex-direction:column; align-items:center; justify-content:center; gap:1px; width:54px; min-width:54px; height:52px; min-height:52px; padding:0; border:2px solid var(--color-brand); border-radius:12px; background:var(--color-brand-soft,#fdf0e6); color:var(--color-brand-hover); font-size:13px; font-weight:800; line-height:1.1; }
+:root .studio-shell.easy-mode .reference-header .reference-header-actions .reference-read.is-icon > svg { display:block !important; width:24px; height:24px; padding:0; }
+:root .studio-shell.easy-mode .reference-header .reference-header-actions .reference-read.is-icon.is-active { background:var(--color-brand); color:#fff; }
+/* [듣기] and 기본/쉬운 are different things: 12 px apart so one is not tapped for the other (QA 2026-10-22). */
+:root .studio-shell.easy-mode .reference-header .reference-header-actions { gap:12px; }

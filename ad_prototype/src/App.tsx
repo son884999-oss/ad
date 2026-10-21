@@ -25,13 +25,14 @@ import { hasPremiumCode } from "./premiumAccess"
 import { AiVideoPlayer, AiVideoStatus, PremiumSteps, saveRealVideo, shareRealVideo, showsRealVideo, type PremiumStepState } from "./AiVideoPanel"
 import { isVideoUnavailable, prepareAiVideoFile, toVideoDetails } from "./video"
 import { buildPosterContent, loadPosterFonts, posterThemeFor, renderPosterToCanvas } from "./poster"
-import { photoPalette } from "./poster/photoColor"
+import { FALLBACK_PALETTE, photoPalette } from "./poster/photoColor"
 import { localBody, localCopy } from "./localCopy"
 import { type VideoCaption } from "./videoCaption"
 import { drawStoryFrame } from "./videoFrame"
 import { makeScene } from "./scene"
 import { outputFolder, saveToComputer } from "./localSave"
-import { drawMotionFrame, MOTION_SECONDS, motionEffectFor, type MotionScene } from "./motionVideo"
+import { drawMotionFrame, MOTION_CUES, MOTION_SECONDS, motionEffectFor, motionToneFor, type MotionScene } from "./motionVideo"
+import { encodeFastVideo, fastVideoPlan } from "./fastVideo"
 import { plainMp4File } from "./mp4Flatten"
 import { musicFor, prepareVideoSound } from "./videoSound"
 import { makeAdBackground } from "./background"
@@ -98,6 +99,11 @@ type GeneratedRecord = {
 
     keywords?: string
 
+    /** 포스터·영상 문구 (QA 2026-10-21): the short line under the product name, ≤16 characters. 자동으로 채워 주기
+     *  fills it; the owner sees and can change it under 더 자세히. mediaCta is no longer asked (2026-10-22). */
+    mediaHeadline?: string
+    mediaCta?: string
+
     /** Shop info (B_이창훈 prompt fields): 위치, 가격, 주문·연락 방법. ≤60 characters each. */
     location?: string
     priceInfo?: string
@@ -143,13 +149,12 @@ type AiPromo = PromoTextResult & { signature: string; /** Index of the first lin
 type Tone = "natural" | "premium" | "friendly" | "trendy"
 
 type PosterRatioKey = "4:5" | "1:1" | "9:16"
-type PosterLayoutKey = "vertical" | "split" | "editorial"
-// Labels say what each shape is for, so nobody has to know what "4:5" means.
-/** Owner, 2026-10-21: channel names (인스타 피드…) read as jargon — the basic screen shows the ratio, the easy screen 1·2·3번. */
-const posterRatioOptions: [PosterRatioKey, string][] = [
-  ["4:5", "세로"],
-  ["1:1", "정사각"],
-  ["9:16", "길쭉한 세로"],
+type PosterLayoutKey = "vertical" | "split" | "editorial" | "card"
+/** 포스터 스타일 (QA 2026-10-22): three designs to pick from, always 4:5 (the size choice is gone). */
+const posterStyleOptions: [PosterLayoutKey, string][] = [
+  ["vertical", "스타일 1"],
+  ["editorial", "스타일 2"],
+  ["card", "스타일 3"],
 ]
 /** The old 기본형/고급형 screens, hidden since plan C; open the app with ?premiumui to see them (development, checks). */
 const premiumUi = typeof location !== "undefined" && new URLSearchParams(location.search).has("premiumui")
@@ -872,38 +877,35 @@ function radioNav(index: number, count: number, selected: number, pick: (index: 
  * follows the photo; records saved with another layout or colour still draw as saved until a size is picked.
  */
 function PosterStyleControls({
-  ratio,
+  layout,
   easyMode,
   onChange,
 }: {
-  ratio: PosterRatioKey
+  layout: PosterLayoutKey
   easyMode: boolean
   onChange: (next: { posterRatio: PosterRatioKey; posterLayout: PosterLayoutKey; posterTheme: "" }) => void
 }) {
   const t = (text: string) => uiText(text, easyMode)
   const groupRef = useRef<HTMLFieldSetElement>(null)
-  // The new size changes the poster's height, which pushed the choices out of view on the basic screen (UX audit
-  // 2026-10-20): once the new poster is drawn, the choices are brought back into view.
-  const pick = (posterRatio: PosterRatioKey) => {
-    onChange({ posterRatio, posterLayout: "vertical", posterTheme: "" })
+  const pick = (posterLayout: PosterLayoutKey) => {
+    onChange({ posterRatio: "4:5", posterLayout, posterTheme: "" })
     for (const wait of [250, 700]) window.setTimeout(() => groupRef.current?.scrollIntoView({ block: "nearest" }), wait)
   }
-  const selected = posterRatioOptions.findIndex(([id]) => id === ratio)
+  const selected = Math.max(0, posterStyleOptions.findIndex(([id]) => id === layout))
   return (
     <fieldset ref={groupRef} className="poster-use" role="radiogroup">
-      <legend className="sr-only">{t("포스터 크기")}</legend>
+      <legend className="sr-only">{t("포스터 스타일")}</legend>
       <div>
-        {posterRatioOptions.map(([id, shape], index) => (
+        {posterStyleOptions.map(([id, label], index) => (
           <button
             key={id}
             type="button"
             role="radio"
-            aria-checked={ratio === id}
-            aria-label={easyMode ? `${index + 1}번, ${shape}` : `${id}, ${shape}`}
+            aria-checked={selected === index}
             onClick={() => pick(id)}
-            {...radioNav(index, posterRatioOptions.length, selected, (next) => pick(posterRatioOptions[next][0]))}
+            {...radioNav(index, posterStyleOptions.length, selected, (next) => pick(posterStyleOptions[next][0]))}
           >
-            <span>{easyMode ? `${index + 1}번` : id}</span>
+            <span>{label}</span>
           </button>
         ))}
       </div>
@@ -1318,6 +1320,7 @@ function CreateFlow({
       ["features", suggestion.highlights],
       ["keywords", suggestion.keyFeatures.join(", ")],
       ["audience", suggestion.targetAudience],
+      ["mediaHeadline", suggestion.mediaHeadline ?? ""],
     ]
     let changed = false
     for (const [key, value] of textFields) {
@@ -1623,23 +1626,7 @@ function CreateFlow({
         ?.focus({ preventScroll: true })
   }
 
-  // "다음: 영상 ▶" under a result, so the results can be gone through in order without knowing the tabs are tabs.
-  const nextResultButton = (id: ResultTabId) => {
-    const next = resultTabs[resultTabs.findIndex((tab) => tab.id === id) + 1]
-    if (!next) return null
-    return (
-      <button
-        type="button"
-        className="result-next"
-        onClick={() => {
-          selectResultTab(next.id, true)
-          document.querySelector(".result-tabs-bar")?.scrollIntoView({ block: "start" })
-        }}
-      >
-        {t("다음")}: {next.label} <span aria-hidden="true">▶</span>
-      </button>
-    )
-  }
+  // No "다음: ○○ ▶" under the results (QA 2026-10-21): the tabs above do the same.
 
   const finalText = `${copyText.trim()}\n\n${hashtags.join(" ")}`.trim()
   const updateDetails = (nextDetails: GeneratedRecord["details"]) => {
@@ -1700,13 +1687,15 @@ function CreateFlow({
   }
 
   const posterContent = {
-    ...buildPosterContent(details, chosenHeadline || body, Boolean(chosenHeadline)),
+    // Product name = big title; the short 포스터·영상 문구 (or the 홍보 글 AI's line) is the line under it.
+    ...buildPosterContent(details, details.mediaHeadline?.trim() || chosenHeadline || body, Boolean(details.mediaHeadline?.trim() || chosenHeadline)),
     callToAction: activePromo?.cta || (details.shopName?.trim() ? `${details.shopName.trim()}에서 만나보세요` : ""),
   }
   const videoCaption = (() => {
     const name = details.name?.trim() ?? ""
     const shop = details.shopName?.trim() ?? ""
-    const headline = activePromo?.videoHeadline || name || shop || details.description.trim()
+    // The product name is the big line (what is sold, at a glance); the short line goes under it (QA 2026-10-22).
+    const headline = name || details.mediaHeadline?.trim() || activePromo?.videoHeadline || shop || details.description.trim()
     return {
       headline,
       // A name the headline already contains ("오늘 만든 크림 커피") is not repeated underneath.
@@ -1718,7 +1707,11 @@ function CreateFlow({
   const sampleCaption: VideoCaption = {
     eyebrow: details.shopName?.trim() || undefined,
     headline: videoCaption.headline,
-    subline: details.name?.trim() && !videoCaption.headline.includes(details.name.trim()) ? details.name.trim() : undefined,
+    subline: (() => {
+      const short = details.mediaHeadline?.trim() || activePromo?.videoHeadline || ""
+      if (short && short !== videoCaption.headline) return short
+      return details.name?.trim() && !videoCaption.headline.includes(details.name.trim()) ? details.name.trim() : undefined
+    })(),
     price: details.priceInfo?.trim() || undefined,
     cta: videoCaption.cta || undefined,
   }
@@ -1908,7 +1901,7 @@ function CreateFlow({
     // The film and the poster scene run side by side: hide only when neither is still running.
     return (edit === null || edit === "done") && scene !== "working" ? null : { scene, camera, edit, special: specialFilm }
   })()
-  // Preview = the file that will be saved: the captioned AI clip (고급형) or the 6-second motion video (기본형).
+  // Preview = the file that will be saved: the captioned AI clip (고급형) or the 10-second motion video (기본형).
   const previewVideoFile = showsRealVideo(aiVideo.state) ? realVideoFile : sampleVideoFile
   const [previewVideoUrl, setPreviewVideoUrl] = useState("")
   useEffect(() => {
@@ -1972,9 +1965,9 @@ function CreateFlow({
     const scene = sceneImage?.forImage === imageUrl ? sceneImage.url : ""
     if (outputFolderName && scene) void fetch(scene).then((r) => r.blob()).then((blob) => saveToComputer(outputFolderName, [{ name: "고급형_배경.jpg", blob }])).catch(() => undefined)
   }, [outputFolderName, sceneImage]) // eslint-disable-line react-hooks/exhaustive-deps
-  const posterRatio: PosterRatioKey = details.posterRatio ?? "4:5"
-  // D's renderer has no side-by-side layout for a square; it would quietly fall back.
-  const posterLayout: PosterLayoutKey = posterRatio === "1:1" && details.posterLayout === "split" ? "vertical" : details.posterLayout ?? "vertical"
+  // Always 4:5 since 2026-10-22; an older record's other size or the old 사이드 분할 opens as 스타일 1.
+  const posterRatio: PosterRatioKey = "4:5"
+  const posterLayout: PosterLayoutKey = posterStyleOptions.some(([id]) => id === details.posterLayout) ? details.posterLayout ?? "vertical" : "vertical"
   const posterTheme: PosterThemeKey = details.posterTheme || posterThemeFor(tones)
   // The poster is drawn from the advertising background once it is back (sceneUrl, see 배경 바꾸기 above).
   const posterKey = JSON.stringify([posterContent, posterTheme, posterRatio, posterLayout, photoBox?.image === imageUrl ? photoBox.box : null, sceneUrl.length])
@@ -2012,7 +2005,8 @@ function CreateFlow({
         // AI 표시 when an AI wrote the copy or drew the background (인공지능기본법 제31조).
         aiMark: Boolean(activePromo) || Boolean(sceneUrl),
         // "색: 분위기대로" follows the product photo; a colour the user picked is kept as is.
-        photoColors: details.posterTheme ? null : photoPalette(image),
+        // A grey photo gives no colour: the app's warm orange then (QA 2026-10-22).
+        photoColors: details.posterTheme ? null : photoPalette(image) ?? FALLBACK_PALETTE,
         // An AI background is drawn with the product about 25–60% from the top (api/_lib/background.js): the wide
         // 사진 먼저 panel centres that band instead of the middle, so the top of the product is not cut
         // ([사진먼저-잘림], 2026-10-19: macaron fully shown, cake shows more). Full width, so it never zooms in.
@@ -2122,13 +2116,14 @@ function CreateFlow({
   const createVideoFile = async (download: boolean) => {
     const canvas = document.createElement("canvas")
 
-    const captureStream = canvas.captureStream
+    const canRecord =
+      typeof canvas.captureStream === "function" &&
+      typeof window.MediaRecorder !== "undefined"
 
-    if (
-      !imageUrl ||
-      typeof captureStream !== "function" ||
-      typeof window.MediaRecorder === "undefined"
-    ) {
+    // WebCodecs first (src/fastVideo.ts): H.264 + AAC encoded faster than real time. null = MediaRecorder as before.
+    const fastPlan = imageUrl ? await fastVideoPlan() : null
+
+    if (!imageUrl || (!fastPlan && !canRecord)) {
       setVideoStatus("unsupported")
 
       setVideoMessage(
@@ -2155,11 +2150,11 @@ function CreateFlow({
       "video/webm",
     ]
 
-    const mimeType = mimeCandidates.find((candidate) =>
-      MediaRecorder.isTypeSupported(candidate),
-    )
+    const mimeType = canRecord
+      ? mimeCandidates.find((candidate) => MediaRecorder.isTypeSupported(candidate))
+      : undefined
 
-    if (!mimeType) {
+    if (!mimeType && !fastPlan) {
       setVideoStatus("unsupported")
 
       setVideoMessage(
@@ -2179,6 +2174,23 @@ function CreateFlow({
     setVideoMessage("")
 
     videoCancelledRef.current = false
+
+    // Shared by the fast (WebCodecs) and the MediaRecorder path.
+    const finishVideo = (result: File, saveNow: boolean) => {
+      setVideoStatus("ready")
+      videoShareFileRef.current = result
+      setSampleVideoFile(result)
+
+      // QA 2026-10-20: no "준비됐어요" line; the video on screen says so. Errors and save results still show.
+      setVideoMessage("")
+
+      if (saveNow) {
+        triggerFileDownload(result)
+        notify("download")
+      }
+
+      return result
+    }
 
     try {
       // The advertising background when there is one (배경 바꾸기), else the photo.
@@ -2201,6 +2213,67 @@ function CreateFlow({
 
       if (!context) throw new Error("canvas-unavailable")
 
+      // The photo framed exactly like the one sent for the AI clip (src/videoFrame.ts), so the product is never
+      // cut at the sides and both videos look the same.
+      const framed = document.createElement("canvas")
+      framed.width = canvas.width
+      framed.height = canvas.height
+      const framedContext = framed.getContext("2d")
+      if (!framedContext || !drawStoryFrame(framedContext, image, !sceneUrl && photoBox?.image === imageUrl ? photoBox.box : null)) framedContext?.drawImage(image, 0, 0, framed.width, framed.height)
+
+      // 10-second motion graphic (src/motionVideo.ts): push-in, close-up with a light sweep and the key points,
+      // end card with the price and the call to action.
+      const motion: MotionScene = {
+        framed,
+        caption: sampleCaption,
+        points: (details.keywords ?? "").split(",").map((item) => item.trim()).filter(Boolean),
+        // The photo's own deep colour (as on the poster) for the shop pill and the call to action; the channel
+        // colour (navy for 파일만 저장) clashed with warm food photos.
+        accent: (() => {
+          const ink = photoPalette(image)?.ink
+          return ink ? [1, 3, 5].map((i) => parseInt(ink.slice(i, i + 2), 16)).join(", ") : channelTheme.rgb
+        })(),
+        effect: motionEffectFor([details.name, details.description, details.features, details.keywords].filter(Boolean).join(" ")),
+        tone: motionToneFor([details.name, details.description, details.features, details.keywords].filter(Boolean).join(" ")),
+        // One "AI 활용" mark when an AI wrote the copy or drew the background, as on the poster.
+        aiMark: Boolean(activePromo) || Boolean(sceneUrl),
+      }
+
+      const musicUrl = musicFor([details.name, details.description, details.features, details.keywords].filter(Boolean).join(" "), tones)
+
+      // Fast path: frames are drawn by time and encoded at once (WebCodecs), sound rendered offline. Any failure
+      // (not cancelled) falls through to the real-time MediaRecorder recording below.
+      let fastFile: File | null = null
+      if (fastPlan) {
+        try {
+          fastFile = await encodeFastVideo({
+            plan: fastPlan,
+            canvas,
+            draw: (fastContext, seconds) => drawMotionFrame(fastContext, seconds, motion),
+            seconds: MOTION_SECONDS,
+            musicUrl,
+            cues: MOTION_CUES,
+            fileName: outputFileName(posterContent.productName, "영상", "mp4"),
+            isCancelled: () => videoCancelledRef.current,
+          })
+        } catch (error) {
+          // Seen in the console on a phone that cannot use the fast path; the recording below takes over.
+          console.warn("fast video failed, recording instead", error)
+          fastFile = null
+          if (!mimeType) throw new Error("fast-video-failed")
+        }
+        if (videoCancelledRef.current) {
+          setVideoStatus("cancelled")
+
+          setVideoMessage(uiText("영상 준비를 취소했어요.", easyMode))
+
+          return null
+        }
+        if (fastFile) return finishVideo(fastFile, download)
+      }
+
+      if (!mimeType) throw new Error("no-recorder")
+
       const stream = canvas.captureStream(30)
 
       // A classical bed chosen by the kind of product and one soft effect on each scene change (src/videoSound.ts);
@@ -2208,7 +2281,7 @@ function CreateFlow({
       const sound = await prepareVideoSound(stream, {
         musicUrl: musicFor([details.name, details.description, details.features, details.keywords].filter(Boolean).join(" "), tones),
         seconds: MOTION_SECONDS,
-        cues: [2.35, 4.15], // into the close-up (motionVideo.ts scene 2 at 2.6 s) and the end card (4.4 s)
+        cues: MOTION_CUES, // into the close-up and the end card (src/motionVideo.ts)
       })
       const audio: AudioContext | null = sound?.audio ?? null
 
@@ -2267,31 +2340,7 @@ function CreateFlow({
 
         const startedAt = performance.now()
 
-        // The photo framed exactly like the one sent for the AI clip (src/videoFrame.ts), so the product is never
-        // cut at the sides and both videos look the same.
-        const framed = document.createElement("canvas")
-        framed.width = canvas.width
-        framed.height = canvas.height
-        const framedContext = framed.getContext("2d")
-        if (!framedContext || !drawStoryFrame(framedContext, image, !sceneUrl && photoBox?.image === imageUrl ? photoBox.box : null)) framedContext?.drawImage(image, 0, 0, framed.width, framed.height)
-
-        // 6-second motion graphic (src/motionVideo.ts): push-in, close-up with a light sweep and the key points,
-        // end card with the price and the call to action.
         const duration = MOTION_SECONDS * 1000
-        const motion: MotionScene = {
-          framed,
-          caption: sampleCaption,
-          points: (details.keywords ?? "").split(",").map((item) => item.trim()).filter(Boolean),
-          // The photo's own deep colour (as on the poster) for the shop pill and the call to action; the channel
-          // colour (navy for 파일만 저장) clashed with warm food photos.
-          accent: (() => {
-            const ink = photoPalette(image)?.ink
-            return ink ? [1, 3, 5].map((i) => parseInt(ink.slice(i, i + 2), 16)).join(", ") : channelTheme.rgb
-          })(),
-          effect: motionEffectFor([details.name, details.description, details.features, details.keywords].filter(Boolean).join(" ")),
-          // One "AI 활용" mark when an AI wrote the copy or drew the background, as on the poster.
-          aiMark: Boolean(activePromo) || Boolean(sceneUrl),
-        }
 
         const drawFrame = (now: number) => {
           if (videoCancelledRef.current) return
@@ -2314,24 +2363,7 @@ function CreateFlow({
 
       if (!result) return null
 
-      setVideoStatus("ready")
-      videoShareFileRef.current = result
-      setSampleVideoFile(result)
-
-      const extension = result.name.endsWith(".mp4") ? "MP4" : "WebM"
-
-      setVideoMessage(
-        easyMode
-          ? "영상이 준비됐어요."
-          : `${extension} 영상이 준비됐어요.`,
-      )
-
-      if (download) {
-        triggerFileDownload(result)
-        notify("download")
-      }
-
-      return result
+      return finishVideo(result, download)
     } catch {
       setVideoStatus("failed")
 
@@ -2346,6 +2378,14 @@ function CreateFlow({
   // Cancelled work settles before another preparation can reuse its recorder refs.
   const prepareVideoDownload = async (download = true) => {
     const context = videoContextRef.current
+    // 저장 with the video already made: hand that file over at once. Making it again first (10 s, or a few with
+    // the fast path) let the phone's "right after the tap" window close, so the save sheet never opened (QA 2026-10-22).
+    const ready = videoShareFileRef.current
+    if (download && ready && !videoTaskRef.current) {
+      triggerFileDownload(ready)
+      notify("download")
+      return ready
+    }
     const previous = videoTaskRef.current
     if (previous) {
       if (!videoCancelledRef.current) return previous
@@ -2731,6 +2771,27 @@ function CreateFlow({
                     </span>
                   )}
                 </label>
+                {/* 포스터·영상 문구 (QA 2026-10-21): filled by 자동으로 채워 주기, shown here so nothing the owner never
+                    saw goes into the poster or the video. Empty → the app picks a line as before. */}
+                <fieldset className="media-copy-fields">
+                  <legend>{t("포스터·영상 문구")} <span className="field-tag">{t("선택")}</span></legend>
+                  <label>
+                    {t("짧은 문구 한 줄")}
+                    {/* 말로 하기 like the other fields (QA 2026-10-22). */}
+                    <VoiceField voice={voice} field="mediaHeadline" label={t("짧은 문구 한 줄")} inputId="field-media-headline" value={details.mediaHeadline ?? ""} maxLength={16} easyMode={easyMode} onVoiceText={(text) => updateDetails({ ...details, mediaHeadline: text.slice(0, 16) })}>
+                    {(bind) => <input
+                      {...bind}
+                      aria-label={t("짧은 문구 한 줄")}
+                      value={details.mediaHeadline ?? ""}
+                      maxLength={16}
+                      placeholder={t("예) 생크림을 층층이 올렸어요")}
+                      onChange={(event) => updateDetails({ ...details, mediaHeadline: event.target.value })}
+                      className="mt-2 w-full rounded-[12px] border p-4"
+                    />}
+                    </VoiceField>
+                  </label>
+                  <span className="field-hint">{t("포스터와 영상에서 제품 이름 바로 아래에 들어가요. 16자까지 적을 수 있어요.")}</span>
+                </fieldset>
                 <label className="block text-[18px] font-bold">
                   {t("주요 고객층")}
                   <VoiceField voice={voice} field="audience" label={t("주요 고객층")} inputId="field-audience" value={details.audience} maxLength={200} easyMode={easyMode} onVoiceText={(text) => updateDetails({ ...details, audience: text })}>
@@ -3072,7 +3133,7 @@ function CreateFlow({
                     // The first-line choice lives on the 홍보 글 tab only (owner, 2026-10-19): on the poster it changes one small
                     // line under the product name, too little to see.
                     <PosterStyleControls
-                      ratio={posterRatio}
+                      layout={posterLayout}
                       easyMode={easyMode}
                       onChange={(next) => updateDetails({ ...details, ...next })}
                     />
@@ -3140,7 +3201,6 @@ function CreateFlow({
                           : ""
                   )}
                 />
-                {nextResultButton("poster")}
                 {RESULT_SECONDARY_FEATURES_ENABLED && <details className="media-full-copy">
                   <summary>이미지 문구 원문 보기</summary>
                   <p>{details.name}</p>
@@ -3162,18 +3222,6 @@ function CreateFlow({
                   easyMode={easyMode}
                   icon="video"
                   title={easyMode ? "짧은 영상" : "영상"}
-                  control={
-                      <button
-                        type="button"
-                        className="result-preview-action"
-                        aria-controls="result-video-preview"
-                        aria-pressed={playing}
-                        onClick={() => setPlaying(!playing)}
-                      >
-                        <Icon name={playing ? "pause" : "play"} size={34} />
-                        <span>{t(playing ? "일시 정지" : "재생하기")}</span>
-                      </button>
-                  }
                 />
                 <ResultPreview>
                   <div
@@ -3211,6 +3259,20 @@ function CreateFlow({
                         </p>
                       </div>
                     )}
+                    {/* 재생하기 on the video itself (QA 2026-10-20, one row fewer): large in the middle while paused,
+                        small in the corner while playing. Only once there is something to play. */}
+                    {(previewVideoUrl || showsRealVideo(aiVideo.state)) && (
+                      <button
+                        type="button"
+                        className={`result-preview-action video-play-overlay${playing ? " is-playing" : ""}`}
+                        aria-controls="result-video-preview"
+                        aria-pressed={playing}
+                        onClick={() => setPlaying(!playing)}
+                      >
+                        <Icon name={playing ? "pause" : "play"} size={playing ? 22 : 30} />
+                        <span>{t(playing ? "일시 정지" : "재생하기")}</span>
+                      </button>
+                    )}
                     {/* Caption band in A_손용범's compose-push layout: headline first, then shop · product and the call to action.
                         Only over the AI clip before its captioned file exists (that file has its own caption drawn in). */}
                     {!previewVideoUrl && showsRealVideo(aiVideo.state) && <strong className={`video-caption${playing ? " is-playing" : ""}`}>
@@ -3240,12 +3302,11 @@ function CreateFlow({
                   error={videoStatus === "failed" || videoStatus === "unsupported"}
                   // The AI clip: after 저장 its own result message; before, whether the captioned file is ready.
                   message={t(showsRealVideo(aiVideo.state) && !/^(AI가 만든 영상을 저장|새 창)/.test(videoMessage)
-                    ? realVideoFile ? "AI가 만든 영상에 글자를 넣어 준비했어요. 저장하거나 보낼 수 있어요." : "AI 영상에 글자를 넣고 있어요. 잠시만 기다려 주세요."
+                    ? realVideoFile ? "" : "AI 영상에 글자를 넣고 있어요. 잠시만 기다려 주세요."
                     : videoStatus === "preparing"
                       ? ""
                       : videoMessage)}
                 />
-                {nextResultButton("video")}
                 {RESULT_SECONDARY_FEATURES_ENABLED && <details className="media-full-copy">
                   <summary>영상 문구 원문 보기</summary>
                   <p>{details.features}</p>
@@ -3328,9 +3389,7 @@ function CreateFlow({
             </p>
             <PublishingGuide channel={channel} hasVideo={showVideo} />
           </details>}
-          <div className="result-followup-actions">
-            <button className="studio-secondary" onClick={onDashboard}><Icon name="home" size={22} />{t("홈으로")}</button>
-          </div>
+          {/* No 홈으로 here (QA 2026-10-20): the bottom menu's 홈 does the same. */}
         </div>
       )}
     </section>
@@ -3898,7 +3957,7 @@ export default function App() {
       return "만드는 중입니다. 잠시만 기다려 주세요. 다 만들어지면 결과 화면으로 넘어가요. 멈추려면 취소 버튼을 누르세요."
     }
 
-    return `결과 보기 화면입니다. ${details.shopName?.trim() || details.name?.trim() || details.description.trim()}. 이미지와 영상은 다운로드 버튼으로 저장하고, 홍보 글은 복사하기 버튼으로 가져가세요. 공유하기 버튼으로 바로 보낼 수도 있어요. 홈으로 버튼을 누르면 첫 화면으로 돌아가요.`
+    return `결과 보기 화면입니다. ${details.shopName?.trim() || details.name?.trim() || details.description.trim()}. 이미지와 영상은 다운로드 버튼으로 저장하고, 홍보 글은 복사하기 버튼으로 가져가세요. 공유하기 버튼으로 바로 보낼 수도 있어요. 아래 메뉴의 홈을 누르면 첫 화면으로 돌아가요.`
   })()
 
   const stopSpeech = () => {

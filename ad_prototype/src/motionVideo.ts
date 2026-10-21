@@ -1,14 +1,19 @@
-// The free video: a 6-second motion graphic drawn in the browser (no AI, no cost, no garbled text).
-//   0.0–2.6 s  the photo, a slow push-in, the shop name and the headline rise in
-//   2.6–4.4 s  closer on the product, a light sweep across it, the key points pop in as tags
-//   4.4–6.0 s  end card over the blurred photo: shop, product name, price, call to action
+// The free video: a 10-second motion graphic drawn in the browser (no AI, no cost, no garbled text).
+//   0.0–3.5 s   the photo, a slow push-in, the shop name and the headline rise in
+//   3.5–6.5 s   closer on the product, a light sweep across it, the key points pop in as tags
+//   6.5–10.0 s  end card over the blurred photo: shop, product name, price, call to action
+// QA 2026-10-21: it was 6 s and the end card (price, call to action) went by in 1.6 s; the extra time is spent
+// holding the text still so it can be read, not on more movement.
 // The photo is the same 9:16 frame as the one sent for the AI clip (src/videoFrame.ts), and the captions use the
 // poster style (src/videoCaption.ts). Reels / Shorts cover about the top 240 px and the bottom 340 px.
 
-import { drawVideoCaption, wrap, type VideoCaption } from "./videoCaption"
+import { drawVideoCaption, drawWords, wrap, type VideoCaption } from "./videoCaption"
 
-export const MOTION_SECONDS = 6
-const END_CARD = 4.4
+export const MOTION_SECONDS = 10
+const SCENE_2 = 3.5
+const END_CARD = 6.5
+/** Scene changes, for the transition sound (src/videoSound.ts): just before each cut. */
+export const MOTION_CUES = [SCENE_2 - 0.25, END_CARD - 0.25]
 
 export type MotionScene = {
   /** The photo already framed to the canvas size (9:16). */
@@ -23,6 +28,21 @@ export type MotionScene = {
   /** "AI 활용" in the corner when an AI wrote the copy or drew the background (one mark for both; the
    *  institution's advice 2026-10-19: combine it, or mark conservatively). Same look as the poster's. */
   aiMark?: boolean
+  /** Colour finish by product (motionToneFor): warm for baked and hot food, none for fresh food and non-food. */
+  tone?: MotionTone
+}
+
+/**
+ * QA 2026-10-22: the warm amber finish suits bread, cake, coffee and hot dishes, but makes raw fish, salad or a
+ * green shampoo bottle look muddy. "fresh" and "neutral" keep the photo's own colours (a white flare at the cuts).
+ */
+export type MotionTone = "warm" | "fresh" | "neutral"
+export function motionToneFor(text: string): MotionTone {
+  if (/화장품|세럼|로션|스킨케어|립스틱|향수|샴푸|비누|꽃|플라워|부케|화분|안경|선글라스|이어폰|전자|생활용품|머그|텀블러|수건|\b(cosmetic|serum|lotion|skincare|lipstick|perfume|shampoo|soap|flower|glasses|earphone)\b/i.test(text)) return "neutral"
+  // A cake with strawberries is still a baked good: desserts are checked first.
+  if (/케이크|마카롱|쿠키|타르트|머핀|브라우니|빵|\b(cake|macaron|cookie|tart|muffin|bread)\b/i.test(text)) return "warm"
+  if (/초밥|스시|사시미|회덮밥|물회|생선회|(?:^|\s)회(?:$|\s)|샐러드|포케|과일|주스|에이드|스무디|빙수|요거트|\b(sushi|sashimi|salad|poke|fruit|juice|smoothie)\b/i.test(text)) return "fresh"
+  return "warm"
 }
 
 export type MotionEffect = "steam" | "sparkle" | "petals" | "glow" | "sheen"
@@ -33,10 +53,13 @@ export type MotionEffect = "steam" | "sparkle" | "petals" | "glow" | "sheen"
  */
 export function motionEffectFor(text: string): MotionEffect {
   if (/꽃|플라워|부케|화분|\b(flower|flowers|bouquet)\b/i.test(text)) return "petals"
+  // Clearly non-food first, so "녹차 샴푸" is a shampoo, not a tea (QA 2026-10-22). ("크림" alone stays below.)
+  if (/화장품|세럼|로션|스킨케어|립스틱|향수|샴푸|비누|\b(cosmetic|serum|lotion|skincare|lipstick|perfume|shampoo|soap)\b/i.test(text)) return "sparkle"
   // A baked or cold dessert is never steamed, even with a flavour word ("녹차 필링" on a 마카롱, 2026-10-18 phone photo).
   if (/케이크|마카롱|쿠키|베이글|타르트|머핀|브라우니|아이스크림|디저트|\b(cake|macaron|cookie|bagel|tart|muffin|brownie|dessert)\b/i.test(text)) return "sheen"
   // Steam only for hot dishes and drinks; cakes, bread and cookies get the light sweep (round 1: steam on a cake).
-  if (/커피|라떼|라테|녹차|홍차|밀크티|국밥|국수|라면|찌개|전골|떡볶이|\b(coffee|latte|tea|soup)\b/i.test(text)) return "steam"
+  // Fried and hot dishes steam too (QA 2026-10-22: 돈까스 got the light sweep).
+  if (/커피|라떼|라테|녹차|홍차|밀크티|국밥|국수|라면|찌개|전골|떡볶이|돈까스|돈가스|카츠|튀김|덮밥|우동|짬뽕|짜장|만두|찜|(?:^|\s)\S*탕(?:$|\s)|\b(coffee|latte|tea|soup|katsu|tempura|udon)\b/i.test(text)) return "steam"
   // Cold or room-temperature food before beauty: "생크림 케이크" has "크림" but is no cosmetic (2026-10-18 showcase).
   if (/빵|과자|떡|초콜릿|초코|생크림|크림치즈|식품|반찬|김치|도시락|\b(bread|chocolate|food)\b/i.test(text)) return "sheen"
   if (/화장품|세럼|로션|크림|스킨케어|립스틱|향수|샴푸|비누|\b(cosmetic|serum|lotion|skincare|lipstick|perfume|shampoo|soap)\b/i.test(text)) return "sparkle"
@@ -140,27 +163,50 @@ const easeInOut = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 
 const easeOutBack = (t: number) => 1 + 2.2 * (t - 1) ** 3 + 1.2 * (t - 1) ** 2
 const progress = (seconds: number, from: number, length: number) => clamp((seconds - from) / length)
 
-/** Camera: 1.0 → 1.12 over the first scene, then 1.12 → 1.38 a little lower (the product), then still. */
+/**
+ * Two shots of the one photo, cut like an ad (QA 2026-10-22, "여러 장면"): a wide push-in (1.0 → 1.1), then a hard
+ * cut to a close-up on the product (1.55 → 1.62) that drifts sideways. The cut itself is a short whip: a sideways
+ * motion blur for ~0.6 s. No extra pictures and no cost.
+ */
+const WHIP = 0.32
 function camera(seconds: number) {
-  const first = easeInOut(progress(seconds, 0, 2.6))
-  const second = easeInOut(progress(seconds, 2.6, 1.8))
-  return { zoom: 1 + 0.12 * first + 0.26 * second, y: 0.035 * second }
+  if (seconds < SCENE_2) {
+    const t = easeInOut(progress(seconds, 0, SCENE_2))
+    return { zoom: 1 + 0.1 * t, x: 0, y: 0 }
+  }
+  const t = easeInOut(progress(seconds, SCENE_2, END_CARD - SCENE_2))
+  // The product sits a little below the middle of the framed photo (src/videoFrame.ts, api/_lib/background.js).
+  return { zoom: 1.55 + 0.07 * t, x: 0.05 - 0.1 * t, y: 0.06 }
 }
 
-function drawPhoto(ctx: CanvasRenderingContext2D, scene: MotionScene, seconds: number) {
+function drawView(ctx: CanvasRenderingContext2D, scene: MotionScene, view: { zoom: number; x: number; y: number }, shift = 0) {
   const { width, height } = ctx.canvas
-  const view = camera(Math.min(seconds, END_CARD))
   ctx.save()
-  ctx.translate(width / 2, height / 2 - view.y * height)
+  ctx.translate(width / 2 + (view.x + shift) * width, height / 2 - view.y * height)
   ctx.scale(view.zoom, view.zoom)
   ctx.translate(-width / 2, -height / 2)
   ctx.drawImage(scene.framed, 0, 0, width, height)
   ctx.restore()
 }
 
+function drawPhoto(ctx: CanvasRenderingContext2D, scene: MotionScene, seconds: number) {
+  const time = Math.min(seconds, END_CARD)
+  const whip = 1 - Math.min(1, Math.abs(time - SCENE_2) / WHIP)
+  if (whip <= 0) {
+    drawView(ctx, scene, camera(time))
+    return
+  }
+  // The whip: the frame slides fast to the left and is smeared sideways, strongest at the cut.
+  const side = time < SCENE_2 ? -1 : 1
+  ctx.save()
+  ctx.filter = `blur(${Math.round(2 + 16 * whip)}px)`
+  drawView(ctx, scene, camera(time), side * 0.12 * whip * whip)
+  ctx.restore()
+}
+
 /** A soft diagonal light band crossing the product once. */
 function drawSheen(ctx: CanvasRenderingContext2D, seconds: number) {
-  const t = progress(seconds, 2.9, 1.0)
+  const t = progress(seconds, SCENE_2 + 0.3, 1.2)
   if (t <= 0 || t >= 1) return
   const { width, height } = ctx.canvas
   const x = -width * 0.6 + t * width * 2.2
@@ -179,8 +225,12 @@ function drawSheen(ctx: CanvasRenderingContext2D, seconds: number) {
 function drawPoints(ctx: CanvasRenderingContext2D, scene: MotionScene, seconds: number) {
   const fadeOut = 1 - progress(seconds, END_CARD - 0.25, 0.25)
   let y = 340
-  scene.points.slice(0, 3).forEach((point, index) => {
-    const t = progress(seconds, 3.0 + index * 0.3, 0.35)
+  // A tag too long for one line is left out, never cut with "…" (QA 2026-10-21).
+  const maxText = ctx.canvas.width - 72 * 2 - 64
+  ctx.font = font(800, 42)
+  const points = scene.points.filter((point) => ctx.measureText(point).width <= maxText)
+  points.slice(0, 3).forEach((point, index) => {
+    const t = progress(seconds, SCENE_2 + 0.4 + index * 0.4, 0.35)
     if (t <= 0 || fadeOut <= 0) return
     ctx.font = font(800, 42)
     const [line] = wrap(ctx, point, ctx.canvas.width - 72 * 2 - 64, 1)
@@ -204,7 +254,7 @@ function drawPoints(ctx: CanvasRenderingContext2D, scene: MotionScene, seconds: 
 }
 
 /** The last scene: blurred photo, dark veil, centred shop · product · price · call to action. */
-function drawEndCard(ctx: CanvasRenderingContext2D, scene: MotionScene, seconds: number) {
+function drawEndCardBackdrop(ctx: CanvasRenderingContext2D, scene: MotionScene, seconds: number) {
   const t = progress(seconds, END_CARD, 0.35)
   if (t <= 0) return
   const { width, height } = ctx.canvas
@@ -217,16 +267,22 @@ function drawEndCard(ctx: CanvasRenderingContext2D, scene: MotionScene, seconds:
   ctx.fillStyle = "rgba(20,14,10,.35)"
   ctx.fillRect(0, 0, width, height)
   ctx.restore()
+}
 
+function drawEndCardText(ctx: CanvasRenderingContext2D, scene: MotionScene, seconds: number) {
+  if (progress(seconds, END_CARD, 0.35) <= 0) return
+  const { width, height } = ctx.canvas
+  const { caption } = scene
   const center = width / 2
   const textWidth = width - 72 * 2
-  const product = caption.subline || caption.headline
+  // The big title is the product name since 2026-10-22 (the sub line is the short 포스터·영상 문구).
+  const product = caption.headline
   ctx.font = font(800, 112)
   const title = wrap(ctx, product, textWidth, 2)
   // Stack the lines around the middle of the safe area.
-  const blocks: { height: number; draw: (y: number) => void; at: number }[] = []
+  const blocks: { height: number; draw: (y: number) => void; at: number; words?: boolean }[] = []
   if (caption.eyebrow) {
-    blocks.push({ height: 76, at: 4.55, draw: (y) => {
+    blocks.push({ height: 76, at: END_CARD + 0.15, draw: (y) => {
       ctx.font = font(800, 40)
       const [line] = wrap(ctx, caption.eyebrow ?? "", textWidth - 56, 1)
       const pill = ctx.measureText(line).width + 56
@@ -238,20 +294,20 @@ function drawEndCard(ctx: CanvasRenderingContext2D, scene: MotionScene, seconds:
       ctx.fillText(line, center, y + 52)
     } })
   }
-  blocks.push({ height: title.length * 124, at: 4.7, draw: (y) => {
+  blocks.push({ height: title.length * 124, at: END_CARD + 0.35, words: true, draw: (y) => {
     ctx.font = font(800, 112)
     ctx.fillStyle = "#ffffff"
-    title.forEach((line, index) => ctx.fillText(line, center, y + 104 + index * 124))
+    title.forEach((line, index) => drawWords(ctx, line, center, y + 104 + index * 124, seconds, END_CARD + 0.35 + index * 0.2, "center"))
   } })
   if (caption.price) {
-    blocks.push({ height: 96, at: 4.9, draw: (y) => {
+    blocks.push({ height: 96, at: END_CARD + 0.6, draw: (y) => {
       ctx.font = font(800, 88)
       ctx.fillStyle = "#ffc79e"
       ctx.fillText(wrap(ctx, caption.price ?? "", textWidth, 1)[0], center, y + 80)
     } })
   }
   if (caption.cta) {
-    blocks.push({ height: 96, at: 5.1, draw: (y) => {
+    blocks.push({ height: 96, at: END_CARD + 0.85, draw: (y) => {
       ctx.font = font(800, 48)
       const [line] = wrap(ctx, caption.cta ?? "", textWidth - 96, 1)
       const pill = ctx.measureText(line).width + 96
@@ -271,10 +327,12 @@ function drawEndCard(ctx: CanvasRenderingContext2D, scene: MotionScene, seconds:
   let y = top
   for (const block of blocks) {
     const appear = progress(seconds, block.at, 0.4)
-    if (appear > 0) {
+    if (appear > 0 || block.words) {
       ctx.save()
-      ctx.globalAlpha = appear
-      ctx.translate(0, (1 - easeInOut(appear)) * 36)
+      if (!block.words) {
+        ctx.globalAlpha = appear
+        ctx.translate(0, (1 - easeInOut(appear)) * 36)
+      }
       block.draw(y)
       ctx.restore()
     }
@@ -283,12 +341,95 @@ function drawEndCard(ctx: CanvasRenderingContext2D, scene: MotionScene, seconds:
   ctx.textAlign = "left"
 }
 
+
+// --- Finishing (free, canvas only): warm grade, vignette, film grain, light leak. All cheap fills, no pixel reads. ---
+let grainTile: HTMLCanvasElement | null = null
+const patterns = new WeakMap<CanvasRenderingContext2D, CanvasPattern | null>()
+/** A 256 px noise tile made once from the seeded generator, so every render has the same grain. */
+function grainPattern(ctx: CanvasRenderingContext2D) {
+  if (patterns.has(ctx)) return patterns.get(ctx) ?? null
+  if (!grainTile) {
+    grainTile = document.createElement("canvas")
+    grainTile.width = grainTile.height = 256
+    const g = grainTile.getContext("2d")
+    if (g) {
+      const image = g.createImageData(256, 256)
+      for (let i = 0; i < 256 * 256; i += 1) {
+        const v = Math.round(seeded(i + 1) * 255)
+        image.data.set([v, v, v, 255], i * 4)
+      }
+      g.putImageData(image, 0, 0)
+    }
+  }
+  const pattern = ctx.createPattern(grainTile, "repeat")
+  patterns.set(ctx, pattern)
+  return pattern
+}
+
+/** Warm advertising tone: a soft-light amber wash over the picture (the text is drawn after, so it stays white). */
+function drawGrade(ctx: CanvasRenderingContext2D, tone: MotionTone) {
+  if (tone !== "warm") return
+  const { width, height } = ctx.canvas
+  ctx.save()
+  ctx.globalCompositeOperation = "soft-light"
+  ctx.fillStyle = "rgba(255,176,98,.22)"
+  ctx.fillRect(0, 0, width, height)
+  ctx.restore()
+}
+
+/** Darkened corners pulling the eye to the middle. */
+function drawVignette(ctx: CanvasRenderingContext2D) {
+  const { width, height } = ctx.canvas
+  const v = ctx.createRadialGradient(width / 2, height * 0.46, height * 0.3, width / 2, height * 0.46, height * 0.75)
+  v.addColorStop(0, "rgba(20,10,4,0)")
+  v.addColorStop(1, "rgba(20,10,4,.38)")
+  ctx.fillStyle = v
+  ctx.fillRect(0, 0, width, height)
+}
+
+/** Very faint film grain: the noise tile, moved to a new seeded offset every frame so it shimmers. */
+function drawGrain(ctx: CanvasRenderingContext2D, seconds: number) {
+  const pattern = grainPattern(ctx)
+  if (!pattern) return
+  const { width, height } = ctx.canvas
+  const frame = Math.round(seconds * 30)
+  ctx.save()
+  ctx.globalCompositeOperation = "overlay"
+  ctx.globalAlpha = 0.07
+  ctx.translate(Math.floor(seeded(frame + 3) * 256), Math.floor(seeded(frame + 91) * 256))
+  ctx.fillStyle = pattern
+  ctx.fillRect(-256, -256, width + 256, height + 256)
+  ctx.restore()
+}
+
+/** A warm flare breathing in from the edge at each cut (the whip at 3.5 s, the end card at 6.5 s). */
+function drawLightLeak(ctx: CanvasRenderingContext2D, seconds: number, tone: MotionTone) {
+  const warm = tone === "warm"
+  const bell = (centre: number, half: number) => Math.max(0, 1 - Math.abs(seconds - centre) / half)
+  const k = Math.max(bell(SCENE_2, 0.45), bell(END_CARD + 0.15, 0.5))
+  if (k <= 0) return
+  const { width, height } = ctx.canvas
+  const strength = k * k * (3 - 2 * k)
+  const flip = seconds > END_CARD ? -1 : 1
+  const cx = flip > 0 ? width * 1.02 : -width * 0.02
+  const leak = ctx.createRadialGradient(cx, height * 0.34, 0, cx, height * 0.34, width * 1.25)
+  leak.addColorStop(0, warm ? `rgba(255,150,70,${0.62 * strength})` : `rgba(255,255,255,${0.45 * strength})`)
+  leak.addColorStop(0.45, warm ? `rgba(255,96,80,${0.26 * strength})` : `rgba(235,242,255,${0.18 * strength})`)
+  leak.addColorStop(1, warm ? "rgba(255,96,80,0)" : "rgba(235,242,255,0)")
+  ctx.save()
+  ctx.globalCompositeOperation = "screen"
+  ctx.fillStyle = leak
+  ctx.fillRect(0, 0, width, height)
+  ctx.restore()
+}
+
 /** Draws the frame at `seconds` (0 … MOTION_SECONDS) on a 1080 × 1920 canvas. */
 export function drawMotionFrame(ctx: CanvasRenderingContext2D, seconds: number, scene: MotionScene) {
   const { width, height } = ctx.canvas
   ctx.clearRect(0, 0, width, height)
   ctx.imageSmoothingQuality = "high"
   drawPhoto(ctx, scene, seconds)
+  drawGrade(ctx, scene.tone ?? "warm")
   const effect = scene.effect ?? "sheen"
   if (effect === "steam") drawSteam(ctx, seconds)
   else if (effect === "sparkle") drawSparkles(ctx, seconds)
@@ -296,16 +437,21 @@ export function drawMotionFrame(ctx: CanvasRenderingContext2D, seconds: number, 
   else if (effect === "glow") drawGlow(ctx, seconds)
   // The light sweep runs for every kind except flowers (petals already move across the picture).
   if (effect !== "petals") drawSheen(ctx, seconds)
+  drawEndCardBackdrop(ctx, scene, seconds)
+  // Finishing sits under all the text, so the letters stay clean.
+  drawVignette(ctx)
+  drawGrain(ctx, seconds)
+  drawLightLeak(ctx, seconds, scene.tone ?? "warm")
   if (seconds < END_CARD + 0.35) {
     // Scenes 1–2: shop name and headline only; price and call to action wait for the end card.
     const fade = 1 - progress(seconds, END_CARD, 0.35)
     ctx.save()
     ctx.globalAlpha = fade
-    drawVideoCaption(ctx, seconds, { eyebrow: scene.caption.eyebrow, headline: scene.caption.headline, subline: scene.caption.subline }, scene.accent)
+    drawVideoCaption(ctx, seconds, { eyebrow: scene.caption.eyebrow, headline: scene.caption.headline, subline: scene.caption.subline }, scene.accent, { words: true })
     ctx.restore()
     drawPoints(ctx, scene, seconds)
   }
-  drawEndCard(ctx, scene, seconds)
+  drawEndCardText(ctx, scene, seconds)
   if (scene.aiMark) drawAiMark(ctx)
 }
 
@@ -313,9 +459,9 @@ export function drawMotionFrame(ctx: CanvasRenderingContext2D, seconds: number, 
 function drawAiMark(ctx: CanvasRenderingContext2D) {
   const label = "AI 활용"
   ctx.save()
-  ctx.font = `700 26px "Pretendard Variable", Pretendard, "Noto Sans KR", sans-serif`
-  const w = ctx.measureText(label).width + 30
-  const h = 44
+  ctx.font = `700 32px "Pretendard Variable", Pretendard, "Noto Sans KR", sans-serif`
+  const w = ctx.measureText(label).width + 34
+  const h = 52
   const x = ctx.canvas.width - w - 32
   const y = 262
   ctx.fillStyle = "rgba(29,26,23,.62)"
