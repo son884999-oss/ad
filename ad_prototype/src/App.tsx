@@ -31,7 +31,7 @@ import { type VideoCaption } from "./videoCaption"
 import { drawStoryFrame } from "./videoFrame"
 import { makeScene } from "./scene"
 import { outputFolder, saveToComputer } from "./localSave"
-import { drawMotionFrame, MOTION_SECONDS, motionEffectFor, type MotionScene } from "./motionVideo"
+import { drawMotionFrame, MOTION_CUES, MOTION_SECONDS, motionEffectFor, type MotionScene } from "./motionVideo"
 import { plainMp4File } from "./mp4Flatten"
 import { musicFor, prepareVideoSound } from "./videoSound"
 import { makeAdBackground } from "./background"
@@ -1908,7 +1908,7 @@ function CreateFlow({
     // The film and the poster scene run side by side: hide only when neither is still running.
     return (edit === null || edit === "done") && scene !== "working" ? null : { scene, camera, edit, special: specialFilm }
   })()
-  // Preview = the file that will be saved: the captioned AI clip (고급형) or the 6-second motion video (기본형).
+  // Preview = the file that will be saved: the captioned AI clip (고급형) or the 10-second motion video (기본형).
   const previewVideoFile = showsRealVideo(aiVideo.state) ? realVideoFile : sampleVideoFile
   const [previewVideoUrl, setPreviewVideoUrl] = useState("")
   useEffect(() => {
@@ -2208,7 +2208,7 @@ function CreateFlow({
       const sound = await prepareVideoSound(stream, {
         musicUrl: musicFor([details.name, details.description, details.features, details.keywords].filter(Boolean).join(" "), tones),
         seconds: MOTION_SECONDS,
-        cues: [2.35, 4.15], // into the close-up (motionVideo.ts scene 2 at 2.6 s) and the end card (4.4 s)
+        cues: MOTION_CUES, // into the close-up and the end card (src/motionVideo.ts)
       })
       const audio: AudioContext | null = sound?.audio ?? null
 
@@ -2275,7 +2275,7 @@ function CreateFlow({
         const framedContext = framed.getContext("2d")
         if (!framedContext || !drawStoryFrame(framedContext, image, !sceneUrl && photoBox?.image === imageUrl ? photoBox.box : null)) framedContext?.drawImage(image, 0, 0, framed.width, framed.height)
 
-        // 6-second motion graphic (src/motionVideo.ts): push-in, close-up with a light sweep and the key points,
+        // 10-second motion graphic (src/motionVideo.ts): push-in, close-up with a light sweep and the key points,
         // end card with the price and the call to action.
         const duration = MOTION_SECONDS * 1000
         const motion: MotionScene = {

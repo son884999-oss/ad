@@ -80,9 +80,26 @@ export async function prepareVideoSound(stream: MediaStream, { musicUrl, seconds
       bedGain.gain.linearRampToValueAtTime(0.15, at + 0.3)
       bedGain.gain.setValueAtTime(0.15, at + Math.max(0.4, seconds - 1))
       bedGain.gain.linearRampToValueAtTime(0.0001, at + seconds)
-      bed.connect(bedGain).connect(warmth)
+      bedGain.connect(warmth)
+      // The clips are about 7.6 s; a longer video (10 s since 2026-10-21) cross-fades a second copy in over 1.2 s.
+      const join = 1.2
+      const first = context.createGain()
+      bed.connect(first).connect(bedGain)
       bed.start(at)
       bed.stop(at + seconds + 0.05)
+      if (music.duration < seconds) {
+        const from = at + music.duration - join
+        first.gain.setValueAtTime(1, from)
+        first.gain.linearRampToValueAtTime(0.0001, from + join)
+        const again = context.createBufferSource()
+        again.buffer = music
+        const second = context.createGain()
+        second.gain.setValueAtTime(0.0001, from)
+        second.gain.linearRampToValueAtTime(1, from + join)
+        again.connect(second).connect(bedGain)
+        again.start(from)
+        again.stop(at + seconds + 0.05)
+      }
       if (!effect) return
       for (const cue of cues) {
         if (cue >= seconds) continue

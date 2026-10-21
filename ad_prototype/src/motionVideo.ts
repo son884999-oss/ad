@@ -1,14 +1,19 @@
-// The free video: a 6-second motion graphic drawn in the browser (no AI, no cost, no garbled text).
-//   0.0–2.6 s  the photo, a slow push-in, the shop name and the headline rise in
-//   2.6–4.4 s  closer on the product, a light sweep across it, the key points pop in as tags
-//   4.4–6.0 s  end card over the blurred photo: shop, product name, price, call to action
+// The free video: a 10-second motion graphic drawn in the browser (no AI, no cost, no garbled text).
+//   0.0–3.5 s   the photo, a slow push-in, the shop name and the headline rise in
+//   3.5–6.5 s   closer on the product, a light sweep across it, the key points pop in as tags
+//   6.5–10.0 s  end card over the blurred photo: shop, product name, price, call to action
+// QA 2026-10-21: it was 6 s and the end card (price, call to action) went by in 1.6 s; the extra time is spent
+// holding the text still so it can be read, not on more movement.
 // The photo is the same 9:16 frame as the one sent for the AI clip (src/videoFrame.ts), and the captions use the
 // poster style (src/videoCaption.ts). Reels / Shorts cover about the top 240 px and the bottom 340 px.
 
 import { drawVideoCaption, wrap, type VideoCaption } from "./videoCaption"
 
-export const MOTION_SECONDS = 6
-const END_CARD = 4.4
+export const MOTION_SECONDS = 10
+const SCENE_2 = 3.5
+const END_CARD = 6.5
+/** Scene changes, for the transition sound (src/videoSound.ts): just before each cut. */
+export const MOTION_CUES = [SCENE_2 - 0.25, END_CARD - 0.25]
 
 export type MotionScene = {
   /** The photo already framed to the canvas size (9:16). */
@@ -142,8 +147,8 @@ const progress = (seconds: number, from: number, length: number) => clamp((secon
 
 /** Camera: 1.0 → 1.12 over the first scene, then 1.12 → 1.38 a little lower (the product), then still. */
 function camera(seconds: number) {
-  const first = easeInOut(progress(seconds, 0, 2.6))
-  const second = easeInOut(progress(seconds, 2.6, 1.8))
+  const first = easeInOut(progress(seconds, 0, SCENE_2))
+  const second = easeInOut(progress(seconds, SCENE_2, END_CARD - SCENE_2))
   return { zoom: 1 + 0.12 * first + 0.26 * second, y: 0.035 * second }
 }
 
@@ -160,7 +165,7 @@ function drawPhoto(ctx: CanvasRenderingContext2D, scene: MotionScene, seconds: n
 
 /** A soft diagonal light band crossing the product once. */
 function drawSheen(ctx: CanvasRenderingContext2D, seconds: number) {
-  const t = progress(seconds, 2.9, 1.0)
+  const t = progress(seconds, SCENE_2 + 0.3, 1.2)
   if (t <= 0 || t >= 1) return
   const { width, height } = ctx.canvas
   const x = -width * 0.6 + t * width * 2.2
@@ -180,7 +185,7 @@ function drawPoints(ctx: CanvasRenderingContext2D, scene: MotionScene, seconds: 
   const fadeOut = 1 - progress(seconds, END_CARD - 0.25, 0.25)
   let y = 340
   scene.points.slice(0, 3).forEach((point, index) => {
-    const t = progress(seconds, 3.0 + index * 0.3, 0.35)
+    const t = progress(seconds, SCENE_2 + 0.4 + index * 0.4, 0.35)
     if (t <= 0 || fadeOut <= 0) return
     ctx.font = font(800, 42)
     const [line] = wrap(ctx, point, ctx.canvas.width - 72 * 2 - 64, 1)
@@ -226,7 +231,7 @@ function drawEndCard(ctx: CanvasRenderingContext2D, scene: MotionScene, seconds:
   // Stack the lines around the middle of the safe area.
   const blocks: { height: number; draw: (y: number) => void; at: number }[] = []
   if (caption.eyebrow) {
-    blocks.push({ height: 76, at: 4.55, draw: (y) => {
+    blocks.push({ height: 76, at: END_CARD + 0.15, draw: (y) => {
       ctx.font = font(800, 40)
       const [line] = wrap(ctx, caption.eyebrow ?? "", textWidth - 56, 1)
       const pill = ctx.measureText(line).width + 56
@@ -238,20 +243,20 @@ function drawEndCard(ctx: CanvasRenderingContext2D, scene: MotionScene, seconds:
       ctx.fillText(line, center, y + 52)
     } })
   }
-  blocks.push({ height: title.length * 124, at: 4.7, draw: (y) => {
+  blocks.push({ height: title.length * 124, at: END_CARD + 0.35, draw: (y) => {
     ctx.font = font(800, 112)
     ctx.fillStyle = "#ffffff"
     title.forEach((line, index) => ctx.fillText(line, center, y + 104 + index * 124))
   } })
   if (caption.price) {
-    blocks.push({ height: 96, at: 4.9, draw: (y) => {
+    blocks.push({ height: 96, at: END_CARD + 0.6, draw: (y) => {
       ctx.font = font(800, 88)
       ctx.fillStyle = "#ffc79e"
       ctx.fillText(wrap(ctx, caption.price ?? "", textWidth, 1)[0], center, y + 80)
     } })
   }
   if (caption.cta) {
-    blocks.push({ height: 96, at: 5.1, draw: (y) => {
+    blocks.push({ height: 96, at: END_CARD + 0.85, draw: (y) => {
       ctx.font = font(800, 48)
       const [line] = wrap(ctx, caption.cta ?? "", textWidth - 96, 1)
       const pill = ctx.measureText(line).width + 96
