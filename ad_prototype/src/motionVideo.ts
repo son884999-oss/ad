@@ -145,21 +145,44 @@ const easeInOut = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 
 const easeOutBack = (t: number) => 1 + 2.2 * (t - 1) ** 3 + 1.2 * (t - 1) ** 2
 const progress = (seconds: number, from: number, length: number) => clamp((seconds - from) / length)
 
-/** Camera: 1.0 → 1.12 over the first scene, then 1.12 → 1.38 a little lower (the product), then still. */
+/**
+ * Two shots of the one photo, cut like an ad (QA 2026-10-22, "여러 장면"): a wide push-in (1.0 → 1.1), then a hard
+ * cut to a close-up on the product (1.55 → 1.62) that drifts sideways. The cut itself is a short whip: a sideways
+ * motion blur for ~0.6 s. No extra pictures and no cost.
+ */
+const WHIP = 0.32
 function camera(seconds: number) {
-  const first = easeInOut(progress(seconds, 0, SCENE_2))
-  const second = easeInOut(progress(seconds, SCENE_2, END_CARD - SCENE_2))
-  return { zoom: 1 + 0.12 * first + 0.26 * second, y: 0.035 * second }
+  if (seconds < SCENE_2) {
+    const t = easeInOut(progress(seconds, 0, SCENE_2))
+    return { zoom: 1 + 0.1 * t, x: 0, y: 0 }
+  }
+  const t = easeInOut(progress(seconds, SCENE_2, END_CARD - SCENE_2))
+  // The product sits a little below the middle of the framed photo (src/videoFrame.ts, api/_lib/background.js).
+  return { zoom: 1.55 + 0.07 * t, x: 0.05 - 0.1 * t, y: 0.06 }
 }
 
-function drawPhoto(ctx: CanvasRenderingContext2D, scene: MotionScene, seconds: number) {
+function drawView(ctx: CanvasRenderingContext2D, scene: MotionScene, view: { zoom: number; x: number; y: number }, shift = 0) {
   const { width, height } = ctx.canvas
-  const view = camera(Math.min(seconds, END_CARD))
   ctx.save()
-  ctx.translate(width / 2, height / 2 - view.y * height)
+  ctx.translate(width / 2 + (view.x + shift) * width, height / 2 - view.y * height)
   ctx.scale(view.zoom, view.zoom)
   ctx.translate(-width / 2, -height / 2)
   ctx.drawImage(scene.framed, 0, 0, width, height)
+  ctx.restore()
+}
+
+function drawPhoto(ctx: CanvasRenderingContext2D, scene: MotionScene, seconds: number) {
+  const time = Math.min(seconds, END_CARD)
+  const whip = 1 - Math.min(1, Math.abs(time - SCENE_2) / WHIP)
+  if (whip <= 0) {
+    drawView(ctx, scene, camera(time))
+    return
+  }
+  // The whip: the frame slides fast to the left and is smeared sideways, strongest at the cut.
+  const side = time < SCENE_2 ? -1 : 1
+  ctx.save()
+  ctx.filter = `blur(${Math.round(2 + 16 * whip)}px)`
+  drawView(ctx, scene, camera(time), side * 0.12 * whip * whip)
   ctx.restore()
 }
 
