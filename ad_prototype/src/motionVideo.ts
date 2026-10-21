@@ -30,6 +30,64 @@ export type MotionScene = {
   aiMark?: boolean
   /** Colour finish by product (motionToneFor): warm for baked and hot food, none for fresh food and non-food. */
   tone?: MotionTone
+  /** Where the product is in `framed` (0–1, centre and size), for aiming the close-up. Missing = the old fixed aim. */
+  focus?: MotionFocus | null
+}
+
+export type MotionFocus = { x: number; y: number; size: number }
+
+/**
+ * Guesses where the product is in the framed photo without any model (QA 2026-10-22): the picture is shrunk to
+ * 54×96, the colour of the border is taken as the background, and the pixels that differ most from it give the
+ * product's centre and size. Returns null when the guess is weak (busy or flat pictures), so the old aim is used.
+ */
+export function findFocus(framed: CanvasImageSource): MotionFocus | null {
+  try {
+    const W = 54
+    const H = 96
+    const canvas = document.createElement("canvas")
+    canvas.width = W
+    canvas.height = H
+    const c = canvas.getContext("2d", { willReadFrequently: true })
+    if (!c) return null
+    c.drawImage(framed, 0, 0, W, H)
+    const data = c.getImageData(0, 0, W, H).data
+    let br = 0, bg = 0, bb = 0, bn = 0
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      if (x > 2 && x < W - 3 && y > 2 && y < H - 3) continue
+      const i = (y * W + x) * 4
+      br += data[i]; bg += data[i + 1]; bb += data[i + 2]; bn++
+    }
+    br /= bn; bg /= bn; bb /= bn
+    const weights = new Float32Array(W * H)
+    let max = 0
+    for (let p = 0; p < W * H; p++) {
+      const i = p * 4
+      const d = Math.hypot(data[i] - br, data[i + 1] - bg, data[i + 2] - bb)
+      weights[p] = d
+      if (d > max) max = d
+    }
+    if (max < 40) return null
+    const cut = max * 0.45
+    let sx = 0, sy = 0, sw = 0, count = 0
+    const xs: number[] = []
+    const ys: number[] = []
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      const w = weights[y * W + x]
+      if (w < cut) continue
+      sx += x * w; sy += y * w; sw += w; count++
+      xs.push(x); ys.push(y)
+    }
+    const share = count / (W * H)
+    // Almost nothing stands out, or almost everything does: no clear product.
+    if (share < 0.03 || share > 0.7) return null
+    xs.sort((a, b) => a - b)
+    ys.sort((a, b) => a - b)
+    const span = (list: number[], n: number) => (list[Math.floor(list.length * 0.9)] - list[Math.floor(list.length * 0.1)] + 1) / n
+    return { x: sx / sw / (W - 1), y: sy / sw / (H - 1), size: Math.max(span(xs, W), span(ys, H) * 1.2) }
+  } catch {
+    return null
+  }
 }
 
 /**
@@ -169,14 +227,23 @@ const progress = (seconds: number, from: number, length: number) => clamp((secon
  * motion blur for ~0.6 s. No extra pictures and no cost.
  */
 const WHIP = 0.32
-function camera(seconds: number) {
+function camera(seconds: number, focus?: MotionFocus | null) {
   if (seconds < SCENE_2) {
     const t = easeInOut(progress(seconds, 0, SCENE_2))
     return { zoom: 1 + 0.1 * t, x: 0, y: 0 }
   }
   const t = easeInOut(progress(seconds, SCENE_2, END_CARD - SCENE_2))
-  // The product sits a little below the middle of the framed photo (src/videoFrame.ts, api/_lib/background.js).
-  return { zoom: 1.55 + 0.07 * t, x: 0.05 - 0.1 * t, y: 0.06 }
+  if (!focus) {
+    // No guess: the product usually sits a little below the middle (src/videoFrame.ts, api/_lib/background.js).
+    return { zoom: 1.55 + 0.07 * t, x: 0.05 - 0.1 * t, y: 0.06 }
+  }
+  // Aim at the product (QA 2026-10-22): the product fills about 60% of the width (or half the height; size counts
+  // height ×1.2), zoom 1.35–1.8, and the
+  // picture never slides far enough to show its edge.
+  const zoom = Math.min(1.8, Math.max(1.35, 0.6 / Math.max(0.1, focus.size))) + 0.07 * t
+  const room = (zoom - 1) / 2
+  const fit = (value: number) => Math.min(room, Math.max(-room, value))
+  return { zoom, x: fit(-zoom * (focus.x - 0.5) + 0.05 - 0.1 * t), y: fit(zoom * (focus.y - 0.5)) }
 }
 
 function drawView(ctx: CanvasRenderingContext2D, scene: MotionScene, view: { zoom: number; x: number; y: number }, shift = 0) {
@@ -193,14 +260,14 @@ function drawPhoto(ctx: CanvasRenderingContext2D, scene: MotionScene, seconds: n
   const time = Math.min(seconds, END_CARD)
   const whip = 1 - Math.min(1, Math.abs(time - SCENE_2) / WHIP)
   if (whip <= 0) {
-    drawView(ctx, scene, camera(time))
+    drawView(ctx, scene, camera(time, scene.focus))
     return
   }
   // The whip: the frame slides fast to the left and is smeared sideways, strongest at the cut.
   const side = time < SCENE_2 ? -1 : 1
   ctx.save()
   ctx.filter = `blur(${Math.round(2 + 16 * whip)}px)`
-  drawView(ctx, scene, camera(time), side * 0.12 * whip * whip)
+  drawView(ctx, scene, camera(time, scene.focus), side * 0.12 * whip * whip)
   ctx.restore()
 }
 

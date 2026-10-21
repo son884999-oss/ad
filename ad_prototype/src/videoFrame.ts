@@ -45,7 +45,19 @@ export function storyFrame(width: number, height: number, box?: Box | null): Sto
   return { mode: "crop", sx: 0, sy, sw: width, sh }
 }
 
-const loadImage = (src: string) =>
+/** The analysis box as the product's centre and size inside the 9:16 frame (0–1), or null when the frame is "fill". */
+export function boxFocus(width: number, height: number, box: Box): { x: number; y: number; size: number } | null {
+  const frame = storyFrame(width, height, box)
+  if (frame.mode !== "crop") return null
+  const [ymin, xmin, ymax, xmax] = box
+  const left = ((xmin / 1000) * width - frame.sx) / frame.sw
+  const right = ((xmax / 1000) * width - frame.sx) / frame.sw
+  const top = ((ymin / 1000) * height - frame.sy) / frame.sh
+  const bottom = ((ymax / 1000) * height - frame.sy) / frame.sh
+  return { x: (left + right) / 2, y: (top + bottom) / 2, size: Math.max(right - left, (bottom - top) * 1.2) }
+}
+
+const loadImage =(src: string) =>
   new Promise<HTMLImageElement>((resolve, reject) => {
     const image = new Image()
     image.onload = () => resolve(image)

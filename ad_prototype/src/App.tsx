@@ -28,10 +28,10 @@ import { buildPosterContent, loadPosterFonts, posterThemeFor, renderPosterToCanv
 import { FALLBACK_PALETTE, photoPalette } from "./poster/photoColor"
 import { localBody, localCopy } from "./localCopy"
 import { type VideoCaption } from "./videoCaption"
-import { drawStoryFrame } from "./videoFrame"
+import { boxFocus, drawStoryFrame } from "./videoFrame"
 import { makeScene } from "./scene"
 import { outputFolder, saveToComputer } from "./localSave"
-import { drawMotionFrame, MOTION_CUES, MOTION_SECONDS, motionEffectFor, motionToneFor, type MotionScene } from "./motionVideo"
+import { drawMotionFrame, findFocus, MOTION_CUES, MOTION_SECONDS, motionEffectFor, motionToneFor, type MotionScene } from "./motionVideo"
 import { encodeFastVideo, fastVideoPlan } from "./fastVideo"
 import { plainMp4File } from "./mp4Flatten"
 import { musicFor, prepareVideoSound } from "./videoSound"
@@ -2219,7 +2219,10 @@ function CreateFlow({
       framed.width = canvas.width
       framed.height = canvas.height
       const framedContext = framed.getContext("2d")
-      if (!framedContext || !drawStoryFrame(framedContext, image, !sceneUrl && photoBox?.image === imageUrl ? photoBox.box : null)) framedContext?.drawImage(image, 0, 0, framed.width, framed.height)
+      const analysisBox = !sceneUrl && photoBox?.image === imageUrl ? photoBox.box : null
+      if (!framedContext || !drawStoryFrame(framedContext, image, analysisBox)) framedContext?.drawImage(image, 0, 0, framed.width, framed.height)
+      // Close-up aim: the photo analysis box when there is one, otherwise a colour guess from the picture itself.
+      const focus = (analysisBox ? boxFocus(image.naturalWidth || image.width, image.naturalHeight || image.height, analysisBox) : null) ?? findFocus(framed)
 
       // 10-second motion graphic (src/motionVideo.ts): push-in, close-up with a light sweep and the key points,
       // end card with the price and the call to action.
@@ -2237,6 +2240,7 @@ function CreateFlow({
         tone: motionToneFor([details.name, details.description, details.features, details.keywords].filter(Boolean).join(" ")),
         // One "AI 활용" mark when an AI wrote the copy or drew the background, as on the poster.
         aiMark: Boolean(activePromo) || Boolean(sceneUrl),
+        focus,
       }
 
       const musicUrl = musicFor([details.name, details.description, details.features, details.keywords].filter(Boolean).join(" "), tones)
