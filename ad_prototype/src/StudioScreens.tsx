@@ -56,7 +56,7 @@ export function StudioHome({onChooseCreation,easyMode}: {navigate:Navigation;eas
   if(!box)return
   const half=()=>box.scrollWidth/2
   box.scrollLeft=half()
-  const loop=()=>{const h=half();if(h<=box.clientWidth)return;if(box.scrollLeft>=h*1.5)box.scrollLeft-=h;else if(box.scrollLeft<=h*0.5)box.scrollLeft+=h}
+  const loop=()=>{const h=half(),end=box.scrollWidth-box.clientWidth;if(end-h<=8)return;if(box.scrollLeft>=end-2)box.scrollLeft-=h;else if(box.scrollLeft<=2)box.scrollLeft+=h}
   box.addEventListener('scroll',loop,{passive:true})
   return()=>box.removeEventListener('scroll',loop)
  },[easyMode])

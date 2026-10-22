@@ -54,13 +54,21 @@ html[data-layout=mobile] .results-step .result-card > .result-preview.result-pre
   color: var(--color-muted, #6b5d55);
 }
 
+/* On a tablet or PC the app sits in a phone frame shorter than the window, so the cap follows the frame (QA 2026-10-22). */
+@media (min-width:768px) { html[data-layout=mobile] .reference-app { --app-h: min(768px, calc(100dvh - 48px)); } }
+/* 쉬운 화면 in the frame: bigger tabs and buttons, so the poster gives up a little more (1366×768 laptop). */
+@media (min-width:768px) {
+  html[data-layout=mobile] .reference-app.easy-mode #result-poster .result-preview,
+  html[data-layout=mobile] .reference-app.easy-mode #result-poster .result-preview img { max-height: max(260px, calc(var(--app-h) - 410px)); }
+}
+
 /* Short phones (QA 2026-10-22): the 4:5 poster preview shrinks so the style choice and 저장 / 보내기 stay above the
    bottom tab bar without scrolling. Tall phones keep the full-width poster. */
 .reference-app #result-poster .result-preview {
-  max-height: max(300px, calc(100dvh - 370px));
+  max-height: max(300px, calc(var(--app-h, 100dvh) - 370px));
 }
 .reference-app #result-poster .result-preview img {
-  max-height: max(300px, calc(100dvh - 370px));
+  max-height: max(300px, calc(var(--app-h, 100dvh) - 370px));
   width: auto;
   max-width: 100%;
   margin-inline: auto;
@@ -71,10 +79,10 @@ html[data-layout=mobile] .results-step .result-card > .result-preview.result-pre
    are not half under the bottom tab bar. */
 .reference-app #result-video .result-preview,
 .reference-app #result-video .result-motion-preview {
-  max-height: max(300px, calc(100dvh - 370px));
+  max-height: max(300px, calc(var(--app-h, 100dvh) - 370px));
 }
 .reference-app #result-video .motion-preview-video {
-  max-height: max(300px, calc(100dvh - 370px));
+  max-height: max(300px, calc(var(--app-h, 100dvh) - 370px));
   object-fit: contain;
 }
 
