@@ -2574,8 +2574,6 @@ function CreateFlow({
           {sceneNotice && <p className={`ai-notice scene-notice${sceneState?.status === "ready" ? " is-ai" : ""}`} role="status">{t(sceneNotice)}</p>}
           {/* The 사진 tab says which photo is used; only a failed 배경 바꾸기 is said here. */}
           {bgNotice && ownBg !== "ready" && <p className="ai-notice scene-notice" role="status">{t(bgNotice)}</p>}
-          {/* Owner, 2026-10-21: the results already carry the AI mark, so only the no-AI fallback is said here. */}
-          {showCopy && !activePromo && <p className="ai-notice">{t("AI 없이 기본 문구로 만들었어요.")}</p>}
         </div>
       ) : (
         <StepHeader step={step} onBack={setStep} easyMode={easyMode} />
@@ -3435,6 +3433,8 @@ function CreateFlow({
                   message={aiNote(t(copyMessage && !copyMessage.includes("못했어요") ? "문구를 복사했어요." : copyMessage))}
                   error={copyMessage.includes("못했어요")}
                 />
+                {/* The no-AI fallback, said once under the text instead of a band above the tabs (QA 2026-10-22). */}
+                {!activePromo && <p className="copy-fallback-note">{t("AI 없이 기본 문구로 만들었어요.")}</p>}
               </article>
             )}
           </div>
