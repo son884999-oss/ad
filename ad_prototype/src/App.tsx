@@ -1833,6 +1833,27 @@ function CreateFlow({
   const ownBg = bgState?.forImage === imageUrl ? bgState.status : undefined
   // 사진 고르기 popup: opened by 바꾸기 (never on its own while the owner types); "사진 다시 고르기" reopens it.
   const changedUrl = ownBg === "ready" && sceneImage?.forImage === imageUrl ? sceneImage.url : ""
+  // The 사진 tab: the corrected picture whenever it exists, also after 로그인 / 내 홍보물 (no background job then).
+  // A blob URL instead of the multi-MB data URL, so showing the tab again does not parse the base64 each time.
+  const sceneDataUrl = sceneImage?.forImage === imageUrl ? sceneImage.url : ""
+  const [photoTabUrl, setPhotoTabUrl] = useState("")
+  useEffect(() => {
+    if (!sceneDataUrl.startsWith("data:")) {
+      setPhotoTabUrl(sceneDataUrl)
+      return
+    }
+    let objectUrl = ""
+    let live = true
+    fetch(sceneDataUrl).then((response) => response.blob()).then((blob) => {
+      if (!live) return
+      objectUrl = URL.createObjectURL(blob)
+      setPhotoTabUrl(objectUrl)
+    }).catch(() => live && setPhotoTabUrl(sceneDataUrl))
+    return () => {
+      live = false
+      if (objectUrl) URL.revokeObjectURL(objectUrl)
+    }
+  }, [sceneDataUrl])
   const [picking, setPicking] = useState(false)
   useEffect(() => setPicking(false), [imageUrl])
   const pickStatus: "making" | "ready" | "failed" = changedUrl ? "ready" : ownBg === "making" ? "making" : "failed"
@@ -2463,7 +2484,7 @@ function CreateFlow({
   // 사진 tab: the photo in use as a file, saved to the gallery or handed to the share sheet (the owner posts it).
   const savePhoto = async (share: boolean) => {
     const update = (message: string) => setShareMessages((current) => ({ ...current, photo: message }))
-    const url = changedUrl
+    const url = photoTabUrl
     if (!url) return
     try {
       const blob = await (await fetch(url)).blob()
@@ -3121,7 +3142,7 @@ function CreateFlow({
             className="result-grid result-tab-panels"
             data-result-count={resultTabs.length}
           >
-            {showPhoto && changedUrl && (
+            {showPhoto && photoTabUrl && (
               <article
                 id="result-photo"
                 role="tabpanel"
@@ -3133,7 +3154,7 @@ function CreateFlow({
                 <ResultCardHeading easyMode={easyMode} icon="camera" title="보정 사진" />
                 <ResultPreview>
                   <div className="result-main-preview result-photo-preview">
-                    <img src={changedUrl} alt={t("AI로 배경을 바꾼 제품 사진")} />
+                    <img src={photoTabUrl} alt={t("AI로 배경을 바꾼 제품 사진")} decoding="async" />
                     {/* AI 표시 (인공지능기본법 제31조): the corrected photo says it was made with AI. */}
                     <span className="ai-badge">{t("AI 보정 사진")}</span>
                   </div>
