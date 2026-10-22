@@ -770,8 +770,26 @@ const isTouchPhone = () => isMobileDevice() && window.matchMedia?.("(pointer: co
  * and the share sheet looked like 공유하기 (QA 2026-10-22). If sharing fails, it downloads.
  */
 const isIPhone = () => /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)
+function showSaveHint(text: string) {
+  document.querySelector(".save-hint-toast")?.remove()
+  const toast = document.createElement("div")
+  toast.className = "save-hint-toast"
+  toast.setAttribute("role", "status")
+  toast.textContent = text
+  Object.assign(toast.style, {
+    position: "fixed", left: "50%", top: "calc(12px + env(safe-area-inset-top, 0px))", transform: "translateX(-50%)",
+    zIndex: "9999", background: "rgba(36,28,22,.92)", color: "#fff", padding: "12px 18px", borderRadius: "14px",
+    font: "600 16px/1.4 Pretendard, sans-serif", maxWidth: "calc(100vw - 32px)", textAlign: "center",
+  })
+  document.body.appendChild(toast)
+  window.setTimeout(() => toast.remove(), 6000)
+}
+
 function triggerFileDownload(file: File) {
   if (isTouchPhone() && isIPhone() && navigator.canShare?.({ files: [file] })) {
+    // The iPhone share sheet has no "저장" heading: say which row saves to Photos (QA 2026-10-22). At the top, so
+    // the sheet rising from the bottom does not cover it.
+    showSaveHint(file.type.startsWith("video/") ? "'동영상 저장'을 누르면 사진 앱에 들어가요" : "'이미지 저장'을 누르면 사진 앱에 들어가요")
     navigator.share({ files: [file] }).catch((error: unknown) => {
       if ((error as { name?: string })?.name !== "AbortError") downloadFile(file)
     })
