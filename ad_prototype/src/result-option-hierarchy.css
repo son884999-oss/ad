@@ -53,3 +53,16 @@ html[data-layout=mobile] .results-step .result-card > .result-preview.result-pre
   font-size: 14px;
   color: var(--color-muted, #6b5d55);
 }
+
+/* Short phones (QA 2026-10-22): the 4:5 poster preview shrinks so the style choice and 저장 / 보내기 stay above the
+   bottom tab bar without scrolling. Tall phones keep the full-width poster. */
+.reference-app #result-poster .result-preview {
+  max-height: max(300px, calc(100dvh - 370px));
+}
+.reference-app #result-poster .result-preview img {
+  max-height: max(300px, calc(100dvh - 370px));
+  width: auto;
+  max-width: 100%;
+  margin-inline: auto;
+  object-fit: contain;
+}
