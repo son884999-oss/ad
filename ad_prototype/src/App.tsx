@@ -1460,8 +1460,7 @@ function CreateFlow({
     type,
 
     outputFormat,
-
-    channel,
+    // Not the 홍보 글 channel: picking another channel while the video is being made used to stop it (QA 2026-10-22).
 
     imageUrl,
 
@@ -2234,12 +2233,12 @@ function CreateFlow({
         // colour (navy for 파일만 저장) clashed with warm food photos.
         accent: (() => {
           const ink = photoPalette(image)?.ink
-          return ink ? [1, 3, 5].map((i) => parseInt(ink.slice(i, i + 2), 16)).join(", ") : channelTheme.rgb
+          return ink ? [1, 3, 5].map((i) => parseInt(ink.slice(i, i + 2), 16)).join(", ") : "61, 29, 12" // FALLBACK_PALETTE ink (app orange family)
         })(),
         effect: motionEffectFor([details.name, details.description, details.features, details.keywords].filter(Boolean).join(" ")),
         tone: motionToneFor([details.name, details.description, details.features, details.keywords].filter(Boolean).join(" ")),
         // One "AI 활용" mark when an AI wrote the copy or drew the background, as on the poster.
-        aiMark: Boolean(activePromo) || Boolean(sceneUrl),
+        aiMark: Boolean(aiPromo) || Boolean(sceneUrl),
         focus,
       }
 
