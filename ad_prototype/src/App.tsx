@@ -29,6 +29,7 @@ import { FALLBACK_PALETTE, photoPalette } from "./poster/photoColor"
 import { localBody, localCopy } from "./localCopy"
 import { type VideoCaption } from "./videoCaption"
 import { boxFocus, drawStoryFrame } from "./videoFrame"
+import { loadCachedVideo, saveCachedVideo, videoKey } from "./videoCache"
 import { makeScene } from "./scene"
 import { outputFolder, saveToComputer } from "./localSave"
 import { drawMotionFrame, findFocus, MOTION_CUES, MOTION_SECONDS, motionEffectFor, motionToneFor, type MotionScene } from "./motionVideo"
@@ -2195,8 +2196,13 @@ function CreateFlow({
 
     videoCancelledRef.current = false
 
+    // Kept on this phone (src/videoCache.ts): the same inputs reopened from 내 홍보물 play at once (QA 2026-10-22).
+    const cacheKey = videoKey([sceneUrl || imageUrl, !sceneUrl && photoBox?.image === imageUrl ? photoBox.box : null, sampleCaption, details, Boolean(aiPromo) || Boolean(sceneUrl)])
+    let fromCache = false
+
     // Shared by the fast (WebCodecs) and the MediaRecorder path.
     const finishVideo = (result: File, saveNow: boolean) => {
+      if (!fromCache) void saveCachedVideo(cacheKey, result)
       setVideoStatus("ready")
       videoShareFileRef.current = result
       setSampleVideoFile(result)
@@ -2213,6 +2219,12 @@ function CreateFlow({
     }
 
     try {
+      const cached = await loadCachedVideo(cacheKey)
+      if (cached && !videoCancelledRef.current) {
+        fromCache = true
+        return finishVideo(cached, download)
+      }
+
       // The advertising background when there is one (배경 바꾸기), else the photo.
       const image = await loadCanvasImage(sceneUrl || imageUrl)
 
