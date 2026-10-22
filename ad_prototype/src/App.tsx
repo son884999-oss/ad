@@ -3163,9 +3163,10 @@ function CreateFlow({
                 </ResultPreview>
                 {/* Owner, QA 2026-10-20: only the corrected photo and 저장하기 / 공유하기 here. */}
                 <ResultActionBar
-                  label="저장하기"
-                  accessibleLabel="보정 사진 저장하기"
-                  shareLabel="공유하기"
+                  // Same words as the poster and video tabs (QA 2026-10-22): 다운로드 / 폰에 저장, 공유하기 / 보내기.
+                  label={easyMode ? saveLabel : "다운로드"}
+                  accessibleLabel={easyMode ? `보정 사진 ${saveLabel}` : "보정 사진 다운로드"}
+                  shareLabel={t("공유하기")}
                   icon="download"
                   onClick={() => savePhoto(false)}
                   onShare={() => savePhoto(true)}
@@ -3297,8 +3298,9 @@ function CreateFlow({
                           loop
                           playsInline
                           preload="auto"
-                          // Paused, it shows the moment the headline is up (0 s is the bare photo).
-                          onLoadedData={(event) => { if (!playing) event.currentTarget.currentTime = 1.6 }}
+                          // Paused, it shows the first scene with every word of the title up (QA 2026-10-22: at 1.6 s
+                          // of the 10 s video the title was still coming in, "수제 초코…"). 3.0 s is before the cut at 3.5 s.
+                          onLoadedData={(event) => { if (!playing) event.currentTarget.currentTime = 3.0 }}
                           aria-label={t("저장될 영상 미리보기")}
                         />
                         {showsRealVideo(aiVideo.state) && <span className="ai-badge">{t("AI 생성 영상")}</span>}

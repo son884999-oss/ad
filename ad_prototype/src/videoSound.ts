@@ -1,7 +1,7 @@
 // Sound for the recorded videos (plan C, 2026-10-19): a short classical bed chosen by the kind of product, and one
 // soft transition effect on each scene change, mixed through a limiter so nothing clips. Replaces the synthetic
 // noise "whoosh" and fast chimes the owner heard as breaking. Files: public/assets/audio/ (licences:
-// docs/라이선스/음원.md — Musopen public-domain / CC0 recordings; the transition effect is our own synthesis).
+// docs/비용_품질_출처.md 4-1 — Musopen public-domain / CC0 recordings; the transition effect is our own synthesis).
 
 const AUDIO = "/assets/audio/"
 const TRACKS = {

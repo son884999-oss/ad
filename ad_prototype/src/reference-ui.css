@@ -813,7 +813,7 @@ html[data-view=mobile] .easy-offer { top:calc(64px * var(--s) + 34px); }
 .records-filters button[aria-pressed=true] { border-color:#b44d1d;background:#fdf0e6;color:#93390f;box-shadow:inset 0 0 0 1px #b44d1d; }
 .records-filters button[aria-pressed=true] svg { color:#b44d1d; }
 /* Login is not ready yet, so the way that works (바로 시작하기) is the main button and 로그인 is secondary.
-   When real login arrives, swap these back (see 품질개선_로드맵.md). */
+   When real login arrives, swap these back (see docs/archive/옛문서_1022/품질개선_로드맵.md). */
 /* Home: room to breathe between the button, the sample cards and the 세 단계 guide (tall screens only;
    short screens keep the tight layout above so everything still fits) */
 @container studio-main (min-height:640px) {

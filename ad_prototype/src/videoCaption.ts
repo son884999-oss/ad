@@ -99,7 +99,8 @@ export function drawWords(ctx: CanvasRenderingContext2D, line: string, x: number
  * Draws the caption for the frame at `seconds` on a 1080 × 1920 canvas (call after drawing the picture).
  * `accent` is the shop's colour for the call-to-action text, as "r, g, b".
  */
-export function drawVideoCaption(ctx: CanvasRenderingContext2D, seconds: number, caption: VideoCaption, accent = "150, 55, 16", options: { words?: boolean } = {}) {
+/** Returns the top of the headline block, so the motion video can place its tags just above it. */
+export function drawVideoCaption(ctx: CanvasRenderingContext2D, seconds: number, caption: VideoCaption, accent = "150, 55, 16", options: { words?: boolean } = {}): number {
   const { width, height } = ctx.canvas
   const textWidth = width - SIDE * 2
 
@@ -203,6 +204,7 @@ export function drawVideoCaption(ctx: CanvasRenderingContext2D, seconds: number,
       ctx.fillText(line, SIDE + 44, ctaY + 62)
     })
   }
+  return headlineTop
 }
 
 /** The 고급형 serif (index.html loads it from Google Fonts); Pretendard stays for the information lines. */
