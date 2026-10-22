@@ -7,7 +7,7 @@
 |---|---|
 | **이 문서** | 지금 상태, 규칙, 설치, 점검 명령, 배포·회원가입 설정 |
 | [결정과_이력.md](결정과_이력.md) | 10-13~10-22에 무엇을 왜 정했고 무엇을 시도했다 버렸는지 |
-| [나중에_할일.md](나중에_할일.md) | 아직 안 한 일, 보류 이름표([특급] [결제] 등), 발표 뒤 할 일 |
+| [나중에_할일.md](나중에_할일.md) | 아직 안 한 일, 보류 이름표([결제] [제품합성] 등), 폐기한 기능, 발표 뒤 할 일 |
 | [비용_품질_출처.md](비용_품질_출처.md) | **유료 호출 장부**(쓰기 전에 먼저 적는 곳), 단가, 품질 기준, 음원 출처 |
 | [발표준비/홍보잇다_PC이어가기_1022.md](발표준비/홍보잇다_PC이어가기_1022.md) | 발표 준비 상황과 발표 자료 제작 지시서, 통계 출처 |
 
@@ -72,7 +72,7 @@ npm run dev:mock                # http://127.0.0.1:5174 (가짜 AI 답, 키·비
 | `GEMINI_API_KEY_2`, `GEMINI_MODEL_2` | Gemini 유료(글 마지막 대체 + 배경). 모델 `gemini-3.5-flash-lite` | 배경 바꾸기 꺼짐 |
 | `GEMINI_IMAGE_MODEL` | 비우면 `gemini-3.1-flash-lite-image` | 기본값 |
 | `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` | 회원가입·서버 저장(관리자 키에는 `VITE_` 금지) | 로그인 "준비 중" |
-| `HF_CREDENTIALS`, `VIDEO_ENABLED`, `PREMIUM_ACCESS_CODE`, `DAILY_PAID_LIMIT` | 특급 영상(보류) — **비워 둔다** | — |
+| `HF_CREDENTIALS`, `VIDEO_ENABLED`, `PREMIUM_ACCESS_CODE`, `DAILY_PAID_LIMIT` | 폐기한 특급 영상용 — **비워 둔다** | — |
 | `ALLOWED_ORIGINS` | 직접 연결한 도메인이 있을 때만 | — |
 
 - 유료 키는 첫 Gemini 키가 **실패할 때만** 쓰인다. 첫 키를 비우면 유료 키도 안 쓴다.
