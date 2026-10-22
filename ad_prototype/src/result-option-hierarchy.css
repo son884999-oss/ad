@@ -6,6 +6,7 @@
 :root .studio-shell.studio-shell.studio-shell.easy-mode .result-tabs button { min-height:60px; }
 :root .studio-shell.studio-shell.studio-shell .result-tabs button[aria-selected=true] { background:transparent; color:var(--color-brand-hover); font-weight:800; box-shadow:none; }
 :root .studio-shell.studio-shell.studio-shell .result-tabs button[aria-selected=true]::after { content:""; position:absolute; left:8%; right:8%; bottom:-1px; height:4px; border-radius:2px 2px 0 0; background:var(--color-brand); }
+:root .studio-shell.studio-shell.studio-shell .result-tabs button[aria-selected=true] svg { color:currentColor; }
 :root .studio-shell.studio-shell.studio-shell .result-tabs button:not([aria-selected=true]):hover { background:#faf6f2; color:var(--color-ink); }
 /* Options (poster size, channel): grey track; the chosen one is filled navy (QA 2026-10-22, 3번) so it reads as a
    choice, not as one of the orange save / share buttons. A small ✓ in its top-left corner, the same on both. */
