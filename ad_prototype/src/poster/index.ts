@@ -57,7 +57,8 @@ export function buildPosterContent(details: Details, headline = "", headlineFirs
         ? features
         : line && body !== line && !same(line, title) ? line : ""
   return {
-    eyebrow: [shopName && !same(shopName, title) ? shopName : "", details.location?.trim() ?? ""].filter(Boolean).join("  ·  "),
+    // Shop name only (QA 2026-10-22): no location on the poster, and nothing when there is no shop name.
+    eyebrow: shopName && !same(shopName, title) ? shopName : "",
     productName: title,
     productDescription: body,
     keySellingPoint: point,

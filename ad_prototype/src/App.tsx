@@ -765,11 +765,13 @@ async function withPngText(blob: Blob, keyword: string, text: string) {
 const isTouchPhone = () => isMobileDevice() && window.matchMedia?.("(pointer: coarse)").matches === true
 
 /**
- * Saves a result. On a phone the share sheet opens so "이미지 저장 / 동영상 저장" puts it in the photo
- * gallery (a plain download lands in the Files app on iPhone). Elsewhere, or if sharing fails, it downloads.
+ * Saves a result. On iPhone the share sheet opens so "이미지 저장 / 동영상 저장" puts it in Photos (a plain download
+ * lands in the Files app there). Android and computers download straight away: the download shows in the gallery,
+ * and the share sheet looked like 공유하기 (QA 2026-10-22). If sharing fails, it downloads.
  */
+const isIPhone = () => /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)
 function triggerFileDownload(file: File) {
-  if (isTouchPhone() && navigator.canShare?.({ files: [file] })) {
+  if (isTouchPhone() && isIPhone() && navigator.canShare?.({ files: [file] })) {
     navigator.share({ files: [file] }).catch((error: unknown) => {
       if ((error as { name?: string })?.name !== "AbortError") downloadFile(file)
     })
@@ -1460,8 +1462,7 @@ function CreateFlow({
     type,
 
     outputFormat,
-
-    channel,
+    // Not the 홍보 글 channel: picking another channel while the video is being made used to stop it (QA 2026-10-22).
 
     imageUrl,
 
@@ -1606,7 +1607,8 @@ function CreateFlow({
 
   // 사진 tab (QA 2026-10-20): the corrected photo itself, to save or share without poster text (배달앱 메뉴,
   // 플레이스 대표 사진). Only when the owner picked the corrected photo; with four tabs the labels get shorter.
-  const showPhoto = photoPick === "changed" && bgState?.forImage === imageUrl && bgState.status === "ready" && sceneImage?.forImage === imageUrl && (showPoster || showVideo)
+  // No bgState check: a record reopened from 내 홍보물 has the picture but no background job (QA 2026-10-22).
+  const showPhoto = photoPick === "changed" && sceneImage?.forImage === imageUrl && (showPoster || showVideo)
   const resultTabs = ([
     { id: "photo", label: "사진", available: showPhoto },
     { id: "poster", label: showPhoto || easyMode ? "포스터" : "이미지", available: showPoster },
@@ -2234,12 +2236,12 @@ function CreateFlow({
         // colour (navy for 파일만 저장) clashed with warm food photos.
         accent: (() => {
           const ink = photoPalette(image)?.ink
-          return ink ? [1, 3, 5].map((i) => parseInt(ink.slice(i, i + 2), 16)).join(", ") : channelTheme.rgb
+          return ink ? [1, 3, 5].map((i) => parseInt(ink.slice(i, i + 2), 16)).join(", ") : "61, 29, 12" // FALLBACK_PALETTE ink (app orange family)
         })(),
         effect: motionEffectFor([details.name, details.description, details.features, details.keywords].filter(Boolean).join(" ")),
         tone: motionToneFor([details.name, details.description, details.features, details.keywords].filter(Boolean).join(" ")),
         // One "AI 활용" mark when an AI wrote the copy or drew the background, as on the poster.
-        aiMark: Boolean(activePromo) || Boolean(sceneUrl),
+        aiMark: Boolean(aiPromo) || Boolean(sceneUrl),
         focus,
       }
 
