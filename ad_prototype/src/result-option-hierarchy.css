@@ -23,3 +23,33 @@
 :root .studio-shell.easy-mode .reference-header .reference-header-actions .reference-read.is-icon.is-active { background:var(--color-brand); color:#fff; }
 /* [듣기] and 기본/쉬운 are different things: 12 px apart so one is not tapped for the other (QA 2026-10-22). */
 :root .studio-shell.easy-mode .reference-header .reference-header-actions { gap:12px; }
+
+/* --- Result screen scrolling (QA 2026-10-22: "상단바와 스크롤이 불편") ---
+   1. One scroll only: the 홍보 글 box grows with its text instead of scrolling inside the page.
+   2. The tab row stays under the header while the page scrolls.
+   3. On 홍보 글 (long text) the copy / share row stays just above the bottom tab bar. The poster, video and photo
+      tabs keep it in the flow: there it would cover the style choices. */
+.reference-app .result-card .result-preview.result-preview--copy,
+html[data-layout=mobile] .results-step .result-card > .result-preview.result-preview--copy {
+  max-height: none !important;
+  overflow: visible !important;
+}
+.reference-app .results-step .result-tabs-bar {
+  position: sticky;
+  top: 0;
+  z-index: 6;
+  background: #fff;
+}
+.reference-app .results-step #result-copy.result-card > .result-card-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  background: #fff;
+  box-shadow: 0 -10px 12px -10px #5a2a1233;
+}
+.reference-app .copy-fallback-note {
+  margin: 4px 0 0;
+  padding: 0 4px;
+  font-size: 14px;
+  color: var(--color-muted, #6b5d55);
+}
