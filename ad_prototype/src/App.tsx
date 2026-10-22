@@ -1147,6 +1147,8 @@ function CreateFlow({
   aiVideo,
   sceneImage,
   setSceneImage,
+  photoPick,
+  setPhotoPick,
   onStopSpeech,
 }: {
   onStopSpeech?: () => void
@@ -1200,6 +1202,9 @@ function CreateFlow({
   /** 고급형 scene picture for the photo it was made from (kept in App so 내 홍보물 can save and reopen it). */
   sceneImage: { forImage: string; url: string } | null
   setSceneImage: (scene: { forImage: string; url: string } | null) => void
+  /** 원본 / 보정 사진 the owner picked (kept in App so a record made with the original is saved without the scene). */
+  photoPick: "changed" | "original"
+  setPhotoPick: (pick: "changed" | "original") => void
 }) {
   const { notify } = useFeedback()
   const t = (text: string) => uiText(text, easyMode)
@@ -1441,7 +1446,6 @@ function CreateFlow({
   // with the record). The poster and the 기본형 video use it as soon as it arrives.
   const [bgChoice, setBgChoice] = useState<{ forImage: string; change: boolean } | null>(null)
   const [bgState, setBgState] = useState<{ forImage: string; status: "making" | "ready" | "failed" | "limit" | "off" } | null>(null)
-  const [photoPick, setPhotoPick] = useState<"changed" | "original">("changed")
   const bgControllerRef = useRef<AbortController | null>(null)
   const sceneUrl = photoPick === "changed" && sceneImage?.forImage === imageUrl ? sceneImage.url : ""
 
@@ -3669,6 +3673,7 @@ export default function App() {
 
   const [imageUrl, setImageUrl] = useState("")
   const [sceneImage, setSceneImage] = useState<{ forImage: string; url: string } | null>(null)
+  const [photoPick, setPhotoPick] = useState<"changed" | "original">("changed")
 
   const [mobileOpen, setMobileOpen] = useState(false)
   // A result opened from 내 홍보물 goes back to that list, not to the 정보 입력 step.
@@ -4242,8 +4247,13 @@ export default function App() {
   // The 고급형 scene arrives about a minute after the result was saved: put it into that record too.
   useEffect(() => {
     if (!sceneImage) return
+    // 원본 picked: the record keeps no corrected picture, so reopening it shows the original and three tabs.
+    if (photoPick === "original") {
+      setRecords((current) => current.map((record) => record.id === currentRecordId && record.sceneUrl ? (({ sceneUrl: _scene, ...rest }) => rest)(record) : record))
+      return
+    }
     setRecords((current) => current.map((record) => record.id === currentRecordId && record.imageUrl === sceneImage.forImage && record.sceneUrl !== sceneImage.url ? { ...record, sceneUrl: sceneImage.url } : record))
-  }, [sceneImage]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [sceneImage, photoPick]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Changes made on the result screen (poster shape, chosen first line) are saved into the record shown.
   // Not while 만드는 중: a new AI answer then belongs to the record about to be created, not the old one.
@@ -4360,7 +4370,8 @@ export default function App() {
 
       imageUrl,
 
-      ...(sceneImage?.forImage === imageUrl ? { sceneUrl: sceneImage.url } : {}),
+      // Only the corrected picture the owner chose: a record made with 원본 reopens with the original (QA 2026-10-22).
+      ...(photoPick === "changed" && sceneImage?.forImage === imageUrl ? { sceneUrl: sceneImage.url } : {}),
 
       details: { ...details, tones: normalizeTones(details) },
 
@@ -4391,6 +4402,7 @@ export default function App() {
 
     setImageUrl(record.imageUrl)
     setSceneImage(record.sceneUrl ? { forImage: record.imageUrl, url: record.sceneUrl } : null)
+    setPhotoPick(record.sceneUrl ? "changed" : "original")
 
     // Older records stored a single `tone`; normalizeTones() migrates it to `tones`.
     const { tone: _legacyTone, ...recordDetails } = record.details
@@ -4544,6 +4556,8 @@ export default function App() {
           aiVideo={aiVideo}
           sceneImage={sceneImage}
           setSceneImage={setSceneImage}
+          photoPick={photoPick}
+          setPhotoPick={setPhotoPick}
         />
       )}
       {page === "records" && (
