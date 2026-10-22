@@ -4,7 +4,7 @@
 //   free fallback, exactly as when paid generation is switched off (503 VIDEO_NOT_CONFIGURED).
 // - DAILY_PAID_LIMIT (default 5, owner's rule 2026-10-18): paid jobs of each kind per Korean day. 0 turns paid
 //   jobs off. The count lives in this function instance's memory, so it is a soft cap across instances: the
-//   prepaid Higgsfield credit stays the hard one (see docs/배포_체크리스트.md for a shared counter).
+//   prepaid Higgsfield credit stays the hard one (see docs/나중에_할일.md [장부서버] for a shared counter).
 import { timingSafeEqual } from "node:crypto"
 import { ApiError } from "./http.js"
 

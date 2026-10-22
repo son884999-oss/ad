@@ -1,6 +1,6 @@
 // Mobile web app only (decided 2026-10-17). Phones get the full-screen mobile layout; tablets and
 // computers show the same mobile app inside a phone frame. The developer viewport switcher and the
-// PC layout were removed (see docs/design/pc-redesign-plan.md).
+// PC layout were removed (see docs/나중에_할일.md [PC화면]).
 
 export type Layout = "mobile"
 
