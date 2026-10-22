@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>홍보잇다 서비스 흐름</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --color-paper:  #fdf3ea;
+      --color-ink:    #3d1d0c;
+      --color-muted:  #6b4a38;
+      --color-accent: #c4622d;
+      --color-link:   #24395c;
+      --font-sans: 'Pretendard', 'Noto Sans KR', 'Malgun Gothic', sans-serif;
+    }
+    body { font-family: var(--font-sans); background: var(--color-paper); color: var(--color-ink); padding: 2.5rem 2rem; }
+    .frame { max-width: 1300px; margin: 0 auto; }
+    .diagram-container { width: 100%; overflow-x: auto; }
+    .eyebrow { font-size: 0.85rem; font-weight: 500; color: var(--color-muted); margin-bottom: 0.4rem; }
+    h1 { font-size: 1.9rem; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 1.2rem; }
+    svg { width: 100%; min-width: 1300px; display: block; }
+    svg text { font-family: var(--font-sans); }
+    @media print { .diagram-container { overflow-x: visible; } svg { min-width: 0; } }
+  </style>
+</head>
+<body>
+  <div class="frame">
+    <p class="eyebrow">서비스 흐름 · 2026-10-22</p>
+    <h1>사진 한 장에서 포스터 · 영상 · 홍보 글까지</h1>
+
+    <div class="diagram-container">
+      <svg id="flow" viewBox="0 80 1300 500" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="flow-title flow-desc">
+        <title id="flow-title">홍보잇다 서비스 흐름</title>
+        <desc id="flow-desc">상품 사진을 넣고, 원하면 배경을 광고 사진처럼 바꿔 원본과 보정본 중 고른 뒤, 정보를 입력하면 포스터·영상·홍보 글이 한 번에 나온다.</desc>
+        <defs>
+          <marker id="flow-arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#6b4a38"/></marker>
+          <marker id="flow-arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#c4622d"/></marker>
+        </defs>
+        <rect x="0" y="80" width="1300" height="500" fill="#fdf3ea"/>
+
+        <!-- 화살표 먼저 -->
+        <g fill="none" stroke-width="1.5">
+          <line x1="180" y1="300" x2="226" y2="300" stroke="#6b4a38" marker-end="url(#flow-arrow)"/>
+          <!-- 바꾸기: 위로 -->
+          <path d="M290 240 V152 Q290 144 298 144 H396" stroke="#c4622d" marker-end="url(#flow-arrow-accent)"/>
+          <line x1="600" y1="144" x2="636" y2="144" stroke="#c4622d" marker-end="url(#flow-arrow-accent)"/>
+          <path d="M820 144 H852 Q860 144 860 152 V292" stroke="#6b4a38"/>
+          <!-- 그대로: 곧게 -->
+          <line x1="350" y1="300" x2="856" y2="300" stroke="#6b4a38"/>
+          <line x1="864" y1="300" x2="884" y2="300" stroke="#6b4a38" marker-end="url(#flow-arrow)"/>
+          <!-- 결과 세 갈래 -->
+          <path d="M1060 284 H1072 Q1080 284 1080 276 V180 Q1080 172 1088 172 H1096" stroke="#6b4a38" marker-end="url(#flow-arrow)"/>
+          <line x1="1060" y1="300" x2="1096" y2="300" stroke="#6b4a38" marker-end="url(#flow-arrow)"/>
+          <path d="M1060 316 H1072 Q1080 316 1080 324 V420 Q1080 428 1088 428 H1096" stroke="#6b4a38" marker-end="url(#flow-arrow)"/>
+        </g>
+
+        <!-- 화살표 글자 -->
+        <rect x="300" y="184" width="52" height="20" fill="#fdf3ea"/>
+        <text x="304" y="199" font-size="13" font-weight="600" fill="#c4622d">바꾸기</text>
+        <rect x="420" y="272" width="52" height="20" fill="#fdf3ea"/>
+        <text x="424" y="287" font-size="13" font-weight="600" fill="#6b4a38">그대로</text>
+
+        <!-- 시작: 사진 넣기 -->
+        <rect x="40" y="272" width="140" height="56" rx="28" fill="#fdf3ea" stroke="#3d1d0c" stroke-width="1.5"/>
+        <text x="110" y="297" font-size="16" font-weight="700" fill="#3d1d0c" text-anchor="middle">사진 넣기</text>
+        <text x="110" y="316" font-size="12" fill="#6b4a38" text-anchor="middle">상품 사진 1장</text>
+
+        <!-- 결정 -->
+        <polygon points="230,300 290,240 350,300 290,360" fill="#fdf3ea" stroke="#3d1d0c" stroke-width="1.5"/>
+        <text x="290" y="296" font-size="13" font-weight="700" fill="#3d1d0c" text-anchor="middle">배경을</text>
+        <text x="290" y="314" font-size="13" font-weight="700" fill="#3d1d0c" text-anchor="middle">바꿀까요?</text>
+
+        <!-- 배경 보정 (강조) -->
+        <rect x="400" y="112" width="200" height="64" rx="6" fill="#f8e3d4" stroke="#c4622d" stroke-width="1.5"/>
+        <text x="500" y="139" font-size="15" font-weight="700" fill="#3d1d0c" text-anchor="middle">AI가 광고 배경으로 보정</text>
+        <text x="500" y="160" font-size="12" fill="#6b4a38" text-anchor="middle">1장 약 50원 · 3~6초</text>
+
+        <!-- 원본/보정 고르기 -->
+        <rect x="640" y="112" width="180" height="64" rx="6" fill="#fdf3ea" stroke="#3d1d0c" stroke-width="1.5"/>
+        <text x="730" y="139" font-size="15" font-weight="700" fill="#3d1d0c" text-anchor="middle">원본 / 보정 고르기</text>
+        <text x="730" y="160" font-size="12" fill="#6b4a38" text-anchor="middle">사장님이 선택</text>
+
+        <!-- 합류점 -->
+        <circle cx="860" cy="300" r="4" fill="#3d1d0c"/>
+
+        <!-- 정보 입력 -->
+        <rect x="888" y="264" width="172" height="72" rx="6" fill="#fdf3ea" stroke="#24395c" stroke-width="1.5"/>
+        <text x="974" y="292" font-size="15" font-weight="700" fill="#3d1d0c" text-anchor="middle">정보 입력</text>
+        <text x="974" y="312" font-size="12" fill="#6b4a38" text-anchor="middle">[자동으로 채워 주기]</text>
+        <text x="974" y="327" font-size="12" fill="#6b4a38" text-anchor="middle">= AI가 사진 읽기</text>
+
+        <!-- 결과 -->
+        <rect x="1100" y="140" width="164" height="64" rx="6" fill="#fdf3ea" stroke="#3d1d0c" stroke-width="1.5"/>
+        <text x="1182" y="167" font-size="15" font-weight="700" fill="#3d1d0c" text-anchor="middle">포스터</text>
+        <text x="1182" y="188" font-size="12" fill="#6b4a38" text-anchor="middle">폰 안에서 · 0원</text>
+
+        <rect x="1100" y="268" width="164" height="64" rx="6" fill="#fdf3ea" stroke="#3d1d0c" stroke-width="1.5"/>
+        <text x="1182" y="295" font-size="15" font-weight="700" fill="#3d1d0c" text-anchor="middle">10초 영상</text>
+        <text x="1182" y="316" font-size="12" fill="#6b4a38" text-anchor="middle">폰 안에서 · 0원</text>
+
+        <rect x="1100" y="396" width="164" height="64" rx="6" fill="#fdf3ea" stroke="#24395c" stroke-width="1.5"/>
+        <text x="1182" y="423" font-size="15" font-weight="700" fill="#3d1d0c" text-anchor="middle">홍보 글</text>
+        <text x="1182" y="444" font-size="12" fill="#6b4a38" text-anchor="middle">AI · 채널별</text>
+
+        <text x="1182" y="492" font-size="12" fill="#6b4a38" text-anchor="middle">저장 · 공유 · 복사</text>
+
+        <!-- 범례 -->
+        <line x1="40" y1="532" x2="1260" y2="532" stroke="rgba(61,29,12,0.15)"/>
+        <rect x="40" y="548" width="20" height="14" rx="3" fill="#f8e3d4" stroke="#c4622d" stroke-width="1.5"/>
+        <text x="68" y="560" font-size="12" fill="#3d1d0c">유료 AI — 사장님이 고를 때만</text>
+        <rect x="300" y="548" width="20" height="14" rx="3" fill="#fdf3ea" stroke="#24395c" stroke-width="1.5"/>
+        <text x="328" y="560" font-size="12" fill="#3d1d0c">AI — 무료 경로부터(기관 Claude → Gemini), 실패하면 기본 문구</text>
+        <rect x="760" y="548" width="20" height="14" rx="3" fill="#fdf3ea" stroke="#3d1d0c" stroke-width="1.5"/>
+        <text x="788" y="560" font-size="12" fill="#3d1d0c">AI 없이 처리</text>
+      </svg>
+    </div>
+  </div>
+</body>
+</html>
