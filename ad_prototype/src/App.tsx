@@ -321,7 +321,7 @@ function SpecialFilmToggle({ value, easyMode, onChange }: { value: boolean; easy
 // through the share button; a record saved with another channel still shows its text.
 const copyChannelOptions: [Channel, string][] = [
   ["instagram", "인스타그램"],
-  ["naver_place", "네이버 플레이스"],
+  ["naver_place", "네이버"],
   ["daangn", "당근"],
 ]
 
