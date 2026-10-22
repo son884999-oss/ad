@@ -288,24 +288,32 @@ function drawSheen(ctx: CanvasRenderingContext2D, seconds: number) {
   ctx.restore()
 }
 
-/** Key points as white tags popping in one after another, under the shop name. */
-function drawPoints(ctx: CanvasRenderingContext2D, scene: MotionScene, seconds: number) {
+/**
+ * Key points as white tags popping in one after another, in one row just above the headline (QA 2026-10-22: in a
+ * column under the shop name they covered the top of the product in the close-up).
+ */
+function drawPoints(ctx: CanvasRenderingContext2D, scene: MotionScene, seconds: number, captionTop: number) {
   const fadeOut = 1 - progress(seconds, END_CARD - 0.25, 0.25)
-  let y = 340
+  let x = 72
+  const y = captionTop - 104
   // A tag too long for one line is left out, never cut with "…" (QA 2026-10-21).
   const maxText = ctx.canvas.width - 72 * 2 - 64
   ctx.font = font(800, 42)
   const points = scene.points.filter((point) => ctx.measureText(point).width <= maxText)
   points.slice(0, 3).forEach((point, index) => {
-    const t = progress(seconds, SCENE_2 + 0.4 + index * 0.4, 0.35)
-    if (t <= 0 || fadeOut <= 0) return
     ctx.font = font(800, 42)
     const [line] = wrap(ctx, point, ctx.canvas.width - 72 * 2 - 64, 1)
     const width = ctx.measureText(line).width + 64
+    const left = x
+    x += width + 16
+    // Only the tags that fit on the one row; the rest are left out.
+    if (left + width > ctx.canvas.width - 72) return
+    const t = progress(seconds, SCENE_2 + 0.4 + index * 0.4, 0.35)
+    if (t <= 0 || fadeOut <= 0) return
     const scale = easeOutBack(t)
     ctx.save()
     ctx.globalAlpha = Math.min(1, t * 1.6) * fadeOut
-    ctx.translate(72, y + 40)
+    ctx.translate(left, y + 40)
     ctx.scale(scale, scale)
     ctx.fillStyle = "#ffffff"
     ctx.beginPath()
@@ -316,7 +324,6 @@ function drawPoints(ctx: CanvasRenderingContext2D, scene: MotionScene, seconds: 
     ctx.textBaseline = "middle"
     ctx.fillText(line, 32, 2)
     ctx.restore()
-    y += 100
   })
 }
 
@@ -514,9 +521,9 @@ export function drawMotionFrame(ctx: CanvasRenderingContext2D, seconds: number, 
     const fade = 1 - progress(seconds, END_CARD, 0.35)
     ctx.save()
     ctx.globalAlpha = fade
-    drawVideoCaption(ctx, seconds, { eyebrow: scene.caption.eyebrow, headline: scene.caption.headline, subline: scene.caption.subline }, scene.accent, { words: true })
+    const captionTop = drawVideoCaption(ctx, seconds, { eyebrow: scene.caption.eyebrow, headline: scene.caption.headline, subline: scene.caption.subline }, scene.accent, { words: true })
     ctx.restore()
-    drawPoints(ctx, scene, seconds)
+    drawPoints(ctx, scene, seconds, captionTop)
   }
   drawEndCardText(ctx, scene, seconds)
   if (scene.aiMark) drawAiMark(ctx)

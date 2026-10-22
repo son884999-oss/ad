@@ -66,3 +66,21 @@ html[data-layout=mobile] .results-step .result-card > .result-preview.result-pre
   margin-inline: auto;
   object-fit: contain;
 }
+
+/* Short phones (QA 2026-10-22): the 9:16 video preview gets the same height cap as the poster, so 저장 / 보내기
+   are not half under the bottom tab bar. */
+.reference-app #result-video .result-preview,
+.reference-app #result-video .result-motion-preview {
+  max-height: max(300px, calc(100dvh - 370px));
+}
+.reference-app #result-video .motion-preview-video {
+  max-height: max(300px, calc(100dvh - 370px));
+  object-fit: contain;
+}
+
+/* Short phones, 정보 입력: the sticky 만들기 bar loses its separate note line (the button is greyed out and the
+   제품 이름 field says 꼭 써요), so the fields behind it are not hidden. */
+@media (max-height: 760px) {
+  .studio-shell .compact-information .missing-details-note { position: absolute; width: 1px; height: 1px; margin: 0; padding: 0; overflow: hidden; clip-path: inset(50%); min-height: 0; }
+  .studio-shell .compact-information .details-actions { padding-top: 6px; padding-bottom: 6px; }
+}

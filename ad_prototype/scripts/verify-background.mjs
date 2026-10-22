@@ -231,7 +231,8 @@ try {
     await photoTab.click()
     const panel = page.locator("#result-photo")
     assert.equal(await panel.locator(".result-photo-preview img").count(), 1, "one photo, the corrected one")
-    assert.ok(await panel.getByRole("button", { name: /저장하기/ }).isVisible())
+    // Same words as the poster and video tabs since 2026-10-22 (기본 다운로드, 쉬운 폰에 저장).
+    assert.ok(await panel.getByRole("button", { name: /다운로드|폰에 저장|컴퓨터에 저장/ }).isVisible())
     assert.ok(await panel.getByRole("button", { name: /공유하기/ }).isVisible())
     assert.equal(await panel.getByRole("radio").count(), 0, "no original photo or switch in the 사진 tab")
     assert.equal(counts.background, 1, "one picture for the whole creation")
