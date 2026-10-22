@@ -19,7 +19,7 @@
 :root .studio-shell.studio-shell.studio-shell .result-card .result-action-buttons { margin-top:20px; }
 
 /* 쉬운 화면 [듣기] (QA 2026-10-22): a square, tinted button with a large speaker over the word, so it is seen. */
-:root .studio-shell.easy-mode .reference-header .reference-header-actions .reference-read.is-icon { display:flex !important; flex-direction:column; align-items:center; justify-content:center; gap:1px; width:54px; min-width:54px; height:52px; min-height:52px; padding:0; border:2px solid var(--color-brand); border-radius:12px; background:var(--color-brand-soft,#fdf0e6); color:var(--color-brand-hover); font-size:13px; font-weight:800; line-height:1.1; }
+:root .studio-shell.easy-mode .reference-header .reference-header-actions .reference-read.is-icon { display:flex !important; flex-direction:column; align-items:center; justify-content:center; gap:1px; width:54px; min-width:54px; height:52px; min-height:52px; padding:0; border:2px solid var(--color-brand); border-radius:12px; background:var(--color-brand-soft,#fdf0e6); color:var(--color-brand-hover); font-size:15px; font-weight:800; line-height:1.1; }
 :root .studio-shell.easy-mode .reference-header .reference-header-actions .reference-read.is-icon > svg { display:block !important; width:24px; height:24px; padding:0; }
 :root .studio-shell.easy-mode .reference-header .reference-header-actions .reference-read.is-icon.is-active { background:var(--color-brand); color:#fff; }
 /* [듣기] and 기본/쉬운 are different things: 12 px apart so one is not tapped for the other (QA 2026-10-22). */
