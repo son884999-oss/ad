@@ -241,7 +241,9 @@ function drawPhotoCover(ctx: Ctx, image: Img, x: number, y: number, width: numbe
   const size = imageSize(image)
   if (!image || !size) return false
   const focus = sourceRect(size, currentFocus)
-  const scale = Math.max(width / focus.width, height / focus.height, width / size.width, height / size.height)
+  // Zoom only as far as the whole product box still fits (a tall bottle kept its pump cut off when the zoom
+  // filled the width with the box), but never less than covering the rectangle.
+  const scale = Math.max(Math.min(width / focus.width, height / focus.height), width / size.width, height / size.height)
   const cropWidth = Math.min(size.width, width / scale)
   const cropHeight = Math.min(size.height, height / scale)
   const centerX = focus.x + focus.width / 2
