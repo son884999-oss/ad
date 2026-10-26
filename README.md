@@ -8,7 +8,7 @@
 | | 주소 |
 |---|---|
 | **앱 바로 써 보기** | https://ad-prototype-codyssey.vercel.app — 가입 없이 바로 시작. 사진이 없으면 홈의 예시로 시작 |
-| **발표 자료(웹 슬라이드)** | https://claude.ai/artifact/PRskF4TH79oZfJtXdDi9X3 — 본편 12장 + 예상 질문 15장(A0~A14) |
+| **발표 자료(웹 슬라이드)** | https://codyseeypresentation.vercel.app — 본편 12장 + 예상 질문 15장(A0~A14) |
 | 브랜드 자료 | https://ad-prototype-codyssey.vercel.app/brand-library/ — 로고·설명 그림 |
 | 개발 문서 | [ad_prototype/docs/README.md](ad_prototype/docs/README.md) |
 
