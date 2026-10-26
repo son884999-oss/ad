@@ -235,6 +235,23 @@ try {
     assert.ok(await panel.getByRole("button", { name: /다운로드|폰에 저장|컴퓨터에 저장/ }).isVisible())
     assert.ok(await panel.getByRole("button", { name: /공유하기/ }).isVisible())
     assert.equal(await panel.getByRole("radio").count(), 0, "no original photo or switch in the 사진 tab")
+    // 2026-10-26: the saved file carries the poster's "AI 활용" mark (bottom right), not only the screen badge.
+    const [download] = await Promise.all([page.waitForEvent("download"), panel.getByRole("button", { name: /다운로드|폰에 저장|컴퓨터에 저장/ }).click()])
+    const saved = readFileSync(await download.path())
+    assert.ok(saved[0] === 0xff && saved[1] === 0xd8, "saved photo is a JPEG")
+    const [markedLight, plainLight] = await page.evaluate(async ([data, src]) => {
+      const light = async (url) => {
+        const bitmap = await createImageBitmap(await (await fetch(url)).blob())
+        const canvas = Object.assign(document.createElement("canvas"), { width: bitmap.width, height: bitmap.height })
+        const ctx = canvas.getContext("2d")
+        ctx.drawImage(bitmap, 0, 0)
+        const s = bitmap.width / 1080 // inside the pill: 16 px from its right end, at its middle
+        const [r, g, b] = ctx.getImageData(Math.round(bitmap.width - 40 * s), Math.round(bitmap.height - 48 * s), 1, 1).data
+        return (r + g + b) / 3
+      }
+      return [await light(`data:image/jpeg;base64,${data}`), await light(src)]
+    }, [saved.toString("base64"), await panel.locator(".result-photo-preview img").getAttribute("src")])
+    assert.ok(markedLight < plainLight * 0.75, `the saved photo has the dark "AI 활용" pill (${markedLight.toFixed(0)} vs ${plainLight.toFixed(0)})`)
     assert.equal(counts.background, 1, "one picture for the whole creation")
     assert.deepEqual(errors, [])
     await page.close()

@@ -1,7 +1,7 @@
 // Poster module (renderer ported from D_고혜숙/src/poster/*). App-specific glue lives here.
 import type { PosterContent, PosterThemeKey } from "./posterRenderer"
 
-export { POSTER_THEMES, POSTER_RATIOS, POSTER_COMPOSITIONS, renderPosterToCanvas, loadPosterFonts } from "./posterRenderer"
+export { POSTER_THEMES, POSTER_RATIOS, POSTER_COMPOSITIONS, renderPosterToCanvas, loadPosterFonts, stampAiMark } from "./posterRenderer"
 export type { PosterContent, PosterThemeKey } from "./posterRenderer"
 
 /** 홍보 분위기 → D theme. The first selected tone decides; 자동 (none) uses the calm minimal theme. */

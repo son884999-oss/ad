@@ -241,7 +241,9 @@ function drawPhotoCover(ctx: Ctx, image: Img, x: number, y: number, width: numbe
   const size = imageSize(image)
   if (!image || !size) return false
   const focus = sourceRect(size, currentFocus)
-  const scale = Math.max(width / focus.width, height / focus.height, width / size.width, height / size.height)
+  // Zoom only as far as the whole product box still fits (a tall bottle kept its pump cut off when the zoom
+  // filled the width with the box), but never less than covering the rectangle.
+  const scale = Math.max(Math.min(width / focus.width, height / focus.height), width / size.width, height / size.height)
   const cropWidth = Math.min(size.width, width / scale)
   const cropHeight = Math.min(size.height, height / scale)
   const centerX = focus.x + focus.width / 2
@@ -681,6 +683,22 @@ function drawAiMark(ctx: Ctx, width: number, height: number, isStory: boolean, a
   ctx.textBaseline = "middle"
   ctx.fillText(label, x + 14, y + h / 2 + 1)
   ctx.restore()
+}
+
+/**
+ * The poster's "AI 활용" mark on any picture (the AI-corrected photo when it is saved or shared), bottom right,
+ * sized as on a 1080 px wide poster. 인공지능기본법 제31조: the photo is the most real-looking output, so the
+ * saved file says it was made with AI too (user, 2026-10-26: same mark on every output).
+ */
+export function stampAiMark(canvas: HTMLCanvasElement): boolean {
+  const ctx = canvas.getContext("2d")
+  if (!ctx || !canvas.width || !canvas.height) return false
+  const scale = canvas.width / 1080
+  ctx.save()
+  ctx.scale(scale, scale)
+  drawAiMark(ctx, 1080, canvas.height / scale, false)
+  ctx.restore()
+  return true
 }
 
 /** Draws the poster and returns the visible text lines, or null when the canvas is unusable. */
