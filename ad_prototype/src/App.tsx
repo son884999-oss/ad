@@ -1408,20 +1408,21 @@ function CreateFlow({
   }
   // One AI answer per channel and inputs, so going back to a channel shows its text without a new request.
   const promoCacheRef = useRef(new Map<string, AiPromo>())
-  const requestPromoText = (forChannel: Channel = channel, waitMs = PROMO_WAIT_MS) => {
-    cancelPromoRequest()
+  // Requests still running, by signature: a channel tapped while it is being fetched in the background waits for that
+  // answer instead of asking again (user, 2026-10-26: "너무 느리다" — switching channels waited up to 25 s).
+  const promoInflightRef = useRef(new Map<string, Promise<AiPromo | null>>())
+  // One background batch per set of inputs: a later batch for the same inputs joins it; new inputs stop the old one.
+  const promoPrefetchRef = useRef<{ controller: AbortController; inputs: string } | null>(null)
+  useEffect(() => () => promoPrefetchRef.current?.controller.abort(), [])
+  const cancelPromoPrefetch = () => {
+    promoPrefetchRef.current?.controller.abort()
+    promoPrefetchRef.current = null
+  }
+  const fetchPromo = (forChannel: Channel, waitMs: number, signal: AbortSignal) => {
     const signature = promoSignature(details, forChannel)
-    if (aiPromo?.signature === signature) return
-    const cached = promoCacheRef.current.get(signature)
-    if (cached) {
-      setAiPromo(cached)
-      return
-    }
-    setAiPromo(null)
-    const controller = new AbortController()
-    promoControllerRef.current = controller
-    setPromoPending(true)
-    void generatePromoText(
+    const running = promoInflightRef.current.get(signature)
+    if (running) return running
+    const job = generatePromoText(
       {
         productName: details.name?.trim() ?? "",
         productDescription: details.description.trim(),
@@ -1437,16 +1438,53 @@ function CreateFlow({
         visualDetails: photoDetailsRef.current.image === imageUrl ? photoDetailsRef.current.details : undefined,
         channel: forChannel,
       },
-      { signal: controller.signal, timeoutMs: waitMs },
+      { signal, timeoutMs: waitMs },
     ).then((result) => {
+      promoInflightRef.current.delete(signature)
+      if (!result) return null
+      const promo = { ...result, signature }
+      promoCacheRef.current.set(signature, promo)
+      return promo
+    }, () => {
+      promoInflightRef.current.delete(signature)
+      return null
+    })
+    promoInflightRef.current.set(signature, job)
+    return job
+  }
+  // After the first channel's AI text arrives, the other two are written in the background, so tapping 네이버 or 당근
+  // shows its text at once. Only after a success: when the AI is down, nothing more is asked.
+  const prefetchOtherChannels = (done: Channel) => {
+    const inputs = promoSignature(details, "download")
+    if (promoPrefetchRef.current?.inputs !== inputs) {
+      cancelPromoPrefetch()
+      promoPrefetchRef.current = { controller: new AbortController(), inputs }
+    }
+    const { controller } = promoPrefetchRef.current!
+    for (const [other] of copyChannelOptions) {
+      if (other === done || promoCacheRef.current.has(promoSignature(details, other))) continue
+      void fetchPromo(other, PROMO_SWITCH_WAIT_MS, controller.signal)
+    }
+  }
+  const requestPromoText = (forChannel: Channel = channel, waitMs = PROMO_WAIT_MS) => {
+    cancelPromoRequest()
+    const signature = promoSignature(details, forChannel)
+    if (aiPromo?.signature === signature) return
+    const cached = promoCacheRef.current.get(signature)
+    if (cached) {
+      setAiPromo(cached)
+      return
+    }
+    setAiPromo(null)
+    const controller = new AbortController()
+    promoControllerRef.current = controller
+    setPromoPending(true)
+    void fetchPromo(forChannel, waitMs, controller.signal).then((promo) => {
       if (promoControllerRef.current !== controller) return
       promoControllerRef.current = null
-      if (result) {
-        const promo = { ...result, signature }
-        promoCacheRef.current.set(signature, promo)
-        setAiPromo(promo)
-      }
+      if (promo) setAiPromo(promo)
       setPromoPending(false)
+      if (promo) prefetchOtherChannels(forChannel)
     })
   }
 
@@ -2575,6 +2613,7 @@ function CreateFlow({
           easyMode={easyMode}
           onCancel={() => {
             cancelPromoRequest()
+            cancelPromoPrefetch()
             dropScene()
             aiVideo.cancel()
             setGenerating(false)
