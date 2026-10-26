@@ -685,6 +685,22 @@ function drawAiMark(ctx: Ctx, width: number, height: number, isStory: boolean, a
   ctx.restore()
 }
 
+/**
+ * The poster's "AI 활용" mark on any picture (the AI-corrected photo when it is saved or shared), bottom right,
+ * sized as on a 1080 px wide poster. 인공지능기본법 제31조: the photo is the most real-looking output, so the
+ * saved file says it was made with AI too (user, 2026-10-26: same mark on every output).
+ */
+export function stampAiMark(canvas: HTMLCanvasElement): boolean {
+  const ctx = canvas.getContext("2d")
+  if (!ctx || !canvas.width || !canvas.height) return false
+  const scale = canvas.width / 1080
+  ctx.save()
+  ctx.scale(scale, scale)
+  drawAiMark(ctx, 1080, canvas.height / scale, false)
+  ctx.restore()
+  return true
+}
+
 /** Draws the poster and returns the visible text lines, or null when the canvas is unusable. */
 export function renderPosterToCanvas({
   canvas,

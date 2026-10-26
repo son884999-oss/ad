@@ -24,7 +24,7 @@ import { useAiVideo, type AiVideoController, type SavedAiVideo } from "./useAiVi
 import { hasPremiumCode } from "./premiumAccess"
 import { AiVideoPlayer, AiVideoStatus, PremiumSteps, saveRealVideo, shareRealVideo, showsRealVideo, type PremiumStepState } from "./AiVideoPanel"
 import { isVideoUnavailable, prepareAiVideoFile, toVideoDetails } from "./video"
-import { buildPosterContent, loadPosterFonts, posterThemeFor, renderPosterToCanvas } from "./poster"
+import { buildPosterContent, loadPosterFonts, posterThemeFor, renderPosterToCanvas, stampAiMark } from "./poster"
 import { FALLBACK_PALETTE, photoPalette } from "./poster/photoColor"
 import { localBody, localCopy } from "./localCopy"
 import { type VideoCaption } from "./videoCaption"
@@ -735,6 +735,26 @@ function outputFileName(title: string, kind: string, extension: string) {
   const now = new Date()
   const date = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(now.getDate()).padStart(2, "0")}`
   return `${safe}_${kind}_${date}.${extension}`
+}
+
+/** The AI-corrected photo with the poster's "AI 활용" mark drawn in (saved / shared file). Falls back to the photo as is. */
+async function withAiPhotoMark(blob: Blob): Promise<Blob> {
+  try {
+    await loadPosterFonts(["AI 활용"])
+    const bitmap = await createImageBitmap(blob)
+    const canvas = document.createElement("canvas")
+    canvas.width = bitmap.width
+    canvas.height = bitmap.height
+    const ctx = canvas.getContext("2d")
+    if (!ctx) return blob
+    ctx.drawImage(bitmap, 0, 0)
+    bitmap.close?.()
+    if (!stampAiMark(canvas)) return blob
+    const marked = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.92))
+    return marked ?? blob
+  } catch {
+    return blob // never block saving: the result screen still shows "AI 보정 사진"
+  }
 }
 
 /**
@@ -2491,7 +2511,8 @@ function CreateFlow({
     const url = photoTabUrl
     if (!url) return
     try {
-      const blob = await (await fetch(url)).blob()
+      // The saved or shared file carries the same "AI 활용" mark as the poster and video (인공지능기본법 제31조).
+      const blob = await withAiPhotoMark(await (await fetch(url)).blob())
       const extension = blob.type === "image/png" ? "png" : blob.type === "image/webp" ? "webp" : "jpg"
       const title = details.shopName?.trim() || details.name?.trim() || "홍보잇다"
       const file = new File([blob], outputFileName(title, "보정사진", extension), { type: blob.type || "image/jpeg" })
