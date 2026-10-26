@@ -1,18 +1,26 @@
-# 홍보잇다
+<img src="ad_prototype/public/assets/branding/selected/horizontal-bold.svg" width="320" alt="홍보잇다">
 
 **가게 홍보의 시작을, 더 쉽게.**
-상품 사진 한 장으로 포스터, 10초 영상, 홍보 글을 한 번에 만드는 소상공인용 모바일 웹앱입니다.
+상품 사진 한 장으로 포스터, 10초 영상, 홍보 글을 한 번에 만드는 소상공인용 모바일 웹앱입니다. (코디세이 네이티브 과정 파이널 프로젝트)
 
-**바로 써 보기: https://ad-prototype-codyssey.vercel.app** — 가입 없이 바로 시작됩니다. 사진이 없으면 홈의 예시로 시작하세요.
+## 링크
 
-<!-- TODO(녹화 뒤): QR 이미지 -->
+| | 주소 |
+|---|---|
+| **앱 바로 써 보기** | https://ad-prototype-codyssey.vercel.app — 가입 없이 바로 시작. 사진이 없으면 홈의 예시로 시작 |
+| **발표 자료(웹 슬라이드)** | https://claude.ai/artifact/PRskF4TH79oZfJtXdDi9X3 — 본편 12장 + 예상 질문 15장(A0~A14) |
+| 브랜드 자료 | https://ad-prototype-codyssey.vercel.app/brand-library/ — 로고·설명 그림 |
+| 개발 문서 | [ad_prototype/docs/README.md](ad_prototype/docs/README.md) |
+
+<img src="ad_prototype/docs/readme/qr.png" width="140" alt="앱 QR">
 
 ## 이런 결과물이 나옵니다
 
-<!-- TODO(녹화 뒤): 실제 녹화에서 나온 결과물 3장으로 바꾼다. 지금은 앱 예시 그림 -->
-| 포스터 | 영상 한 장면 | 홍보 글 |
+실제 앱이 사진 한 장("쁘띠 몽드 초콜릿 크루아상")으로 만든 결과물입니다(2026-10-22).
+
+| 포스터 | 10초 영상 한 장면 | 홍보 글 |
 |---|---|---|
-| <img src="ad_prototype/public/assets/reference-fresh/poster-example.webp" width="220" alt="포스터 예시"> | <img src="ad_prototype/public/assets/reference-fresh/demo-scene-cake.jpg" width="220" alt="영상 장면 예시"> | 인스타그램·네이버·당근 등 채널에 맞춘 글과 해시태그 (캡처 예정) |
+| <img src="ad_prototype/docs/readme/poster.jpg" width="220" alt="포스터"> | <img src="ad_prototype/docs/readme/video.jpg" width="220" alt="영상 장면"> | <img src="ad_prototype/docs/readme/copy.jpg" width="220" alt="홍보 글 화면"> |
 
 ## 어떻게 동작하나
 
@@ -29,7 +37,7 @@
 - 포스터와 영상은 폰 안에서 만들어서 **0원**입니다. 글자가 깨지지 않고, 같은 입력이면 같은 결과가 나옵니다.
 - 배경 바꾸기는 1장에 약 50원이고, 원래 사진과 바뀐 사진 중에서 고를 수 있습니다.
 - AI가 실패하면 다음 순서로 넘어가서(기관 Claude → Gemini → 앱 기본 문구) 결과는 늘 나옵니다.
-- AI가 들어간 결과물에는 "AI 활용"을 표시합니다.
+- AI가 들어간 결과물에는 "AI 활용"을 표시합니다. 포스터·영상·보정 사진에는 그림에, 홍보 글은 복사·공유할 때 안내합니다(인공지능기본법 제31조).
 
 ## 팀
 
@@ -39,7 +47,7 @@
 | B | 이창훈 | AI 홍보 글 규칙(채널별 글, 금지어, 문구 후보, 영상용 짧은 제목) | [B_이창훈](B_이창훈/) |
 | C | 김만복 | 제품 정보 입력 항목·글자 수 제한, 입력 화면 | [C_김만복](C_김만복/) |
 | D | 고혜숙 | 포스터 렌더러(크기·배치·색, 파일 이름 규칙) | [D_고혜숙](D_고혜숙/) |
-| E | 이채원 | 영상 연출 규칙, 장면 프롬프트, 업종별 연출 방향 | [E_이채원](E_이채원/) |
+| E | 이채원 | 영상 연출 규칙, 장면 프롬프트, 업종별 연출 방향, 시장조사·기획 의도 | [E_이채원](E_이채원/) |
 | F | 육성준 | QA 피드백, 결과 화면 개선 요청, 사용자 관점 점검 | [F_육성준](F_육성준/) |
 
 ## 폴더 구조
