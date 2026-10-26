@@ -9,7 +9,8 @@ type Navigation = (page: Page, type?: CreationType) => void
 type Speech = { easyMode: boolean; speaking: boolean; speechPreparing: boolean; onSpeak: () => void; speechMessage: string }
 export { default as StudioIcon } from "./Icon"
 function Logo() {
-  return <span className="reference-logo"><svg viewBox="0 0 54 28" aria-hidden="true"><path d="M27 14C16-1 3 2 3 14s13 15 24 0S51-1 51 14s-13 15-24 0" fill="none" stroke="currentColor" strokeWidth="5" strokeLinecap="round" /></svg><strong>홍보잇다</strong></span>
+  // 2026-10-26 (owner): the brand logo — C안 symbol + the bold gothic wordmark (Pretendard Black, outlined), not a drawn stand-in.
+  return <span className="reference-logo"><img src="/assets/branding/selected/horizontal-bold.svg" alt="홍보잇다" width={724} height={180} decoding="async" /></span>
 }
 // icon: the small [듣기] in the easy screen header (text, since the easy screen shows no icons) (owner, 2026-10-20: the full-width button took about 100px of every
 // easy screen). Its name is still read out, and switching to the easy screen says where it is.

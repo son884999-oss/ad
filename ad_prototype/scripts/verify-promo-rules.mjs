@@ -144,6 +144,14 @@ try {
     assert.match(sentBodies[0].systemInstruction.parts[0].text, /videoHeadline[\s\S]*cta/)
   })
 
+  await check("naver_place tone: visiting info only from <shop>, no invented hours / '매일' (2026-10-26)", async () => {
+    await run({ ...product, channel: "naver_place" }, [good])
+    const prompt = promptOf(0)
+    assert.match(prompt, /네이버 스마트플레이스/)
+    assert.match(prompt, /영업시간·요일·'매일'/)
+    assert.doesNotMatch(prompt, /방문에 필요한 정보를 또렷하게/)
+  })
+
   await check("Gemini call: no shop info → the 'do not invent' note", async () => {
     await run(product, [good])
     assert.match(promptOf(0), /가게 정보 없음/)

@@ -43,7 +43,10 @@ html[data-layout=mobile] .results-step .result-card > .result-preview.result-pre
 }
 .reference-app .results-step #result-copy.result-card > .result-card-actions {
   position: sticky;
-  bottom: 0;
+  /* The scroll area keeps a 14 px bottom padding (reference-ui.css .studio-main): a sticky bottom:0 stopped that far
+     above the tab bar and the text showed through the gap (real phone, QA 2026-10-26). Reach down over it instead. */
+  bottom: calc(-14px * var(--s, 1));
+  padding-bottom: calc(14px * var(--s, 1));
   z-index: 5;
   background: #fff;
   box-shadow: 0 -10px 12px -10px #5a2a1233;
