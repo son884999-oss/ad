@@ -11,7 +11,7 @@
 | [비용_품질_출처.md](비용_품질_출처.md) | **유료 호출 장부**(쓰기 전에 먼저 적는 곳), 단가, 품질 기준, 음원 출처 |
 | [발표준비/홍보잇다_PC이어가기_1022.md](발표준비/홍보잇다_PC이어가기_1022.md) | 발표 준비 상황과 발표 자료 제작 지시서, 통계 출처 |
 
-링크: 앱 https://ad-prototype-codyssey.vercel.app · 발표 자료(웹 슬라이드) https://codyseeypresentation.vercel.app (원본 저장소 `son884999-oss/CODYSEEY-presentation`, main에 푸시하면 Vercel이 자동 배포 · `son884999-oss/CODYSEEY-presentation`, 비공개) · 브랜드 자료 `/brand-library/`
+링크: 앱 https://ad-prototype-codyssey.vercel.app · 발표 자료(웹 슬라이드) https://codyseeypresentation.vercel.app (원본 저장소 `son884999-oss/CODYSEEY-presentation`(비공개), main에 푸시하면 Vercel이 자동 배포) · 브랜드 자료 `/brand-library/`
 
 문서가 아닌 자료: [기술문서/](기술문서/)(팀 공유 2장) · [기술설계서_통합본/](기술설계서_통합본/)(교수님 제출 6장) · [변경요약/](변경요약/)(10-22 팀 공유 PDF) · [서비스흐름도/](서비스흐름도/) · [기준문구/](기준문구/)(테스트용 홍보 문구) · [기준그림/](기준그림/) · [supabase/](supabase/)(DB SQL) · [발표준비/development_purpose.pdf](발표준비/development_purpose.pdf). 옛 문서 원본은 [archive/옛문서_1022/](archive/옛문서_1022/)에 그대로 있다(읽을 필요 없음).
 
