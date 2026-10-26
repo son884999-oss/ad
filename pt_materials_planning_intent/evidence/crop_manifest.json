@@ -1,0 +1,58 @@
+[
+  {
+    "slide": 6,
+    "image": "s1_original.png",
+    "source": "mss_2024_release.pdf",
+    "pdf_page": 2,
+    "crop_points": [
+      55,
+      148,
+      545,
+      224
+    ],
+    "source_text": "  디지털, 스마트 기술을 활용하고 있는 소상공인은 전체의 27.2%로, 전\n년 대비 9.2%p 증가하였고, 유형(복수응답)은 ‘온라인 판로(49.0%)’, ‘매장\n관리(34.4%)’, ‘경영관리 소프트웨어(19.6%)’, ‘스마트 주문·결제(15.2%)’ \n순으로 나타났다.\n",
+    "image_sha256": "e64709df1a3a12902b19bb82d810667e74dfe5cc204d01c90732bc70d6009b1f"
+  },
+  {
+    "slide": 7,
+    "image": "s2_original.png",
+    "source": "nabo_2025.pdf",
+    "pdf_page": 120,
+    "crop_points": [
+      80,
+      597,
+      462,
+      622
+    ],
+    "source_text": "65) 디지털 기술(기기)를 도입하지 않은 응답자들의 미도입 이유(1순위 기준)로, ‘디지털 기술을 이용하기 \n위한 인력·지식 부재’가 45.6%로 가장 높게 나타나며 다음으로 디지털 기술을 이용하기 위한 자금 \n",
+    "image_sha256": "e89be7a7d6e61e51d4efb5789261dfbb7a043870a1360b952a43efee8d6cd95a"
+  },
+  {
+    "slide": 8,
+    "image": "s3_level_original.png",
+    "source": "cni_397.pdf",
+    "pdf_page": 5,
+    "crop_points": [
+      62,
+      171,
+      438,
+      188
+    ],
+    "source_text": "■충남 소상공인 디지털전환 지원을 위해서는 우선 업체의 디지털전환 수준 파악 필요\n \n",
+    "image_sha256": "6a1bc274ab6261c7b15aa73ad22a490e26d65842668f06e9fed8ac41e3cd4693"
+  },
+  {
+    "slide": 8,
+    "image": "s3_fit_original.png",
+    "source": "cni_397.pdf",
+    "pdf_page": 5,
+    "crop_points": [
+      85,
+      207,
+      545,
+      223
+    ],
+    "source_text": "본 연구에서 고안한 체크리스트로 점수를 매겨보고 디지털전환 단계에 맞춘 적합사업을 고려하는 것을 제안\n",
+    "image_sha256": "ab1f0c94e63212de75cecc7407ac9bc74b6a03e20fefd40f2aedf03a2e5c1c61"
+  }
+]

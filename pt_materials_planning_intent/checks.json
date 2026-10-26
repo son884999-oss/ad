@@ -1,0 +1,12 @@
+{
+  "slides": 8,
+  "pptx_pdf_text_match": true,
+  "text_boxes_within_canvas": true,
+  "pdf_text_overflow": false,
+  "source_links_present": true,
+  "original_pdf_crop_images": 4,
+  "pptx_embedded_images_match_crops": true,
+  "speaker_notes_present": true,
+  "rendering": "shared coordinates; independent PDF renderer",
+  "native_powerpoint_render_verified": false
+}

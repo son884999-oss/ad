@@ -1,0 +1,20 @@
+[
+  {
+    "file": "mss_2024_release.pdf",
+    "url": "https://www.mss.go.kr/common/board/Download.do?bcIdx=1066231&cbIdx=86&streFileNm=27cf5887-6e00-4c61-9100-22421758d9b6.pdf",
+    "sha256": "53d59c22963ea968e527783fa5c12a1fb4a9b2e570e20c3a5ea5f783fabe8fb7",
+    "pages": 3
+  },
+  {
+    "file": "nabo_2025.pdf",
+    "url": "https://www.nabo.go.kr/board/file/down.do?fid=33318912",
+    "sha256": "ce457fa4009778076ad2b9c9b59154089d1d5f4324ed835c8c596a3fbb9a9db5",
+    "pages": 179
+  },
+  {
+    "file": "cni_397.pdf",
+    "url": "https://www.cni.re.kr/main/contents/report/down?addType=2&docId=1024E10035&gcd=BB0000002137&projectName=%EC%B6%A9%EB%82%A8%EB%A6%AC%ED%8F%AC%ED%8A%B8-%28%EC%A0%9C397%ED%98%B8%29+%EC%B6%A9%EC%B2%AD%EB%82%A8%EB%8F%84+%EC%86%8C%EC%83%81%EA%B3%B5%EC%9D%B8+%EB%94%94%EC%A7%80%ED%84%B8%EC%A0%84%ED%99%98+%EC%B6%94%EC%A7%84%EB%B0%A9%EC%95%88&projectType=15&seq=1",
+    "sha256": "6516a362b17dd42b4d1bde5778b8e8d064acf7b3b668cb23309fb738b44ffa4e",
+    "pages": 5
+  }
+]
