@@ -3461,7 +3461,8 @@ function CreateFlow({
                   error={copyMessage.includes("못했어요")}
                 />
                 {/* The no-AI fallback, said once under the text instead of a band above the tabs (QA 2026-10-22). */}
-                {!activePromo && <p className="copy-fallback-note">{t("AI 없이 기본 문구로 만들었어요.")}</p>}
+                {/* While a channel's text is still being written (up to 25 s after a switch) it is not a fallback yet (QA 2026-10-26). */}
+                {!activePromo && <p className="copy-fallback-note" role="status">{t(promoPending ? "AI가 이 채널 글을 쓰고 있어요. 잠시만 기다려 주세요." : "AI 없이 기본 문구로 만들었어요.")}</p>}
               </article>
             )}
           </div>
