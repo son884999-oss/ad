@@ -42,6 +42,7 @@ ${Object.entries(TONE_NAMES).map(([id, name]) => `  ${id}: ${name}`).join("\n")}
 
 - photoReview: 사진에서 한 번 더 확인할 내용. 이것은 확정 판단이나 법적 판정이 아니다.
   - items: 사람·동물·건물/가게·배경이 사진의 중심이거나, 담배·술·의약품·마약류 의심 물품·위험 물품·신용카드/금융정보 등이 실제로 보일 때만 최대 4개.
+    담배는 낱개비뿐 아니라 담뱃갑·보루·전자담배 기기·액상·흡연 용품도 포함한다. 포장의 흡연 경고문이나 경고그림을 사람 사진·일반 상품 라벨로만 분류하지 말고, 담배 포장일 가능성을 함께 확인한다.
     category는 animal, person, building, background, tobacco, alcohol, medicine, drug, hazardous_item, credit_card, other_sensitive 중 하나.
     reason은 무엇이 보여서 확인이 필요한지 중립적인 한국어 50자 이내. 사람·동물·건물 자체를 유해하다고 부르지 않는다.
     정상 상품 사진의 손·평범한 배경·작은 장식은 불필요하게 분류하지 않는다. 사진만으로 약물 종류·불법 여부를 단정하지 않는다.
@@ -126,6 +127,10 @@ function visualDetailList(value) {
  * photoCheck is lenient: only an explicit `false` / `true` flags the photo, so a missing or odd
  * value never warns the user. A reason is kept only when something is flagged.
  */
+export function isCompletePhotoReview(value) {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value) && typeof value.uncertain === "boolean" && Array.isArray(value.items) && value.items.length <= 4 && value.items.every((item) => Boolean(item) && typeof item === "object" && !Array.isArray(item) && typeof item.category === "string" && PHOTO_REVIEW_CATEGORIES.includes(item.category) && typeof item.reason === "string")
+}
+
 export function parsePhotoReview(value) {
   const review = value && typeof value === "object" && !Array.isArray(value) ? value : {}
   const seen = new Set()
@@ -182,7 +187,7 @@ export function parsePhotoSuggestion(data) {
     visualDetails: visualDetailList(data.visualDetails),
     subjectBox: parseSubjectBox(data.subjectBox),
     photoCheck: parsePhotoCheck(data.photoCheck),
-    photoReview: parsePhotoReview(data.photoReview),
+    photoReview: isCompletePhotoReview(data.photoReview) ? parsePhotoReview(data.photoReview) : undefined,
   }
 }
 

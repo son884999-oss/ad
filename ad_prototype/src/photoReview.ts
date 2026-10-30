@@ -9,6 +9,13 @@ export type PhotoReviewCategory = keyof typeof PHOTO_REVIEW_LABELS
 export type PhotoReviewItem = { category: PhotoReviewCategory; reason: string }
 export type PhotoReview = { items: PhotoReviewItem[]; uncertain: boolean }
 
+/** Mandatory review must distinguish an explicitly empty list from a malformed/missing result. */
+export function isCompletePhotoReview(value: unknown): value is PhotoReview {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false
+  const review = value as Record<string, unknown>
+  return typeof review.uncertain === "boolean" && Array.isArray(review.items) && review.items.length <= 4 && review.items.every((item) => Boolean(item) && typeof item === "object" && !Array.isArray(item) && typeof item.category === "string" && Object.prototype.hasOwnProperty.call(PHOTO_REVIEW_LABELS, item.category) && typeof item.reason === "string")
+}
+
 export function parsePhotoReview(value: unknown): PhotoReview {
   const data = value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {}
   const seen = new Set<string>()
@@ -24,8 +31,11 @@ export function parsePhotoReview(value: unknown): PhotoReview {
   return { items, uncertain: data.uncertain === true }
 }
 
-export function reviewWithQuality(value: unknown, check?: { isRealPhoto: boolean; isBlurry: boolean; reason: string }): PhotoReview {
+export function reviewWithQuality(value: unknown, check?: { isRealPhoto: boolean; isBlurry: boolean; reason: string }, productName = ""): PhotoReview {
   const review = parsePhotoReview(value)
+  // A model may name tobacco correctly but omit its category. Use that explicit name as a bounded fallback.
+  if (/(?:담배|담뱃갑|담뱃대|궐련|흡연\s*용품|cigarettes?|tobacco|vapes?|e[- ]?cigarettes?)/i.test(productName) && !review.items.some((item) => item.category === "tobacco")) review.items.unshift({ category: "tobacco", reason: "사진 분석에서 담배·흡연 용품으로 읽힌 상품인지 확인해 주세요." })
+  if (review.uncertain && !review.items.length) review.items.push({ category: "other_sensitive", reason: "사진 내용을 확실히 확인하지 못했어요. 홍보에 사용할 상품 사진인지 직접 확인해 주세요." })
   if (check?.isRealPhoto === false && !review.items.some((item) => item.category === "not_photo")) review.items.push({ category: "not_photo", reason: check.reason || "파는 상품을 직접 찍은 사진인지 확인해 주세요." })
   if (check?.isBlurry === true && !review.items.some((item) => item.category === "blurry")) review.items.push({ category: "blurry", reason: check.reason || "상품이 선명하게 보이는지 확인해 주세요." })
   return { ...review, items: review.items.slice(0, 6) }

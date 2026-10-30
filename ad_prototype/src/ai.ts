@@ -1,4 +1,4 @@
-import { parsePhotoReview, type PhotoReview } from "./photoReview"
+import { isCompletePhotoReview, parsePhotoReview, type PhotoReview } from "./photoReview"
 // Browser side of the AI features. Talks only to our own /api functions (the Gemini key stays on
 // the server). Every function resolves to `null` on any failure — missing key (503), network
 // error, timeout, bad JSON — so the UI silently keeps its local template behaviour.
@@ -171,7 +171,7 @@ export async function analyzePhoto(source: Blob | string, options: RequestOption
     visualDetails: textList(value.visualDetails, 5, 30),
     subjectBox: box(value.subjectBox),
     photoCheck: photoCheck(value.photoCheck),
-    photoReview: parsePhotoReview(value.photoReview),
+    photoReview: isCompletePhotoReview(value.photoReview) ? parsePhotoReview(value.photoReview) : undefined,
   }
 }
 
@@ -180,7 +180,7 @@ function photoCheck(value: unknown): PhotoCheck {
   return { isRealPhoto: check.isRealPhoto !== false, isBlurry: check.isBlurry === true, reason: text(check.reason, 60) }
 }
 
-// Only an explicit auto-fill click starts analysis. Share that request; manual retries may replace it.
+// Next requests the photo review; auto-fill reuses the same original-photo analysis. Only an explicit retry replaces it.
 let sharedAnalysis: { source: string; promise: Promise<PhotoSuggestion | null> } | null = null
 
 /** analyzePhoto, shared per photo. Callers ignore stale answers themselves (no abort here). */

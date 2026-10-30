@@ -1301,12 +1301,17 @@ function CreateFlow({
   const userEditedRef = useRef(new Set<string>())
   const aiFilledRef = useRef<Partial<Record<string, string>>>({})
   const [photoFill, setPhotoFill] = useState<"idle" | "loading" | "filled" | "unchanged" | "failed" | "unavailable" | "manual">("idle")
-  // The owner explicitly requests analysis. Selecting a photo alone never starts a paid call.
+  // Photo review starts on Next, before any background job. Auto-fill reuses it only when asked.
   const [scanImage, setScanImage] = useState("")
   const [aiPhotoCheck, setAiPhotoCheck] = useState<{ image: string; check: PhotoCheck } | null>(null)
   const [photoReview, setPhotoReview] = useState<{ image: string; review: PhotoReview; accepted: boolean } | null>(null)
   const [photoReviewOpen, setPhotoReviewOpen] = useState(false)
   const [photoReviewChecked, setPhotoReviewChecked] = useState(false)
+  const [preflightStatus, setPreflightStatus] = useState<"idle" | "loading" | "ready" | "failed">("idle")
+  const [preflightFailureOpen, setPreflightFailureOpen] = useState(false)
+  const preflightRef = useRef<{ image: string; approved: boolean; checking: boolean; suggestion: PhotoSuggestion | null }>({ image: "", approved: false, checking: false, suggestion: null })
+  const resumePhotoRef = useRef<(() => void) | null>(null)
+  const failedReviewImageRef = useRef("")
   const analysisRequestRef = useRef(0)
   const currentPhotoRef = useRef(imageUrl)
   currentPhotoRef.current = imageUrl
@@ -1319,6 +1324,11 @@ function CreateFlow({
   useLayoutEffect(() => {
     analysisRequestRef.current += 1
     setPhotoFill("idle")
+    setPreflightStatus("idle")
+    setPreflightFailureOpen(false)
+    preflightRef.current = { image: imageUrl, approved: false, checking: false, suggestion: null }
+    resumePhotoRef.current = null
+    failedReviewImageRef.current = ""
     setScanImage("")
     setAiPhotoCheck(null)
     setPhotoReview(null)
@@ -1334,26 +1344,72 @@ function CreateFlow({
   }, [imageUrl])
   useEffect(() => () => { analysisRequestRef.current += 1 }, [])
   useEffect(() => {
-    if (step === 2 && pendingPhotoReview) {
+    if ((step === 1 || step === 2) && pendingPhotoReview) {
       setPhotoReviewChecked(false)
       setPhotoReviewOpen(true)
     }
   }, [step]) // Only returning to the info step reopens a dismissed warning.
 
+  const chooseAnotherPhoto = () => (document.getElementById(stepRef.current === 1 ? "product-photo" : "details-photo") as HTMLInputElement | null)?.click()
   const openPhotoReview = () => {
     setPhotoReviewChecked(false)
     setPhotoReviewOpen(true)
   }
+  const resumeReviewedPhoto = () => {
+    const resume = resumePhotoRef.current
+    resumePhotoRef.current = null
+    resume?.()
+  }
+  const requestPhotoReview = (resume?: () => void, retry = false) => {
+    const image = imageUrl
+    if (!image || uploadPending) return
+    if (resume) resumePhotoRef.current = resume
+    const cached = preflightRef.current
+    if (cached.image === image && cached.approved) { resumeReviewedPhoto(); return }
+    if (cached.image === image && cached.checking) return
+    if (!retry && cached.image === image && cached.suggestion?.photoReview) { openPhotoReview(); return }
+    if (!retry && failedReviewImageRef.current === image) { setPhotoReviewChecked(false); setPreflightFailureOpen(true); return }
+    const request = ++analysisRequestRef.current
+    preflightRef.current = { image, approved: false, checking: true, suggestion: null }
+    setPreflightStatus("loading")
+    failedReviewImageRef.current = ""
+    setPreflightFailureOpen(false)
+    setPhotoReviewChecked(false)
+    void analyzePhotoOnce(image, retry).then((suggestion) => {
+      if (request !== analysisRequestRef.current || currentPhotoRef.current !== image) return
+      preflightRef.current = { image, approved: false, checking: false, suggestion }
+      if (!suggestion || !suggestion.photoReview) {
+        failedReviewImageRef.current = image
+        setPreflightStatus("failed")
+        setPreflightFailureOpen(true)
+        return
+      }
+      const review = reviewWithQuality(suggestion.photoReview, suggestion.photoCheck, suggestion.productName)
+      setPhotoReview({ image, review, accepted: review.items.length === 0 })
+      setAiPhotoCheck({ image, check: suggestion.photoCheck })
+      setPreflightStatus("ready")
+      if (review.items.length) { setPhotoReviewOpen(true); return }
+      preflightRef.current.approved = true
+      resumeReviewedPhoto()
+    }).catch(() => {
+      if (request !== analysisRequestRef.current || currentPhotoRef.current !== image) return
+      preflightRef.current = { image, approved: false, checking: false, suggestion: null }
+      failedReviewImageRef.current = image
+      setPreflightStatus("failed")
+      setPreflightFailureOpen(true)
+    })
+  }
   const scanPhoto = () => {
-    if (!imageUrl || photoFill === "loading") return
+    if (!imageUrl || photoFill === "loading" || preflightRef.current.checking) return
     const image = imageUrl
     const request = ++analysisRequestRef.current
     const retry = scanImage === image
     setScanImage(image)
     setPhotoFill("loading")
-    void analyzePhotoOnce(image, retry).then((suggestion) => {
+    const cachedSuggestion = preflightRef.current.image === image && !retry ? preflightRef.current.suggestion : null
+    void (cachedSuggestion ? Promise.resolve(cachedSuggestion) : analyzePhotoOnce(image, retry)).then((suggestion) => {
       if (request !== analysisRequestRef.current || currentPhotoRef.current !== image) return
-      if (!suggestion) {
+      if (!suggestion || !suggestion.photoReview) {
         // Keep the owner's fields and any earlier, still-unconfirmed warning intact.
         setPhotoFill(isAiUnavailable() ? "unavailable" : "failed")
         return
@@ -1361,10 +1417,13 @@ function CreateFlow({
       photoDetailsRef.current = { image, details: suggestion.visualDetails ?? [], box: suggestion.subjectBox ?? null }
       if (suggestion.subjectBox) setPhotoBox({ image, box: suggestion.subjectBox })
       setAiPhotoCheck({ image, check: suggestion.photoCheck })
-      const review = reviewWithQuality(suggestion.photoReview, suggestion.photoCheck)
-      setPhotoReview({ image, review, accepted: false })
+      const review = reviewWithQuality(suggestion.photoReview, suggestion.photoCheck, suggestion.productName)
+      const alreadyAccepted = preflightRef.current.image === image && preflightRef.current.approved && cachedSuggestion === suggestion
+      setPhotoReview({ image, review, accepted: alreadyAccepted || review.items.length === 0 })
+      preflightRef.current = { image, approved: alreadyAccepted || review.items.length === 0, checking: false, suggestion }
+      setPreflightStatus("ready")
       setPhotoReviewChecked(false)
-      if (review.items.length && stepRef.current === 2) setPhotoReviewOpen(true)
+      if (review.items.length && !alreadyAccepted) setPhotoReviewOpen(true)
       const hasDraft = Boolean(suggestion.productName || suggestion.description || suggestion.highlights || suggestion.keyFeatures.length || suggestion.targetAudience || suggestion.mediaHeadline)
       if (!hasDraft) { setPhotoFill("failed"); return }
       const applied = applyPhotoSuggestion(suggestion)
@@ -1374,6 +1433,7 @@ function CreateFlow({
     })
   }
   const enterPhotoManually = () => {
+    if (preflightRef.current.checking) return
     analysisRequestRef.current += 1
     setPhotoFill("manual")
     requestAnimationFrame(() => document.getElementById("field-product-name")?.focus())
@@ -1876,6 +1936,7 @@ function CreateFlow({
     setPhotoPick("changed")
   }, [imageUrl])
   const startBackground = (forImage: string) => {
+    if (preflightRef.current.image !== forImage || !preflightRef.current.approved) return
     if (sceneImage?.forImage === forImage) {
       setBgState({ forImage, status: "ready" })
       return
@@ -1900,14 +1961,20 @@ function CreateFlow({
   // info step when the owner swaps the photo there.
   const [asking, setAsking] = useState(false)
   const needsAnswer = Boolean(imageUrl) && (showPoster || showVideo) && bgChoice?.forImage !== imageUrl
-  const goToDetails = () => {
+  const continueToDetails = () => {
     if (needsAnswer) setAsking(true)
     else setStep(2)
   }
+  const goToDetails = () => requestPhotoReview(continueToDetails)
   useEffect(() => {
-    if (step === 2 && bgChoice && needsAnswer && !uploadPending) setAsking(true)
+    if (step === 2 && imageUrl && !uploadPending) requestPhotoReview(() => { if (needsAnswer) setAsking(true) })
   }, [imageUrl, uploadPending]) // eslint-disable-line react-hooks/exhaustive-deps
   const answerBackground = (change: boolean) => {
+    if (preflightRef.current.image !== imageUrl || !preflightRef.current.approved) {
+      setAsking(false)
+      requestPhotoReview(() => answerBackground(change))
+      return
+    }
     setAsking(false)
     setBgChoice({ forImage: imageUrl, change })
     if (change) {
@@ -1921,7 +1988,7 @@ function CreateFlow({
     setBgState(null)
     if (step === 1) setStep(2)
   }
-  const asksBackground = asking && Boolean(imageUrl) && (step === 1 || step === 2)
+  const asksBackground = asking && Boolean(imageUrl) && preflightRef.current.image === imageUrl && preflightRef.current.approved && (step === 1 || step === 2)
   const ownBg = bgState?.forImage === imageUrl ? bgState.status : undefined
   // 사진 고르기 popup: opened by 바꾸기 (never on its own while the owner types); "사진 다시 고르기" reopens it.
   const changedUrl = ownBg === "ready" && sceneImage?.forImage === imageUrl ? sceneImage.url : ""
@@ -2617,7 +2684,7 @@ function CreateFlow({
         step === 3 ? "results-flow" : "max-w-[920px]"
       }`}
     >
-      {step === 2 && pendingPhotoReview && photoReviewOpen && photoReview && (
+      {(step === 1 || step === 2) && pendingPhotoReview && photoReviewOpen && photoReview && (
         <AppDialog titleId="photo-review-title" bodyId="photo-review-body" className="photo-review-dialog" onClose={() => setPhotoReviewOpen(false)} closeOnBackdrop={false} focusSelector="#photo-review-title">
           <button type="button" className="photo-review-close" aria-label={t("사진 확인창 닫기")} onClick={() => setPhotoReviewOpen(false)}>×</button>
           <h2 id="photo-review-title" tabIndex={-1}>{t("사진 내용을 확인해 주세요")}</h2>
@@ -2632,13 +2699,31 @@ function CreateFlow({
             <button type="button" className="studio-primary" disabled={!photoReviewChecked} onClick={() => {
               if (!photoReviewChecked || photoReview.image !== imageUrl) return
               setPhotoReview({ ...photoReview, accepted: true })
+              preflightRef.current.approved = true
               setAiPhotoCheck(null) // This photo's AI quality warning was acknowledged in the dialog.
               setPhotoReviewOpen(false)
+              resumeReviewedPhoto()
             }}>{t("확인하고 계속")}</button>
-            <button type="button" className="studio-secondary" onClick={() => { setPhotoReviewOpen(false); detailsPhotoRef.current?.click() }}>{t("다른 사진 고르기")}</button>
+            <button type="button" className="studio-secondary" onClick={() => { setPhotoReviewOpen(false); chooseAnotherPhoto() }}>{t("다른 사진 고르기")}</button>
           </div>
         </AppDialog>
       )}
+      {(step === 1 || step === 2) && preflightFailureOpen && preflightStatus === "failed" && (
+        <AppDialog titleId="photo-preflight-title" bodyId="photo-preflight-body" className="photo-review-dialog" onClose={() => setPreflightFailureOpen(false)} closeOnBackdrop={false} focusSelector="#photo-preflight-title">
+          <button type="button" className="photo-review-close" aria-label={t("사진 확인창 닫기")} onClick={() => setPreflightFailureOpen(false)}>×</button>
+          <h2 id="photo-preflight-title" tabIndex={-1}>{t("사진 내용을 확인하지 못했어요")}</h2>
+          <div id="photo-preflight-body"><p>{t("아직 담배·술·약물·위험 물품 등을 확인하지 못했어요. 다시 읽거나 다른 사진을 골라 주세요.")}</p><p>{t("직접 확인하고 진행하려면 사용이 제한되는 물품이나 민감정보가 없는 상품 사진인지 확인해 주세요. 자동 검사를 통과했다는 뜻은 아니에요.")}</p></div>
+          <label className="photo-review-confirm"><input type="checkbox" checked={photoReviewChecked} onChange={(event) => setPhotoReviewChecked(event.target.checked)} /><span>{t("사용이 제한되는 물품이나 민감정보가 없는 상품 사진임을 직접 확인했어요.")}</span></label>
+          <div className="bg-ask-actions">
+            <button type="button" className="studio-primary" onClick={() => requestPhotoReview(undefined, true)}>{t("사진 다시 확인하기")}</button>
+            <button type="button" className="studio-secondary" disabled={!photoReviewChecked} onClick={() => { if (!photoReviewChecked || preflightRef.current.image !== imageUrl) return; preflightRef.current.approved = true; setPreflightStatus("ready"); setPreflightFailureOpen(false); resumeReviewedPhoto() }}>{t("직접 확인하고 계속")}</button>
+            <button type="button" className="studio-secondary" onClick={() => { setPreflightFailureOpen(false); chooseAnotherPhoto() }}>{t("다른 사진 고르기")}</button>
+          </div>
+        </AppDialog>
+      )}
+      {(step === 1 || step === 2) && preflightStatus === "loading" && <p className="photo-review-pending" role="status">{t("보정 전에 사진 내용을 확인하고 있어요…")}</p>}
+      {step === 1 && pendingPhotoReview && !photoReviewOpen && <div className="photo-review-pending" role="status"><p>{t("사진 내용 확인이 필요해요. 확인한 뒤 다음으로 갈 수 있어요.")}</p><button type="button" className="studio-secondary" onClick={openPhotoReview}>{t("사진 내용 확인하기")}</button></div>}
+      {(step === 1 || step === 2) && preflightStatus === "failed" && !preflightFailureOpen && <div className="photo-review-pending" role="status"><p>{t("사진 내용을 확인하지 못했어요. 확인한 뒤 계속해 주세요.")}</p><button type="button" className="studio-secondary" onClick={() => { setPhotoReviewChecked(false); setPreflightFailureOpen(true) }}>{t("사진 확인 다시 열기")}</button></div>}
       {step === 3 && generating ? (
         <GenerationProgress
           kind={type}
@@ -2730,7 +2815,7 @@ function CreateFlow({
               type="button"
               className="studio-secondary photo-change-button"
               disabled={uploadPending}
-              onClick={() => detailsPhotoRef.current?.click()}
+              onClick={() => chooseAnotherPhoto()}
             >
               <Icon name="camera" size={18} />
               {t("사진 변경")}
@@ -3172,9 +3257,9 @@ function CreateFlow({
                 {pendingPhotoReview ? t("사진 내용을 먼저 확인해 주세요.") : photoFill === "loading" ? t("사진을 읽은 뒤 만들 수 있어요.") : missingFields.length > 0 ? t("제품 이름을 적으면 만들 수 있어요.") : ""}
               </p>
               <PrimaryButton
-                disabled={missingFields.length > 0 || uploadPending || photoFill === "loading" || pendingPhotoReview}
+                disabled={missingFields.length > 0 || uploadPending || photoFill === "loading" || pendingPhotoReview || preflightStatus !== "ready" || !preflightRef.current.approved}
                 onClick={() => {
-                  if (photoFill === "loading") return
+                  if (photoFill === "loading" || preflightStatus !== "ready" || !preflightRef.current.approved) return
                   if (pendingPhotoReview) { openPhotoReview(); return }
                   // Results open on the first made thing (the 사진 tab is there to go back to).
                   setSelectedResultTab((resultTabs.find((tab) => tab.id !== "photo") ?? resultTabs[0]).id)

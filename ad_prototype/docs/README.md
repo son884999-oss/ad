@@ -18,14 +18,14 @@
 
 ## 1. 지금 상태 (2026-10-26)
 
-**기능 고정:** 담당 교수 지시로 발표까지 새 기능·기능 변경 없음. 자잘한 버그와 화면 가림만 고친다. 단, 10-30 사용자 명시 승인으로 사진 의심 항목 확인·인식 실패 복구 및 첫 영상 썸네일 버그를 보완했다. 사진 분석은 여전히 [자동으로 채워 주기]를 눌렀을 때만 실행한다.
+**기능 고정:** 담당 교수 지시로 발표까지 새 기능·기능 변경 없음. 자잘한 버그와 화면 가림만 고친다. 단, 10-30 사용자 명시 승인으로 사진 의심 항목 확인·인식 실패 복구 및 첫 영상 썸네일 버그를 보완했다. 이후 담배 사진이 보정까지 진행된 제보를 반영해 [다음으로]에서 원본 사진을 먼저 확인하도록 수정했다. [자동으로 채워 주기]는 이 분석 결과를 재사용하되 입력은 버튼을 눌러야 채운다.
 
 소상공인이 **상품 사진 한 장**으로 포스터 · 10초 영상 · 홍보 글을 만드는 모바일 웹앱. PC에서는 휴대폰 틀 안에 모바일 화면이 나온다. 배포: Vercel 프로젝트 `son884999-oss-projects/ad`, 주소 `https://ad-prototype-codyssey.vercel.app`.
 
 ```
-홈(예시 카드 9장) → ① 사진 넣기 → [다음으로]
+홈(예시 카드 9장) → ① 사진 넣기 → [다음으로] → 원본 사진 확인(의심 항목·실패는 확인 후 계속)
   → 팝업 "배경을 광고 사진처럼 바꿀까요?" → 바꾸기면 "원하는 사진을 선택해 주세요"(원본 / 보정)
-→ ② 정보 입력 ([자동으로 채워 주기]를 누를 때만 AI가 사진을 읽음, 기본·쉬운 화면 전환)
+→ ② 정보 입력 ([자동으로 채워 주기]는 확인 결과 재사용, 기본·쉬운 화면 전환)
 → ③ 결과: 사진(보정을 골랐을 때만) · 포스터 · 영상 · 홍보 글 탭
 → 저장·공유·복사, 로그인했으면 내 홍보물에 서버 저장
 ```
@@ -87,7 +87,7 @@ npm run dev:mock                # http://127.0.0.1:5174 (가짜 AI 답, 키·비
 npx tsc --noEmit -p .
 npm run build
 npm run verify:ai; npm run verify:video; npm run verify:easy; npm run verify:records; npm run verify:photo
-npm run verify:photo-review; npm run verify:video-preview
+npm run verify:photo-review; npm run verify:photo-preflight; npm run verify:video-preview
 npm run verify:promo; npm run verify:guard; npm run verify:scene; npm run verify:background; npm run verify:auth
 $env:REFERENCE_REBUILD_OUTPUT="$env:TEMP\rebuild"; node scripts/verify-reference-rebuild.mjs
 npm run audit:screens -- --shots "$env:TEMP\audit"
@@ -117,3 +117,9 @@ npm run eval:promo; npm run eval:promo -- --local
 ### 2026-10-30 추가 점검
 
 사진 확인·실패 복구는 `verify:photo-review`, 영상 첫 미리보기는 `verify:video-preview`로 모의 응답을 검증한다. 모든 API를 가로채므로 실제 AI 호출이 없다. Linux 등 Edge가 없는 환경에서는 `PLAYWRIGHT_EXECUTABLE_PATH`(사진·AI 점검), `PLAYWRIGHT_CHROMIUM_EXECUTABLE`(영상 점검) 및 필요시 JSON 배열 `PLAYWRIGHT_CHROMIUM_ARGS`를 지정한다. 실제 AI의 탐지 정확도와 실기기 코덱·소리·배포 설정은 이 검사로 보장하지 않는다.
+
+### 담배 사진 제보 후 사진 확인 순서 보완(2026-10-30)
+- 기존 자동 채우기 단계만 확인하던 구현은 배경 보정 전에 경고하지 못했다. 이제 원본 사진의 [다음으로]가 사진 확인을 먼저 요청하며, 확인 전에는 배경 API와 홍보물 생성을 시작하지 않는다. 정보 입력에서 새 사진을 고를 때도 다시 확인한다.
+- 확인만으로 정보 칸을 바꾸지 않는다. [자동으로 채워 주기]를 누를 때 같은 분석을 재사용하므로 정상 흐름에서는 사진 분석 1회이며, 사용자가 요청한 재시도만 추가 호출한다.
+- 확인 실패/누락·잘못된 분류 응답을 정상 사진으로 처리하지 않는다. 다시 읽기/다른 사진 또는 사용 제한 물품·민감정보 없는 상품 사진을 직접 확인했다는 별도 체크 후 진행한다. 닫기·ESC는 확인으로 처리하지 않는다.
+- 담배 경고는 담뱃갑·보루·전자담배·흡연 경고그림까지 보도록 지시했고, 모델이 제품 이름을 담배/담뱃갑 등으로 읽었는데 항목을 빠뜨린 경우에도 확인을 요구한다. 이는 모델이 모든 담배 사진을 탐지한다는 보증이 아니다.
