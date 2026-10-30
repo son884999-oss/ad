@@ -144,6 +144,8 @@ type GeneratedRecord = {
   owner?: string
   /** What already went up: the photo and background fingerprints (pictureKey), so edits send the row only. */
   cloud?: { photo?: string; scene?: string }
+  /** Device edits not yet acknowledged by the server. Retained across failed uploads/reloads. */
+  cloudPending?: boolean
   /** Links to the saved poster and video (records read from the server). */
   cloudFiles?: { poster?: string; video?: string }
 }
@@ -3669,8 +3671,16 @@ function Records({
   onDelete,
   onCreate,
   onStartNew,
+  cloudStatus,
+  cloudFailed,
+  onRetryCloud,
+  cloudLoading,
 }: {
   easyMode: boolean
+  cloudStatus: string
+  cloudFailed: boolean
+  cloudLoading: boolean
+  onRetryCloud: () => void
   /** True when the list is kept on this device (IndexedDB); false = this window only. */
   stored: boolean
   records: GeneratedRecord[]
@@ -3713,9 +3723,10 @@ function Records({
       <h2 data-screen-heading tabIndex={-1}>
         내 홍보물
       </h2>
-      <p className="records-retention-note">
-        {t(stored ? "이 기기에 저장된 홍보물이에요. 다른 기기에서는 보이지 않아요." : "이 창에서 만든 홍보물을 확인할 수 있어요.")}
+      <p className="records-retention-note" role="status">
+        {t(cloudStatus || (stored ? "이 기기에 저장된 홍보물이에요. 다른 기기에서는 보이지 않아요." : "이 창에서 만든 홍보물을 확인할 수 있어요."))}
       </p>
+      {cloudFailed && <button type="button" className="studio-secondary" onClick={onRetryCloud}>{t("서버 연결 다시 시도")}</button>}
       <div className="records-toolbar">
         <p className="records-count" role="status">
           {t("모두")} {visible.length}{t("개")}
@@ -3741,6 +3752,7 @@ function Records({
             <div className="record-entry" key={record.id}>
             <button
               className={view === "grid" ? "record-card" : "record-item"}
+              disabled={cloudLoading}
               onClick={() => onOpen(record, kind)}
             >
               <span className="record-thumbnail" data-kind={kind}>
@@ -3774,6 +3786,7 @@ function Records({
             <button
               type="button"
               className="record-delete"
+              disabled={cloudLoading}
               aria-label={`${record.details.name?.trim() || labels[kind]} ${t("지우기")}`}
               onClick={() => {
                 if (window.confirm(t("이 홍보물을 지울까요? 포스터·영상·글이 함께 지워지고 되돌릴 수 없어요."))) onDelete(record)
@@ -3892,8 +3905,8 @@ export default function App() {
   // record on screen.
   const aiVideo = useAiVideo((jobId, video) =>
     setRecords((current) => current.some((record) => record.video?.jobId === jobId)
-      ? current.map((record) => (record.video?.jobId === jobId ? { ...record, video: { ...record.video, ...video } } : record))
-      : current.map((record) => (record.id === currentRecordId && !record.video ? { ...record, video } : record))),
+      ? current.map((record) => (record.video?.jobId === jobId ? { ...record, video: { ...record.video, ...video }, cloudPending: true } : record))
+      : current.map((record) => (record.id === currentRecordId && !record.video ? { ...record, video, cloudPending: true } : record))),
     (jobId) => Boolean(jobId) && recordsRef.current.some((record) => record.video?.jobId === jobId))
 
   const [continuationNotice, setContinuationNotice] = useState(false)
@@ -3903,6 +3916,7 @@ export default function App() {
   recordsRef.current = records
   // 내 홍보물 on this device: read once, then saved whenever the list changes.
   const [recordsStored, setRecordsStored] = useState(false)
+  const [recordsLoaded, setRecordsLoaded] = useState(false)
   const recordsLoadedRef = useRef(false)
   useEffect(() => {
     void loadRecords<GeneratedRecord>().then((saved) => {
@@ -3911,6 +3925,7 @@ export default function App() {
         setRecordsStored(true)
       }
       recordsLoadedRef.current = true
+      setRecordsLoaded(true)
     })
   }, [])
   useEffect(() => {
@@ -3918,89 +3933,150 @@ export default function App() {
     void saveRecords(records).then(setRecordsStored)
   }, [records])
 
-  // 회원가입·로그인 (Supabase): a signed-in owner's records are mirrored on the server (src/cloudRecords.ts).
-  // Signing in reads them; signing out takes them off this device (they stay on the server).
+  // Cloud writes start only after both the device copy and this account's server copy are read.
   const auth = useAuth()
   const userId = auth.user?.id ?? ""
+  const currentUserRef = useRef(userId)
+  currentUserRef.current = userId
   const syncedRef = useRef(new Map<string, string>())
   const pendingFilesRef = useRef(new Map<string, Map<"poster" | "video", Blob>>())
-  const previousUserRef = useRef("")
+  const pendingDeletesRef = useRef(new Set<string>())
+  const scopeRef = useRef({ userId: "", running: false })
+  const cloudAccountRef = useRef("")
+  const [cloudReady, setCloudReady] = useState("")
+  const [cloudStatus, setCloudStatus] = useState("")
+  const [cloudFailed, setCloudFailed] = useState(false)
+  const [cloudRetry, setCloudRetry] = useState(0)
+  const [syncTick, setSyncTick] = useState(0)
   const recordData = (record: GeneratedRecord) => {
-    const { imageUrl: _image, sceneUrl: _scene, owner: _owner, cloud: _cloud, cloudFiles: _files, ...rest } = record
+    const { imageUrl: _image, sceneUrl: _scene, owner: _owner, cloud: _cloud, cloudFiles: _files, cloudPending: _pending, ...rest } = record
     return JSON.stringify(rest)
   }
   useEffect(() => {
-    if (!auth.ready) return
-    const previous = previousUserRef.current
-    previousUserRef.current = userId
-    if (previous && previous !== userId) {
+    if (!auth.ready || !recordsLoaded) return
+    const scope = { userId, running: false }
+    scopeRef.current = scope
+    const active = () => scopeRef.current === scope && currentUserRef.current === userId
+    if (cloudAccountRef.current !== userId) {
+      if (cloudAccountRef.current) {
+        setCurrentRecordId("")
+        setImageUrl("")
+        setSceneImage(null)
+        setDetails({ ...initialDetails })
+        setAiPromo(null)
+        setPage("home")
+      }
       syncedRef.current.clear()
       pendingFilesRef.current.clear()
-      setRecords((current) => current.filter((record) => record.owner !== previous))
+      pendingDeletesRef.current.clear()
+      cloudAccountRef.current = userId
     }
+    setCloudReady("")
+    setCloudFailed(false)
+    setCloudStatus(userId ? "서버에서 홍보물을 불러오고 있어요…" : "")
+    // Keep each account's unsent device copy, but display/upload only the current owner.
+    // Claim guest records before any asynchronous upload so a later account cannot acquire a failed save.
+    if (userId) setRecords((current) => current.map((record) => !record.owner ? { ...record, owner: userId, cloudPending: true } : record))
     if (!userId) return
     void loadCloudRecords<GeneratedRecord>(userId).then((cloud) => {
-      if (!cloud.length || previousUserRef.current !== userId) return
+      if (!active()) return
       for (const record of cloud) syncedRef.current.set(record.id, recordData(record))
       setRecords((current) => {
-        const ids = new Set(current.map((record) => record.id))
-        const updated = current.map((record) => {
-          const remote = cloud.find((item) => item.id === record.id)
-          return remote ? { ...record, owner: userId, cloudFiles: remote.cloudFiles } : record
+        const remoteIds = new Set(cloud.map((record) => record.id))
+        // Remote rows win for an existing ID; replace expired signed image links as well as text.
+        const remote = cloud.filter((record) => !pendingDeletesRef.current.has(record.id)).map((record) => {
+          const pending = current.find((item) => item.id === record.id && item.cloudPending && (!item.owner || item.owner === userId))
+          return pending ? { ...pending, imageUrl: /^https?:/.test(pending.imageUrl) ? record.imageUrl : pending.imageUrl, sceneUrl: pending.sceneUrl && /^https?:/.test(pending.sceneUrl) ? record.sceneUrl : pending.sceneUrl, cloudFiles: record.cloudFiles } : { ...record, cloudPending: false, cloud: { photo: "server", scene: record.sceneUrl ? "server" : undefined } }
         })
-        const added = cloud.filter((record) => !ids.has(record.id)).map((record) => ({ ...record, cloud: { photo: "server", scene: record.sceneUrl ? "server" : undefined } }))
-        return [...updated, ...added]
+        const local = current.filter((record) => !remoteIds.has(record.id) && (record.owner !== userId || record.cloudPending))
+        return [...remote, ...local]
       })
+      setCloudReady(userId)
+      setCloudStatus("서버에서 홍보물을 불러왔어요.")
+    }).catch(() => {
+      if (!active()) return
+      setCloudFailed(true)
+      setCloudStatus("서버의 홍보물을 불러오지 못했어요. 이 기기의 기록은 보존했어요.")
     })
-  }, [userId, auth.ready]) // eslint-disable-line react-hooks/exhaustive-deps
-  const flushFiles = (recordId: string) => {
-    const files = pendingFilesRef.current.get(recordId)
-    if (!files || !userId) return
-    pendingFilesRef.current.delete(recordId)
-    for (const [kind, blob] of files) void saveCloudFile(userId, recordId, kind, blob).catch(() => undefined)
-  }
+    return () => { if (scopeRef.current === scope) scopeRef.current = { userId: "", running: false } }
+  }, [userId, auth.ready, recordsLoaded, cloudRetry]) // eslint-disable-line react-hooks/exhaustive-deps
+
   useEffect(() => {
-    if (!userId) return
-    // Shortly after the list settles: new or changed records go up, records deleted here go from the server.
+    if (!userId || cloudReady !== userId || cloudFailed) return
+    const scope = scopeRef.current
+    const active = () => scopeRef.current === scope && currentUserRef.current === userId
     const timer = window.setTimeout(() => {
+      if (!active() || scope.running) return
       const current = recordsRef.current
-      const ids = new Set(current.map((record) => record.id))
-      for (const id of [...syncedRef.current.keys()]) {
-        if (ids.has(id)) continue
-        syncedRef.current.delete(id)
-        void deleteCloudRecord(userId, id).catch(() => undefined)
-      }
-      for (const record of current) {
-        if (record.owner && record.owner !== userId) continue
-        const data = recordData(record)
-        const photoKey = pictureKey(record.imageUrl)
-        const sceneKey = pictureKey(record.sceneUrl)
-        const uploadPhoto = !record.cloud?.photo
-        const uploadScene = Boolean(record.sceneUrl) && record.cloud?.scene !== sceneKey && record.cloud?.scene !== "server"
-        if (record.owner === userId && !uploadPhoto && !uploadScene && syncedRef.current.get(record.id) === data) continue
-        syncedRef.current.set(record.id, data)
-        void saveCloudRecord(userId, record, { uploadPhoto, uploadScene })
-          .then(() => {
-            setRecords((list) => list.map((item) => item.id === record.id
-              ? { ...item, owner: userId, cloud: { photo: item.cloud?.photo ?? photoKey, scene: uploadScene ? sceneKey : item.cloud?.scene } }
-              : item))
-            flushFiles(record.id)
-          })
-          .catch(() => syncedRef.current.delete(record.id))
-      }
+      const changed = current.filter((record) => (!record.owner || record.owner === userId) && (
+        record.cloudPending || !record.cloud?.photo || (record.sceneUrl && record.cloud?.scene !== "server" && record.cloud?.scene !== pictureKey(record.sceneUrl)) || syncedRef.current.get(record.id) !== recordData(record)))
+      if (!changed.length && !pendingDeletesRef.current.size && !pendingFilesRef.current.size) return
+      scope.running = true
+      setCloudStatus("서버에 저장하고 있어요…")
+      void (async () => {
+        for (const id of [...pendingDeletesRef.current]) {
+          if (!active()) return
+          await deleteCloudRecord(userId, id, active)
+          if (!active()) return
+          pendingDeletesRef.current.delete(id)
+          pendingFilesRef.current.delete(id)
+          syncedRef.current.delete(id)
+        }
+        for (const record of changed) {
+          if (!active() || pendingDeletesRef.current.has(record.id)) continue
+          const uploadPhoto = !record.cloud?.photo
+          const uploadScene = Boolean(record.sceneUrl) && record.cloud?.scene !== "server" && record.cloud?.scene !== pictureKey(record.sceneUrl)
+          setRecords((list) => list.map((item) => item.id === record.id ? { ...item, cloudPending: true } : item))
+          await saveCloudRecord(userId, record, { uploadPhoto, uploadScene, active })
+          if (!active()) return
+          syncedRef.current.set(record.id, recordData(record))
+          setRecords((list) => list.map((item) => item.id === record.id ? {
+            ...item, owner: userId, cloudPending: recordData(item) !== recordData(record) || pictureKey(item.imageUrl) !== pictureKey(record.imageUrl) || pictureKey(item.sceneUrl) !== pictureKey(record.sceneUrl),
+            cloud: { photo: uploadPhoto ? pictureKey(record.imageUrl) : item.cloud?.photo, scene: !record.sceneUrl ? undefined : uploadScene ? pictureKey(record.sceneUrl) : item.cloud?.scene },
+          } : item))
+        }
+        for (const [id, files] of [...pendingFilesRef.current]) {
+          if (!active()) return
+          if (pendingDeletesRef.current.has(id) || !syncedRef.current.has(id)) continue
+          for (const [kind, blob] of [...files]) {
+            await saveCloudFile(userId, id, kind, blob, active)
+            if (!active()) return
+            // A newer render may have replaced this file while the upload was in flight.
+            if (files.get(kind) === blob) files.delete(kind)
+          }
+          if (!files.size) pendingFilesRef.current.delete(id)
+        }
+        if (active()) setCloudStatus("서버에 저장했어요. 같은 계정으로 다른 기기에서 불러올 수 있어요.")
+      })().catch(() => {
+        if (!active()) return
+        setCloudFailed(true)
+        setCloudStatus("서버에 저장하지 못한 변경이 있어요. 이 기기의 기록을 보존했어요. 다시 시도해 주세요.")
+      }).finally(() => {
+        scope.running = false
+        if (active()) setSyncTick((tick) => tick + 1)
+      })
     }, 800)
     return () => window.clearTimeout(timer)
-  }, [records, userId]) // eslint-disable-line react-hooks/exhaustive-deps
-  /** The record shown on the result screen; poster shape and first-line choices made there are saved into it. */
+  }, [records, userId, cloudReady, cloudFailed, syncTick]) // eslint-disable-line react-hooks/exhaustive-deps
+  const retryCloud = () => {
+    setCloudFailed(false)
+    if (cloudReady === userId) setSyncTick((tick) => tick + 1)
+    else setCloudRetry((tick) => tick + 1)
+  }
+  const deleteRecord = (record: GeneratedRecord) => {
+    if (userId && (!record.owner || record.owner === userId)) pendingDeletesRef.current.add(record.id)
+    setRecords((current) => current.filter((item) => item.id !== record.id))
+  }
+  /** The record shown on the result screen. Rendered files stay queued until their upload succeeds. */
   const [currentRecordId, setCurrentRecordId] = useState("")
-  /** The poster or video for the record on screen: uploaded now if its row is on the server, else right after. */
   const saveResultFile = (kind: "poster" | "video", file: Blob) => {
     if (!userId || !currentRecordId) return
+    const record = recordsRef.current.find((item) => item.id === currentRecordId)
+    if (!record || record.owner && record.owner !== userId) return
     const files = pendingFilesRef.current.get(currentRecordId) ?? new Map<"poster" | "video", Blob>()
     files.set(kind, file)
     pendingFilesRef.current.set(currentRecordId, files)
-    const record = recordsRef.current.find((item) => item.id === currentRecordId)
-    if (record?.owner === userId && syncedRef.current.has(record.id)) flushFiles(record.id)
+    setSyncTick((tick) => tick + 1)
   }
 
   // Remembered on this device so an older user does not have to find the switch again after a reload.
@@ -4442,10 +4518,10 @@ export default function App() {
     if (!sceneImage) return
     // 원본 picked: the record keeps no corrected picture, so reopening it shows the original and three tabs.
     if (photoPick === "original") {
-      setRecords((current) => current.map((record) => record.id === currentRecordId && record.sceneUrl ? (({ sceneUrl: _scene, ...rest }) => rest)(record) : record))
+      setRecords((current) => current.map((record) => record.id === currentRecordId && record.sceneUrl ? (({ sceneUrl: _scene, ...rest }) => ({ ...rest, cloudPending: true }))(record) : record))
       return
     }
-    setRecords((current) => current.map((record) => record.id === currentRecordId && record.imageUrl === sceneImage.forImage && record.sceneUrl !== sceneImage.url ? { ...record, sceneUrl: sceneImage.url } : record))
+    setRecords((current) => current.map((record) => record.id === currentRecordId && record.imageUrl === sceneImage.forImage && record.sceneUrl !== sceneImage.url ? { ...record, sceneUrl: sceneImage.url, cloudPending: true } : record))
   }, [sceneImage, photoPick]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Changes made on the result screen (poster shape, chosen first line) are saved into the record shown.
@@ -4454,13 +4530,15 @@ export default function App() {
     if (!currentRecordId || page !== "create" || step !== 3 || generatingView) return
     // Only what can be changed on the result screen, so other edits never leak into an older record.
     const { posterRatio, posterLayout, posterTheme } = details
-    setRecords((current) => current.map((record) => record.id === currentRecordId
-      ? {
-          ...record,
-          details: { ...record.details, posterRatio, posterLayout, posterTheme },
-          ...(record.promo && aiPromo && record.promo.signature === aiPromo.signature ? { promo: { ...record.promo, chosen: aiPromo.chosen } } : {}),
-        }
-      : record))
+    setRecords((current) => current.map((record) => {
+      if (record.id !== currentRecordId) return record
+      const updated = {
+        ...record,
+        details: { ...record.details, posterRatio, posterLayout, posterTheme },
+        ...(record.promo && aiPromo && record.promo.signature === aiPromo.signature ? { promo: { ...record.promo, chosen: aiPromo.chosen } } : {}),
+      }
+      return recordData(updated) === recordData(record) ? record : { ...updated, cloudPending: true }
+    }))
   }, [details, aiPromo]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const navigate = (nextPage: Page, type?: CreationType) => {
@@ -4542,6 +4620,7 @@ export default function App() {
 
   const saveCurrentResult = () => {
     const record: GeneratedRecord = {
+      ...(userId ? { owner: userId, cloudPending: true } : {}),
       editedHashtags: { ...editedHashtags },
       id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
 
@@ -4757,15 +4836,23 @@ export default function App() {
         <Records
           easyMode={easyMode}
           stored={recordsStored}
-          records={records}
+          records={records.filter((record) => !record.owner || record.owner === userId)}
+          cloudStatus={cloudStatus}
+          cloudFailed={cloudFailed}
+          cloudLoading={Boolean(userId) && cloudReady !== userId && !cloudFailed}
+          onRetryCloud={retryCloud}
           onOpen={(record, kind) => {
             // A record read from the server has links; it opens like a local one once its pictures are data URLs.
             if (!/^https?:/.test(record.imageUrl)) return openRecord(record, kind)
+            const scope = scopeRef.current
+            const owner = userId
             void Promise.all([toDataUrl(record.imageUrl), record.sceneUrl ? toDataUrl(record.sceneUrl) : Promise.resolve(undefined)])
-              .then(([imageUrl, sceneUrl]) => openRecord({ ...record, imageUrl, sceneUrl }, kind))
-              .catch(() => window.alert("사진을 불러오지 못했어요. 잠시 뒤에 다시 열어 주세요."))
+              .then(([imageUrl, sceneUrl]) => {
+                if (scopeRef.current === scope && currentUserRef.current === owner) openRecord({ ...record, imageUrl, sceneUrl }, kind)
+              })
+              .catch(() => { if (scopeRef.current === scope && currentUserRef.current === owner) window.alert("사진을 불러오지 못했어요. 잠시 뒤에 다시 열어 주세요.") })
           }}
-          onDelete={(record) => setRecords((current) => current.filter((item) => item.id !== record.id))}
+          onDelete={deleteRecord}
           onCreate={() => navigate("create", "all")}
           onStartNew={startNew}
         />

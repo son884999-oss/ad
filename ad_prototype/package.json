@@ -28,6 +28,7 @@
     "check:copa": "node scripts/check-copa.mjs",
     "verify:background": "node scripts/verify-background.mjs",
     "verify:auth": "node scripts/verify-auth.mjs",
+    "verify:cloud-sync": "node scripts/verify-cloud-sync.mjs",
     "verify:photo-preflight": "node scripts/verify-photo-preflight.mjs",
     "verify:photo-review-prototype": "node scripts/verify-photo-preflight.mjs"
   },

@@ -85,7 +85,7 @@ const base = configured.url
 
 const user = { id: "11111111-2222-3333-4444-555555555555", email: "owner@example.com", aud: "authenticated", role: "authenticated", app_metadata: {}, user_metadata: {}, created_at: new Date().toISOString() }
 const session = () => ({ access_token: "header.eyJzdWIiOiIxMTExIn0.sig", refresh_token: "refresh", expires_in: 3600, expires_at: Math.floor(Date.now() / 1000) + 3600, token_type: "bearer", user })
-const browser = await chromium.launch({ channel: "msedge", headless: true })
+const browser = await chromium.launch({ ...(process.env.PLAYWRIGHT_EXECUTABLE_PATH ? { executablePath: process.env.PLAYWRIGHT_EXECUTABLE_PATH } : { channel: "msedge" }), args: process.env.PLAYWRIGHT_CHROMIUM_ARGS ? JSON.parse(process.env.PLAYWRIGHT_CHROMIUM_ARGS) : [], headless: true })
 try {
   await check("browser: 회원가입 (two passwords, 만 14세, 개인정보 동의) → signed in, the menu shows the account", async () => {
     const page = await browser.newPage({ viewport: { width: 390, height: 844 } })

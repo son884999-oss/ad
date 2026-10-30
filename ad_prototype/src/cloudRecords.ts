@@ -42,56 +42,80 @@ export function pictureKey(url?: string) {
  * only when `uploadPhoto` / `uploadScene` say so (first save, or a new background): the caller remembers what
  * went up (record.cloud) so a later edit sends the small row only.
  */
-export async function saveCloudRecord<T extends Uploadable>(userId: string, record: T, { uploadPhoto, uploadScene }: { uploadPhoto: boolean; uploadScene: boolean }) {
+export async function saveCloudRecord<T extends Uploadable>(userId: string, record: T, { uploadPhoto, uploadScene, active = () => true }: { uploadPhoto: boolean; uploadScene: boolean; active?: () => boolean }) {
   if (!supabase) return
   const { imageUrl, sceneUrl, ...rest } = record
   const data = { ...rest } as Record<string, unknown>
   delete data.owner
   delete data.cloud
   delete data.cloudFiles
+  delete data.cloudPending
+  if (!active()) throw new Error("account-changed")
   const row: Record<string, unknown> = { id: record.id, user_id: userId, data, updated_at: new Date().toISOString() }
   if (uploadPhoto && !/^https?:/.test(imageUrl)) row.photo_path = await upload(userId, record.id, "photo", await blobOf(imageUrl))
+  if (!active()) throw new Error("account-changed")
   if (uploadScene && sceneUrl && !/^https?:/.test(sceneUrl)) row.scene_path = await upload(userId, record.id, "scene", await blobOf(sceneUrl))
+  if (!active()) throw new Error("account-changed")
+  if (!sceneUrl) row.scene_path = null
   const { error } = await supabase.from("records").upsert(row)
   if (error) throw error
 }
 
 /** The poster or video made for a record (uploaded the moment it is ready on the result screen). */
-export async function saveCloudFile(userId: string, recordId: string, kind: "poster" | "video", blob: Blob) {
+export async function saveCloudFile(userId: string, recordId: string, kind: "poster" | "video", blob: Blob, active = () => true) {
   if (!supabase) return
+  if (!active()) throw new Error("account-changed")
   const path = await upload(userId, recordId, kind, blob)
-  const { error } = await supabase.from("records").update({ [`${kind}_path`]: path, updated_at: new Date().toISOString() }).eq("id", recordId)
+  if (!active()) throw new Error("account-changed")
+  const { error } = await supabase.from("records").update({ [`${kind}_path`]: path, updated_at: new Date().toISOString() }).eq("id", recordId).eq("user_id", userId)
   if (error) throw error
 }
 
-export async function deleteCloudRecord(userId: string, recordId: string) {
+export async function deleteCloudRecord(userId: string, recordId: string, active = () => true) {
   if (!supabase) return
-  const { data } = await supabase.storage.from(BUCKET).list(`${userId}/${recordId}`, { limit: 20 })
+  if (!active()) throw new Error("account-changed")
+  // Remove the row first: a failed file cleanup must not leave a visible row pointing at deleted photos.
+  const { error } = await supabase.from("records").delete().eq("id", recordId).eq("user_id", userId)
+  if (error) throw error
+  if (!active()) throw new Error("account-changed")
+  const { data, error: listError } = await supabase.storage.from(BUCKET).list(`${userId}/${recordId}`, { limit: 20 })
+  if (listError) throw listError
+  if (!active()) throw new Error("account-changed")
   const paths = (data ?? []).map((file) => `${userId}/${recordId}/${file.name}`)
-  if (paths.length) await supabase.storage.from(BUCKET).remove(paths)
-  await supabase.from("records").delete().eq("id", recordId)
+  if (paths.length) {
+    const { error: removeError } = await supabase.storage.from(BUCKET).remove(paths)
+    if (removeError) throw removeError
+  }
 }
 
 export type CloudRecordExtras = { owner: string; cloudFiles?: { poster?: string; video?: string } }
 
 /** The owner's records, newest first, with week-long links to their photo, background, poster and video. */
 export async function loadCloudRecords<T>(userId: string): Promise<(T & CloudRecordExtras & { imageUrl: string; sceneUrl?: string })[]> {
-  if (!supabase) return []
-  const { data, error } = await supabase.from("records").select("id, data, photo_path, scene_path, poster_path, video_path, created_at").order("created_at", { ascending: false }).limit(200)
-  if (error || !data) return []
+  if (!supabase) throw new Error("not-configured")
+  type Row = { id: string; data: unknown; photo_path: string | null; scene_path: string | null; poster_path: string | null; video_path: string | null }
+  const data: Row[] = []
+  // Read every page before reconciling absence with local rows.
+  for (let offset = 0; ; offset += 200) {
+    const { data: page, error } = await supabase.from("records").select("id, data, photo_path, scene_path, poster_path, video_path, created_at").eq("user_id", userId).order("created_at", { ascending: false }).order("id", { ascending: false }).range(offset, offset + 199)
+    if (error || !page) throw error ?? new Error("records-read")
+    data.push(...page as Row[])
+    if (page.length < 200) break
+  }
   const paths = data.flatMap((row) => [row.photo_path, row.scene_path, row.poster_path, row.video_path].filter(Boolean) as string[])
   const links = new Map<string, string>()
   for (let i = 0; i < paths.length; i += 100) {
-    const { data: signed } = await supabase.storage.from(BUCKET).createSignedUrls(paths.slice(i, i + 100), LINK_SECONDS)
-    for (const item of signed ?? []) if (item.path && item.signedUrl) links.set(item.path, item.signedUrl)
+    const { data: signed, error: signError } = await supabase.storage.from(BUCKET).createSignedUrls(paths.slice(i, i + 100), LINK_SECONDS)
+    if (signError || !signed || signed.some((item) => item.error || !item.signedUrl)) throw signError ?? new Error("records-file-link")
+    for (const item of signed) if (item.path && item.signedUrl) links.set(item.path, item.signedUrl)
   }
+  if (data.some((row) => !row.photo_path || !links.has(row.photo_path))) throw new Error("records-photo-missing")
   return data
-    .filter((row) => row.photo_path && links.has(row.photo_path))
     .map((row) => ({
       ...(row.data as T),
       id: row.id,
       owner: userId,
-      imageUrl: links.get(row.photo_path) as string,
+      imageUrl: links.get(row.photo_path as string) as string,
       sceneUrl: row.scene_path ? links.get(row.scene_path) : undefined,
       cloudFiles: { poster: row.poster_path ? links.get(row.poster_path) : undefined, video: row.video_path ? links.get(row.video_path) : undefined },
     }))

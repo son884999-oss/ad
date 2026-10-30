@@ -88,7 +88,7 @@ npx tsc --noEmit -p .
 npm run build
 npm run verify:ai; npm run verify:video; npm run verify:easy; npm run verify:records; npm run verify:photo
 npm run verify:photo-review; npm run verify:photo-preflight; npm run verify:video-preview
-npm run verify:promo; npm run verify:guard; npm run verify:scene; npm run verify:background; npm run verify:auth
+npm run verify:promo; npm run verify:guard; npm run verify:scene; npm run verify:background; npm run verify:auth; npm run verify:cloud-sync
 $env:REFERENCE_REBUILD_OUTPUT="$env:TEMP\rebuild"; node scripts/verify-reference-rebuild.mjs
 npm run audit:screens -- --shots "$env:TEMP\audit"
 npm run eval:poster -- http://127.0.0.1:5173/ --layout vertical --out "$env:TEMP\poster-v"
@@ -124,3 +124,10 @@ npm run eval:promo; npm run eval:promo -- --local
 - 내부 플래그는 기본 꺼짐. `VITE_PHOTO_REVIEW_EXPERIMENTAL=1`과 **Vite mock 모드 두 조건을 모두** 충족할 때만 시범 경고를 켠다. production 빌드에서는 플래그가 남아 있어도 비활성이다. 사용자 설정이나 시연 화면에 토글을 추가하지 않았다.
 - 기본 검증: `npm run verify:photo-review`(분류 파서 계약 + 현재 시연 동작). 시범 검증: 위 플래그를 둔 `npm run dev:mock` 서버에 `npm run verify:photo-review-prototype`을 실행한다(`verify:photo-preflight`는 같은 시범 검사의 기존 별칭). 모의 API만 사용한다.
 - 현재 유지되는 인식 실패 안내·[다시 읽기]·[직접 입력하기]와 영상 사진 표지는 별도 기능이다. 자동 채우기는 요청할 때만 실행하고, 실패하면 이미 적은 내용을 보존한다.
+
+### 기기 간 저장·불러오기 보완 (2026-10-30)
+- 사용자 승인으로 로그인 기록의 동기화 결함을 보완했다. 기기 로컬 기록과 계정의 서버 목록을 모두 읽은 뒤 업로드를 시작한다. 동일ID의 동기화된 기록은 서버의 최신 입력·문구·새 사진 주소를 반영하고, 아직 저장되지 않은 기기 수정은 보존한다.
+- 내 홍보물에서 서버 불러오기/저장 상태와 실패를 알리고 [서버 연결 다시 시도]를 제공한다. 로컬 저장 성공과 서버 저장 성공을 구분한다. 계정별 미전송 로컬 기록은 해당 계정에 귀속시키고 다른 계정에서는 표시·전송하지 않는다.
+- 200개 단위 페이지를 끝까지 읽으며, 서버에서 삭제된 동기화 기록은 재조회 때 목록에서 제거한다. 삭제는 DB행을 먼저 처리해 사진만 먼저 사라지는 문제를 피한다.
+- `npm run verify:cloud-sync`: 두 격리 브라우저와 공유 모의 Supabase로 조회·수정·재접속·실패·계정 전환을 검사한다. 운영 계정·실기기·운영 RLS 적용 여부의 검증을 대신하지 않는다.
+- 실시간 공동 편집·충돌 병합은 지원하지 않는다. 로그인/재접속 때 목록을 다시 읽는다. 삭제·포스터/영상 파일의 실패 큐는 현재 창 메모리에 있으므로 창을 닫기 전 재시도해야 한다. 미전송 기록 입력값은 로컬에 보존하지만 파일 큐의 영구 오프라인 보관까지 구현한 것은 아니다.
