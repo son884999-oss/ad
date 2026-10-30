@@ -95,9 +95,9 @@ const okSuggestion = {
   productName: "AI가 붙인 이름", description: "AI가 쓴 제품 설명이에요.", highlights: "", keyFeatures: [], targetAudience: "", tones: [],
   photoCheck: { isRealPhoto: true, isBlurry: false, reason: "" },
 }
-const browser = await chromium.launch({ channel: "msedge", headless: true })
+const browser = await chromium.launch({ headless: true, ...(process.env.PLAYWRIGHT_EXECUTABLE_PATH ? { executablePath: process.env.PLAYWRIGHT_EXECUTABLE_PATH, args: process.env.PLAYWRIGHT_CHROMIUM_ARGS ? JSON.parse(process.env.PLAYWRIGHT_CHROMIUM_ARGS) : ["--no-sandbox", "--disable-dev-shm-usage"] } : { channel: "msedge" }) })
 async function open({ width = 390, height = 844, view = "auto", easy = false, touch = false, analyze = null } = {}) {
-  const page = await browser.newPage({ viewport: { width, height }, reducedMotion: "reduce", hasTouch: touch, isMobile: touch })
+  const page = await browser.newContext({ viewport: { width, height }, reducedMotion: "reduce", hasTouch: touch, isMobile: touch }).then(context => context.newPage())
   page.errors = []
   page.analyzeCalls = 0
   page.on("pageerror", (e) => page.errors.push(e.message))
@@ -109,7 +109,7 @@ async function open({ width = 390, height = 844, view = "auto", easy = false, to
     return route.fulfill({ status: 503, contentType: "application/json", body: '{"error":"AI_NOT_CONFIGURED"}' })
   })
   await page.goto(base)
-  if (easy) await page.getByRole("radio", { name: "쉬운 화면", exact: true }).first().click()
+  await page.getByRole("radio", { name: easy ? "쉬운 화면" : "기본 화면", exact: true }).first().click()
   await page.getByRole("button", { name: "홍보물 만들기", exact: true }).first().click()
   await page.locator(".photo-step").waitFor()
   return page
@@ -253,10 +253,14 @@ try {
     assert.equal(await page.getByLabel("제품 이름", { exact: true }).inputValue(), okSuggestion.productName)
     assert.equal(await page.getByLabel("제품 설명", { exact: true }).inputValue(), okSuggestion.description)
     assert.equal(await button(page, "자동으로 채워 주기").count(), 0, "asked once per photo")
+    const reviewDialog = page.getByRole("dialog", { name: "사진 내용을 확인해 주세요", exact: true })
+    await reviewDialog.waitFor()
+    await reviewDialog.getByRole("checkbox").check()
+    await reviewDialog.getByRole("button", { name: "확인하고 계속" }).click()
     await button(page, "뒤로가기").click()
     await ready(page)
     await settle(page)
-    assert.equal(await warning(page).count(), 0, "the AI flag from the info step is never shown on the photo step")
+    assert.equal(await warning(page).count(), 0, "the acknowledged AI photo warning is not shown again")
     await button(page, "다음으로").click()
     await page.getByLabel("제품 이름", { exact: true }).waitFor()
     await settle(page)

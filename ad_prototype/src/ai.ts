@@ -1,3 +1,4 @@
+import { parsePhotoReview, type PhotoReview } from "./photoReview"
 // Browser side of the AI features. Talks only to our own /api functions (the Gemini key stays on
 // the server). Every function resolves to `null` on any failure — missing key (503), network
 // error, timeout, bad JSON — so the UI silently keeps its local template behaviour.
@@ -24,6 +25,7 @@ export type PhotoSuggestion = {
   /** Where the product is, [ymin, xmin, ymax, xmax] on 0–1000; null when unknown. Used to frame the poster. */
   subjectBox: [number, number, number, number] | null
   photoCheck: PhotoCheck
+  photoReview?: PhotoReview
 }
 
 export type PromoTextRequest = {
@@ -169,6 +171,7 @@ export async function analyzePhoto(source: Blob | string, options: RequestOption
     visualDetails: textList(value.visualDetails, 5, 30),
     subjectBox: box(value.subjectBox),
     photoCheck: photoCheck(value.photoCheck),
+    photoReview: parsePhotoReview(value.photoReview),
   }
 }
 
@@ -177,13 +180,14 @@ function photoCheck(value: unknown): PhotoCheck {
   return { isRealPhoto: check.isRealPhoto !== false, isBlurry: check.isBlurry === true, reason: text(check.reason, 60) }
 }
 
-// One analysis per photo: the photo step starts it as soon as a photo is chosen and the info step
-// reuses the same pending answer (never a second request). Only the latest photo is kept.
+// Only an explicit auto-fill click starts analysis. Share that request; manual retries may replace it.
 let sharedAnalysis: { source: string; promise: Promise<PhotoSuggestion | null> } | null = null
 
 /** analyzePhoto, shared per photo. Callers ignore stale answers themselves (no abort here). */
-export function analyzePhotoOnce(source: string) {
-  if (sharedAnalysis?.source === source) return sharedAnalysis.promise
+export function analyzePhotoOnce(source: string, retry = false) {
+  if (!retry && sharedAnalysis?.source === source) return sharedAnalysis.promise
+  // An explicit retry may reconnect after a static/API-unavailable response. Never retry automatically.
+  if (retry) aiUnavailable = false
   const promise = analyzePhoto(source)
   sharedAnalysis = { source, promise }
   // A failure (network, quota) is not remembered: the next time this photo is chosen it is analysed again.

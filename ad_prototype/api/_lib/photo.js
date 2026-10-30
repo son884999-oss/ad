@@ -9,6 +9,8 @@ export const IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"])
 /** base64 characters (~3 MB of image). The client sends a ≤1024 px JPEG, usually far smaller. */
 export const MAX_IMAGE_BASE64 = 4 * 1024 * 1024
 
+export const PHOTO_REVIEW_CATEGORIES = ["animal", "person", "building", "background", "tobacco", "alcohol", "medicine", "drug", "hazardous_item", "credit_card", "other_sensitive"]
+
 export const PHOTO_SYSTEM_PROMPT = `너는 한국 동네 가게 사장님이 홍보물 입력란을 채우도록 돕는 도우미야.
 첨부된 사진 한 장을 보고, 사장님이 그대로 쓰거나 조금 고쳐 쓸 수 있는 초안을 쉬운 한국어로 만든다.
 
@@ -38,11 +40,18 @@ ${Object.entries(TONE_NAMES).map(([id, name]) => `  ${id}: ${name}`).join("\n")}
   - isBlurry: 초점이 안 맞거나 흔들려서 무엇인지 알아보기 어려우면 true. 배경만 흐리고 제품이 또렷하면 false.
   - reason: 문제가 있을 때만 사장님께 하는 쉬운 한 문장, 30자 이내. 예) "흔들려서 흐릿해요" 문제가 없으면 "".
 
+- photoReview: 사진에서 한 번 더 확인할 내용. 이것은 확정 판단이나 법적 판정이 아니다.
+  - items: 사람·동물·건물/가게·배경이 사진의 중심이거나, 담배·술·의약품·마약류 의심 물품·위험 물품·신용카드/금융정보 등이 실제로 보일 때만 최대 4개.
+    category는 animal, person, building, background, tobacco, alcohol, medicine, drug, hazardous_item, credit_card, other_sensitive 중 하나.
+    reason은 무엇이 보여서 확인이 필요한지 중립적인 한국어 50자 이내. 사람·동물·건물 자체를 유해하다고 부르지 않는다.
+    정상 상품 사진의 손·평범한 배경·작은 장식은 불필요하게 분류하지 않는다. 사진만으로 약물 종류·불법 여부를 단정하지 않는다.
+  - uncertain: 분류에 확신이 없으면 true. 경고할 근거가 없으면 items는 []로 둔다.
+
 [출력 형식]
 다른 설명 없이 JSON 객체 하나만 출력한다.
-{"productName":"","description":"","highlights":"","keyFeatures":[],"targetAudience":"","mediaHeadline":"","tones":[],"visualDetails":[],"subjectBox":[0,0,1000,1000],"photoCheck":{"isRealPhoto":true,"isBlurry":false,"reason":""}}`
+{"productName":"","description":"","highlights":"","keyFeatures":[],"targetAudience":"","mediaHeadline":"","tones":[],"visualDetails":[],"subjectBox":[0,0,1000,1000],"photoCheck":{"isRealPhoto":true,"isBlurry":false,"reason":""},"photoReview":{"items":[],"uncertain":false}}`
 
-const PHOTO_FIELDS = ["productName", "description", "highlights", "keyFeatures", "targetAudience", "mediaHeadline", "tones", "visualDetails", "subjectBox", "photoCheck"]
+const PHOTO_FIELDS = ["productName", "description", "highlights", "keyFeatures", "targetAudience", "mediaHeadline", "tones", "visualDetails", "subjectBox", "photoCheck", "photoReview"]
 
 /**
  * Gemini structured output (generationConfig.responseJsonSchema). Shapes the answer only:
@@ -60,6 +69,14 @@ export const PHOTO_RESPONSE_SCHEMA = {
     tones: { type: "array", items: { type: "string", enum: Object.keys(TONE_NAMES) }, maxItems: 2 },
     visualDetails: { type: "array", description: "사진에 보이는 색·질감·담음새·장소, 짧은 명사구", items: { type: "string" }, maxItems: 5 },
     subjectBox: { type: "array", description: "제품 영역 [ymin, xmin, ymax, xmax], 0~1000", items: { type: "integer" }, minItems: 4, maxItems: 4 },
+    photoReview: {
+      type: "object",
+      properties: {
+        items: { type: "array", maxItems: 4, items: { type: "object", properties: { category: { type: "string", enum: PHOTO_REVIEW_CATEGORIES }, reason: { type: "string" } }, required: ["category", "reason"] } },
+        uncertain: { type: "boolean" },
+      },
+      required: ["items", "uncertain"],
+    },
     photoCheck: {
       type: "object",
       properties: { isRealPhoto: { type: "boolean" }, isBlurry: { type: "boolean" }, reason: { type: "string" } },
@@ -109,6 +126,19 @@ function visualDetailList(value) {
  * photoCheck is lenient: only an explicit `false` / `true` flags the photo, so a missing or odd
  * value never warns the user. A reason is kept only when something is flagged.
  */
+export function parsePhotoReview(value) {
+  const review = value && typeof value === "object" && !Array.isArray(value) ? value : {}
+  const seen = new Set()
+  const items = []
+  for (const item of Array.isArray(review.items) ? review.items : []) {
+    if (!item || typeof item !== "object" || typeof item.category !== "string" || !PHOTO_REVIEW_CATEGORIES.includes(item.category) || seen.has(item.category)) continue
+    seen.add(item.category)
+    items.push({ category: item.category, reason: cleanText(item.reason, 100) })
+    if (items.length === 4) break
+  }
+  return { items, uncertain: review.uncertain === true }
+}
+
 export function parsePhotoCheck(value) {
   const check = value && typeof value === "object" && !Array.isArray(value) ? value : {}
   const isRealPhoto = check.isRealPhoto !== false
@@ -152,6 +182,7 @@ export function parsePhotoSuggestion(data) {
     visualDetails: visualDetailList(data.visualDetails),
     subjectBox: parseSubjectBox(data.subjectBox),
     photoCheck: parsePhotoCheck(data.photoCheck),
+    photoReview: parsePhotoReview(data.photoReview),
   }
 }
 
@@ -162,7 +193,7 @@ export async function analyzeProductPhoto(image, config) {
     parts: [{ text: "첨부한 제품 사진을 보고 입력란 초안을 JSON으로 작성해 줘." }, { inlineData: image }],
     timeoutMs: 15_000,
     temperature: 0.4,
-    maxOutputTokens: 832, // visualDetails, then mediaHeadline added to the answer
+    maxOutputTokens: 1200, // Includes bounded photo-review items in the same requested analysis.
     responseJsonSchema: PHOTO_RESPONSE_SCHEMA,
   })
   return parsePhotoSuggestion(data)

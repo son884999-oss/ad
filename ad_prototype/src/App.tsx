@@ -13,6 +13,8 @@ import {
   useState,
 } from "react"
 import { uiText } from "./easyText"
+import { PHOTO_REVIEW_LABELS, reviewWithQuality, type PhotoReview } from "./photoReview"
+import "./photo-review.css"
 import { recognitionConstructor, useVoiceInput } from "./useVoiceInput"
 import VoiceField from "./VoiceField"
 import { isMobileDevice } from "./DesktopStage"
@@ -22,6 +24,7 @@ import { deleteCloudRecord, loadCloudRecords, pictureKey, saveCloudFile, saveClo
 import { analyzePhotoOnce, generatePromoText, isAiUnavailable, type PhotoCheck, type PhotoSuggestion, type PromoTextResult } from "./ai"
 import { useAiVideo, type AiVideoController, type SavedAiVideo } from "./useAiVideo"
 import { hasPremiumCode } from "./premiumAccess"
+import VideoPreviewPlayer from "./VideoPreviewPlayer"
 import { AiVideoPlayer, AiVideoStatus, PremiumSteps, saveRealVideo, shareRealVideo, showsRealVideo, type PremiumStepState } from "./AiVideoPanel"
 import { isVideoUnavailable, prepareAiVideoFile, toVideoDetails } from "./video"
 import { buildPosterContent, loadPosterFonts, posterThemeFor, renderPosterToCanvas, stampAiMark } from "./poster"
@@ -56,7 +59,6 @@ import {
   StudioLogin as Login,
 } from "./StudioScreens"
 
-/** Photo analysis with nothing in it: used when the analysis failed, to clear AI text left from an earlier photo. */
 const EMPTY_SUGGESTION: PhotoSuggestion = { productName: "", description: "", highlights: "", keyFeatures: [], targetAudience: "", tones: [], visualDetails: [], subjectBox: null, photoCheck: { isRealPhoto: true, isBlurry: false, reason: "" } }
 
 type Page = "login" | "home" | "create" | "records" | "plan"
@@ -287,8 +289,8 @@ function AppDialog({ titleId, bodyId, onClose, className, backdropClass, closeOn
         onKeyDown={(event) => {
           if (event.key === "Escape") onClose()
           if (event.key === "Tab") {
-            const buttons = [...event.currentTarget.querySelectorAll<HTMLButtonElement>("button:not(:disabled)")]
-            const index = buttons.indexOf(document.activeElement as HTMLButtonElement)
+            const buttons = [...event.currentTarget.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), a[href], [tabindex="0"]')].filter((element) => !element.hidden && element.getClientRects().length > 0)
+            const index = buttons.indexOf(document.activeElement as HTMLElement)
             const next = buttons[(index + (event.shiftKey ? buttons.length - 1 : 1)) % buttons.length]
             next?.focus()
             event.preventDefault()
@@ -1298,60 +1300,83 @@ function CreateFlow({
   detailsRef.current = details
   const userEditedRef = useRef(new Set<string>())
   const aiFilledRef = useRef<Partial<Record<string, string>>>({})
-  const aiEligibleImageRef = useRef("")
-  const analyzedImageRef = useRef("")
-  const [photoFill, setPhotoFill] = useState<"idle" | "loading" | "filled" | "failed">("idle")
-  // The owner asks for it (owner, 2026-10-19): the photo is read by the AI only when "자동으로 채워 주기" is pressed,
-  // not the moment it is added — no AI call for anyone who types themselves, and nothing filled in unasked.
+  const [photoFill, setPhotoFill] = useState<"idle" | "loading" | "filled" | "unchanged" | "failed" | "unavailable" | "manual">("idle")
+  // The owner explicitly requests analysis. Selecting a photo alone never starts a paid call.
   const [scanImage, setScanImage] = useState("")
-  // AI photo check (from the same analysis): shown on the photo step only if it arrives while the
-  // user is still there; after moving on it is dropped so nothing interrupts.
   const [aiPhotoCheck, setAiPhotoCheck] = useState<{ image: string; check: PhotoCheck } | null>(null)
+  const [photoReview, setPhotoReview] = useState<{ image: string; review: PhotoReview; accepted: boolean } | null>(null)
+  const [photoReviewOpen, setPhotoReviewOpen] = useState(false)
+  const [photoReviewChecked, setPhotoReviewChecked] = useState(false)
+  const analysisRequestRef = useRef(0)
+  const currentPhotoRef = useRef(imageUrl)
+  currentPhotoRef.current = imageUrl
   const stepRef = useRef(step)
   stepRef.current = step
-  // What the photo shows (colour, texture, plating…) for the 홍보 글 prompt; kept per photo, never waited for.
+  const pendingPhotoReview = photoReview?.image === imageUrl && photoReview.review.items.length > 0 && !photoReview.accepted
   const photoDetailsRef = useRef<{ image: string; details: string[]; box: [number, number, number, number] | null }>({ image: "", details: [], box: null })
   const [photoBox, setPhotoBox] = useState<{ image: string; box: [number, number, number, number] } | null>(null)
-  const startPhotoAnalysis = (image: string) => {
-    void analyzePhotoOnce(image).then((result) => {
-      if (result) photoDetailsRef.current = { image, details: result.visualDetails ?? [], box: result.subjectBox ?? null }
-      if (result?.subjectBox) setPhotoBox({ image, box: result.subjectBox })
-      const check = result?.photoCheck
-      if (check && (!check.isRealPhoto || check.isBlurry) && stepRef.current === 1) setAiPhotoCheck({ image, check })
+
+  useLayoutEffect(() => {
+    analysisRequestRef.current += 1
+    setPhotoFill("idle")
+    setScanImage("")
+    setAiPhotoCheck(null)
+    setPhotoReview(null)
+    setPhotoReviewOpen(false)
+    setPhotoReviewChecked(false)
+    photoDetailsRef.current = { image: "", details: [], box: null }
+    setPhotoBox(null)
+    if (imageUrl) applyPhotoSuggestion(EMPTY_SUGGESTION)
+    if (!imageUrl) {
+      userEditedRef.current.clear()
+      aiFilledRef.current = {}
+    }
+  }, [imageUrl])
+  useEffect(() => () => { analysisRequestRef.current += 1 }, [])
+  useEffect(() => {
+    if (step === 2 && pendingPhotoReview) {
+      setPhotoReviewChecked(false)
+      setPhotoReviewOpen(true)
+    }
+  }, [step]) // Only returning to the info step reopens a dismissed warning.
+
+  const openPhotoReview = () => {
+    setPhotoReviewChecked(false)
+    setPhotoReviewOpen(true)
+  }
+  const scanPhoto = () => {
+    if (!imageUrl || photoFill === "loading") return
+    const image = imageUrl
+    const request = ++analysisRequestRef.current
+    const retry = scanImage === image
+    setScanImage(image)
+    setPhotoFill("loading")
+    void analyzePhotoOnce(image, retry).then((suggestion) => {
+      if (request !== analysisRequestRef.current || currentPhotoRef.current !== image) return
+      if (!suggestion) {
+        // Keep the owner's fields and any earlier, still-unconfirmed warning intact.
+        setPhotoFill(isAiUnavailable() ? "unavailable" : "failed")
+        return
+      }
+      photoDetailsRef.current = { image, details: suggestion.visualDetails ?? [], box: suggestion.subjectBox ?? null }
+      if (suggestion.subjectBox) setPhotoBox({ image, box: suggestion.subjectBox })
+      setAiPhotoCheck({ image, check: suggestion.photoCheck })
+      const review = reviewWithQuality(suggestion.photoReview, suggestion.photoCheck)
+      setPhotoReview({ image, review, accepted: false })
+      setPhotoReviewChecked(false)
+      if (review.items.length && stepRef.current === 2) setPhotoReviewOpen(true)
+      const hasDraft = Boolean(suggestion.productName || suggestion.description || suggestion.highlights || suggestion.keyFeatures.length || suggestion.targetAudience || suggestion.mediaHeadline)
+      if (!hasDraft) { setPhotoFill("failed"); return }
+      const applied = applyPhotoSuggestion(suggestion)
+      setPhotoFill(applied ? "filled" : "unchanged")
+    }).catch(() => {
+      if (request === analysisRequestRef.current && currentPhotoRef.current === image) setPhotoFill("failed")
     })
   }
-
-  useEffect(() => {
-    if (imageUrl) return
-    // A new creation starts without a photo: forget what belonged to the previous one.
-    userEditedRef.current.clear()
-    aiFilledRef.current = {}
-    aiEligibleImageRef.current = ""
-    analyzedImageRef.current = ""
-  }, [imageUrl])
-
-  useEffect(() => {
-    if (step !== 2 || !imageUrl || scanImage !== imageUrl || aiEligibleImageRef.current !== imageUrl || analyzedImageRef.current === imageUrl) return
-    const controller = new AbortController()
-    setPhotoFill("loading")
-    void analyzePhotoOnce(imageUrl).then((suggestion) => {
-      if (controller.signal.aborted) return
-      analyzedImageRef.current = imageUrl
-      // No answer for this photo: what the AI wrote for an earlier photo no longer fits, so it is cleared too.
-      const applied = applyPhotoSuggestion(suggestion ?? EMPTY_SUGGESTION)
-      // A failed analysis is said out loud, so the owner knows to type instead of waiting (not when AI is off).
-      setPhotoFill(suggestion ? (applied ? "filled" : "idle") : isAiUnavailable() ? "idle" : "failed")
-    })
-    return () => {
-      controller.abort()
-      setPhotoFill("idle")
-    }
-  }, [step, imageUrl, scanImage])
-  const scanPhoto = () => {
-    if (!imageUrl) return
-    // The same single analysis also gives what the photo shows (for the 홍보 글) and where the product is (poster).
-    startPhotoAnalysis(imageUrl)
-    setScanImage(imageUrl)
+  const enterPhotoManually = () => {
+    analysisRequestRef.current += 1
+    setPhotoFill("manual")
+    requestAnimationFrame(() => document.getElementById("field-product-name")?.focus())
   }
 
   const applyPhotoSuggestion = (suggestion: PhotoSuggestion) => {
@@ -1386,6 +1411,11 @@ function CreateFlow({
     }
     const currentTones = normalizeTones(current)
     const suggestedTones = normalizeTones({ tones: suggestion.tones })
+    if (!suggestedTones.length && filled.tones && currentTones.join(",") === filled.tones && !userEditedRef.current.has("tones")) {
+      next.tones = []
+      delete filled.tones
+      changed = true
+    }
     if (suggestedTones.length && fillable("tones", currentTones.join(",")) && currentTones.join(",") !== suggestedTones.join(",")) {
       next.tones = suggestedTones
       filled.tones = suggestedTones.join(",")
@@ -1609,7 +1639,7 @@ function CreateFlow({
 
           if (request !== uploadRequestRef.current) return
 
-          aiEligibleImageRef.current = reader.result
+          analysisRequestRef.current += 1
           setImageUrl(reader.result)
           setUploadPending(false)
 
@@ -2017,23 +2047,6 @@ function CreateFlow({
     setPreviewVideoUrl(url)
     return () => URL.revokeObjectURL(url)
   }, [previewVideoFile])
-  const previewVideoRef = useRef<HTMLVideoElement | null>(null)
-  useEffect(() => {
-    const video = previewVideoRef.current
-    if (!video) return
-    // 재생하기 plays with sound (the owner heard nothing: the preview was always muted). A browser that refuses
-    // sound still plays it silent rather than not at all; pausing mutes again for the quiet still frame.
-    if (playing) {
-      video.muted = false
-      void video.play().catch(() => {
-        video.muted = true
-        return video.play()
-      }).catch(() => setPlaying(false))
-    } else {
-      video.pause()
-      video.muted = true
-    }
-  }, [playing, previewVideoUrl])
   // A copy of every result on this computer (local dev server only, src/localSave.ts): one folder per creation,
   // filled as each file becomes ready; a restyled poster or another channel's text replaces the earlier one.
   const [outputFolderName, setOutputFolderName] = useState("")
@@ -2604,6 +2617,28 @@ function CreateFlow({
         step === 3 ? "results-flow" : "max-w-[920px]"
       }`}
     >
+      {step === 2 && pendingPhotoReview && photoReviewOpen && photoReview && (
+        <AppDialog titleId="photo-review-title" bodyId="photo-review-body" className="photo-review-dialog" onClose={() => setPhotoReviewOpen(false)} closeOnBackdrop={false} focusSelector="#photo-review-title">
+          <button type="button" className="photo-review-close" aria-label={t("사진 확인창 닫기")} onClick={() => setPhotoReviewOpen(false)}>×</button>
+          <h2 id="photo-review-title" tabIndex={-1}>{t("사진 내용을 확인해 주세요")}</h2>
+          <div id="photo-review-body">
+            <p>{t("AI가 아래 내용을 발견했어요. 잘못 알아볼 수 있으니 직접 확인해 주세요.")}</p>
+            <ul className="photo-review-items">{photoReview.review.items.map((item) => <li key={item.category}><strong>{t(PHOTO_REVIEW_LABELS[item.category])}</strong>{item.reason && <span>{item.reason}</span>}</li>)}</ul>
+            {photoReview.review.items.some((item) => item.category === "credit_card") && <p className="photo-review-privacy">{t("카드 번호 등 개인정보는 가린 사진으로 바꿔 주세요.")}</p>}
+            <p className="photo-review-disclaimer">{t("사람·동물·건물 자체가 유해하다는 뜻은 아니에요. 이 안내는 안전이나 광고 가능 여부를 보증하지 않아요.")}</p>
+          </div>
+          <label className="photo-review-confirm"><input type="checkbox" checked={photoReviewChecked} onChange={(event) => setPhotoReviewChecked(event.target.checked)} /><span>{t("안내를 읽고 홍보에 사용할 사진을 확인했어요.")}</span></label>
+          <div className="bg-ask-actions">
+            <button type="button" className="studio-primary" disabled={!photoReviewChecked} onClick={() => {
+              if (!photoReviewChecked || photoReview.image !== imageUrl) return
+              setPhotoReview({ ...photoReview, accepted: true })
+              setAiPhotoCheck(null) // This photo's AI quality warning was acknowledged in the dialog.
+              setPhotoReviewOpen(false)
+            }}>{t("확인하고 계속")}</button>
+            <button type="button" className="studio-secondary" onClick={() => { setPhotoReviewOpen(false); detailsPhotoRef.current?.click() }}>{t("다른 사진 고르기")}</button>
+          </div>
+        </AppDialog>
+      )}
       {step === 3 && generating ? (
         <GenerationProgress
           kind={type}
@@ -2744,18 +2779,24 @@ function CreateFlow({
           <div className="details-fields mt-7 space-y-5">
             {imageUrl && scanImage !== imageUrl && (
               <button type="button" className="photo-scan" onClick={scanPhoto}>
-                <Icon name="picture" size={22} />
-                <span>{t("자동으로 채워 주기")}</span>
+                <Icon name="picture" size={22} /><span>{t("자동으로 채워 주기")}</span>
               </button>
             )}
             <div className="ai-fill-live" role="status" aria-live="polite" aria-atomic="true">
               {photoFill !== "idle" && (
-                <p className={`ai-fill-status${photoFill === "loading" ? " is-loading" : ""}`}>
-                  {photoFill === "loading" && <span className="ai-fill-spinner" aria-hidden="true" />}
-                  {t(photoFill === "loading" ? "사진을 보고 내용을 채우고 있어요…" : photoFill === "failed" ? "사진을 읽지 못했어요. 아래 칸에 직접 적어 주세요." : "사진을 보고 채웠어요. 맞지 않으면 고쳐 주세요.")}
-                </p>
+                <div className={`photo-fill-feedback${photoFill === "failed" || photoFill === "unavailable" ? " is-failed" : ""}`}>
+                  <p className={`ai-fill-status${photoFill === "loading" ? " is-loading" : ""}`}>
+                    {photoFill === "loading" && <span className="ai-fill-spinner" aria-hidden="true" />}
+                    {t({ loading: "사진을 보고 내용을 채우고 있어요…", filled: "사진을 보고 채웠어요. 맞지 않으면 고쳐 주세요.", unchanged: "사진을 읽었어요. 직접 적은 내용은 그대로 두었어요.", failed: "사진에서 제품 정보를 읽지 못했어요. 다시 읽거나 직접 입력해 주세요.", unavailable: "사진을 읽는 기능에 연결하지 못했어요. 다시 시도하거나 직접 입력해 주세요.", manual: "직접 입력할 수 있어요. 이미 적은 내용은 그대로예요." }[photoFill])}
+                  </p>
+                  {(photoFill === "failed" || photoFill === "unavailable") && <div className="photo-fill-actions">
+                    <button type="button" className="studio-secondary" onClick={scanPhoto}>{t("다시 읽기")}</button>
+                    <button type="button" className="studio-secondary" onClick={enterPhotoManually}>{t("직접 입력하기")}</button>
+                  </div>}
+                </div>
               )}
             </div>
+            {pendingPhotoReview && <div className="photo-review-pending" role="status"><p>{t("사진 내용 확인이 필요해요. 확인한 뒤 홍보물을 만들 수 있어요.")}</p><button type="button" className="studio-secondary" onClick={openPhotoReview}>{t("사진 내용 확인하기")}</button></div>}
             <label className="block text-[18px] font-bold">
               제품 이름 <span className="field-tag is-required">{t("필수")}</span>
               <VoiceField voice={voice} field="name" label="제품 이름" inputId="field-product-name" value={details.name ?? ""} maxLength={50} easyMode={easyMode} onVoiceText={(text) => updateDetails({ ...details, name: text })}>
@@ -3128,11 +3169,13 @@ function CreateFlow({
                 role="status"
                 className="missing-details-note"
               >
-                {missingFields.length > 0 ? t("제품 이름을 적으면 만들 수 있어요.") : ""}
+                {pendingPhotoReview ? t("사진 내용을 먼저 확인해 주세요.") : photoFill === "loading" ? t("사진을 읽은 뒤 만들 수 있어요.") : missingFields.length > 0 ? t("제품 이름을 적으면 만들 수 있어요.") : ""}
               </p>
               <PrimaryButton
-                disabled={missingFields.length > 0 || uploadPending}
+                disabled={missingFields.length > 0 || uploadPending || photoFill === "loading" || pendingPhotoReview}
                 onClick={() => {
+                  if (photoFill === "loading") return
+                  if (pendingPhotoReview) { openPhotoReview(); return }
                   // Results open on the first made thing (the 사진 tab is there to go back to).
                   setSelectedResultTab((resultTabs.find((tab) => tab.id !== "photo") ?? resultTabs[0]).id)
                   if (showCopy) requestPromoText()
@@ -3350,18 +3393,12 @@ function CreateFlow({
                   >
                     {previewVideoUrl ? (
                       <>
-                        <video
-                          ref={previewVideoRef}
-                          className="motion-preview-video"
+                        <VideoPreviewPlayer
                           src={previewVideoUrl}
-                          muted
-                          loop
-                          playsInline
-                          preload="auto"
-                          // Paused, it shows the first scene with every word of the title up (QA 2026-10-22: at 1.6 s
-                          // of the 10 s video the title was still coming in, "수제 초코…"). 3.0 s is before the cut at 3.5 s.
-                          onLoadedData={(event) => { if (!playing) event.currentTarget.currentTime = 3.0 }}
-                          aria-label={t("저장될 영상 미리보기")}
+                          poster={sceneUrl || imageUrl}
+                          playing={playing}
+                          onPlayingChange={setPlaying}
+                          label={t("저장될 영상 미리보기")}
                         />
                         {showsRealVideo(aiVideo.state) && <span className="ai-badge">{t("AI 생성 영상")}</span>}
                       </>

@@ -318,11 +318,11 @@ const suggestion = {
 const cannedPromo = { copy: "AI 카피 한 줄", sns: "AI SNS 문구예요. 들러 보세요.", intro: "AI 제품 소개입니다.", hashtags: ["AI태그", "커피", "디저트", "동네카페"] }
 const toneNames = { auto: "AI 자동 추천", natural: "자연스럽고 건강한", premium: "고급스럽고 전문적인", friendly: "친근하고 따뜻한", trendy: "트렌디하고 활기찬" }
 
-const browser = await chromium.launch({ channel: "msedge", headless: true })
+const browser = await chromium.launch({ headless: true, ...(process.env.PLAYWRIGHT_EXECUTABLE_PATH ? { executablePath: process.env.PLAYWRIGHT_EXECUTABLE_PATH, args: process.env.PLAYWRIGHT_CHROMIUM_ARGS ? JSON.parse(process.env.PLAYWRIGHT_CHROMIUM_ARGS) : ["--no-sandbox", "--disable-dev-shm-usage"] } : { channel: "msedge" }) })
 // The dev server may hold real keys: every /api/* call is stubbed (503) unless a test routes it itself
 // (routes added later take precedence), so no request ever reaches a real AI or video API.
 async function newPage(options) {
-  const page = await browser.newPage(options)
+  const page = await browser.newContext(options).then(context => context.newPage())
   await page.route("**/api/**", (route) => route.fulfill({ status: 503, contentType: "application/json", body: '{"error":"AI_NOT_CONFIGURED"}' }))
   return page
 }
@@ -361,7 +361,7 @@ try {
     await page.getByText("사진을 보고 내용을 채우고 있어요…").waitFor()
     assert.ok(await page.getByRole("button", { name: "홍보물 만들기", exact: true }).isDisabled(), "name still empty")
     await page.getByLabel("제품 이름", { exact: true }).fill("내가 쓴 이름")
-    assert.ok(await page.getByRole("button", { name: "홍보물 만들기", exact: true }).isEnabled(), "loading does not block the button")
+    assert.ok(await page.getByRole("button", { name: "홍보물 만들기", exact: true }).isDisabled(), "finish the requested photo check before generation; a late warning cannot be bypassed")
     release()
     await page.getByText("사진을 보고 채웠어요. 맞지 않으면 고쳐 주세요.").waitFor()
     assert.equal(analyzeBody.image.mimeType, "image/jpeg")

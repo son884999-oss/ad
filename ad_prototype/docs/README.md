@@ -1,7 +1,7 @@
 # 홍보잇다 — 여기부터 읽기
 
 사람도 클로드 코드도 이 문서부터 읽는다. 문서는 아래 4개뿐이다.
-마지막 갱신: 2026-10-27 · 작업 브랜치 `feature/UI-Screen` · 앱 `ad_prototype/`(Vite + React, Vercel 함수 `api/`)
+마지막 갱신: 2026-10-30 · 기본 작업 브랜치 `feature/UI-Screen` · 앱 `ad_prototype/`(Vite + React, Vercel 함수 `api/`)
 
 | 문서 | 무엇 |
 |---|---|
@@ -18,7 +18,7 @@
 
 ## 1. 지금 상태 (2026-10-26)
 
-**기능 고정:** 담당 교수 지시로 발표까지 새 기능·기능 변경 없음. 자잘한 버그와 화면 가림만 고친다.
+**기능 고정:** 담당 교수 지시로 발표까지 새 기능·기능 변경 없음. 자잘한 버그와 화면 가림만 고친다. 단, 10-30 사용자 명시 승인으로 사진 의심 항목 확인·인식 실패 복구 및 첫 영상 썸네일 버그를 보완했다. 사진 분석은 여전히 [자동으로 채워 주기]를 눌렀을 때만 실행한다.
 
 소상공인이 **상품 사진 한 장**으로 포스터 · 10초 영상 · 홍보 글을 만드는 모바일 웹앱. PC에서는 휴대폰 틀 안에 모바일 화면이 나온다. 배포: Vercel 프로젝트 `son884999-oss-projects/ad`, 주소 `https://ad-prototype-codyssey.vercel.app`.
 
@@ -87,6 +87,7 @@ npm run dev:mock                # http://127.0.0.1:5174 (가짜 AI 답, 키·비
 npx tsc --noEmit -p .
 npm run build
 npm run verify:ai; npm run verify:video; npm run verify:easy; npm run verify:records; npm run verify:photo
+npm run verify:photo-review; npm run verify:video-preview
 npm run verify:promo; npm run verify:guard; npm run verify:scene; npm run verify:background; npm run verify:auth
 $env:REFERENCE_REBUILD_OUTPUT="$env:TEMP\rebuild"; node scripts/verify-reference-rebuild.mjs
 npm run audit:screens -- --shots "$env:TEMP\audit"
@@ -112,3 +113,7 @@ npm run eval:promo; npm run eval:promo -- --local
 2. **카카오**(2025 콘솔): 앱 → 플랫폼 키 → **REST API 키** 화면 안에 리다이렉트 URI `https://<프로젝트>.supabase.co/auth/v1/callback`과 클라이언트 시크릿이 있다. 카카오 로그인 ON. 동의항목 닉네임·사진·**이메일**(없으면 KOE205 오류). 이메일은 비즈 앱만 되므로 "개인 개발자 비즈 앱 전환" 뒤 선택 동의로. Supabase Kakao에 키·시크릿, "Allow users without an email" 켬. 사이트 도메인에 localhost와 Vercel 주소.
 3. **Google**: OAuth consent(External, Test users에 QA 계정) → OAuth client(Web): JavaScript origins = localhost·Vercel 주소, redirect = Supabase callback → Supabase Google에 입력.
 4. 확인: 이메일 가입 → 메뉴에 이메일이 보임 → 홍보물을 만들면 Table Editor `records`와 Storage `records`에 생김 → 다른 브라우저에서도 보임 → 회원 탈퇴하면 지워짐.
+
+### 2026-10-30 추가 점검
+
+사진 확인·실패 복구는 `verify:photo-review`, 영상 첫 미리보기는 `verify:video-preview`로 모의 응답을 검증한다. 모든 API를 가로채므로 실제 AI 호출이 없다. Linux 등 Edge가 없는 환경에서는 `PLAYWRIGHT_EXECUTABLE_PATH`(사진·AI 점검), `PLAYWRIGHT_CHROMIUM_EXECUTABLE`(영상 점검) 및 필요시 JSON 배열 `PLAYWRIGHT_CHROMIUM_ARGS`를 지정한다. 실제 AI의 탐지 정확도와 실기기 코덱·소리·배포 설정은 이 검사로 보장하지 않는다.
