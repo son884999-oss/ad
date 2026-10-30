@@ -28,7 +28,8 @@
     "check:copa": "node scripts/check-copa.mjs",
     "verify:background": "node scripts/verify-background.mjs",
     "verify:auth": "node scripts/verify-auth.mjs",
-    "verify:photo-preflight": "node scripts/verify-photo-preflight.mjs"
+    "verify:photo-preflight": "node scripts/verify-photo-preflight.mjs",
+    "verify:photo-review-prototype": "node scripts/verify-photo-preflight.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "2.118.0",

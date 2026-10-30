@@ -14,4 +14,4 @@ await check("API + browser reject unknown, object, inherited and duplicate categ
 })
 if (process.env.PHOTO_REVIEW_UNIT_ONLY === "1") process.exit(0)
 
-await import("./verify-photo-preflight.mjs")
+await import("./verify-photo-review-default.mjs")
