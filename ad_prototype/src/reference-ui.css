@@ -237,6 +237,26 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,summary:focus-vi
 .plan-option-note,.plan-status { grid-column:2; }
 .plan-option-note { font-size:calc(15px * var(--s));line-height:1.5;color:#6e625a; }
 .plan-status { margin-top:calc(6px * var(--s));font-size:calc(14px * var(--s));font-weight:700;color:#b44d1d; }
+/* 구독 관리 화면(2026-11-01): 지금 상태 · 결제 준비 중 안내 · 요금제 카드 2개 · 잠긴 결제 버튼 */
+.plan-usage { margin:0;font-size:calc(15px * var(--s));color:#6e625a; }
+.plan-section { margin:calc(22px * var(--s)) 0 0;font-size:calc(17px * var(--s));font-weight:800;color:#2b2420; }
+.plan-section-note { margin:calc(4px * var(--s)) 0 0;font-size:calc(14px * var(--s));line-height:1.5;color:#6e625a; }
+.plan-section-note + .plan-options { margin-top:calc(10px * var(--s)); }
+.plan-usage b { color:#2b2420;font-size:calc(17px * var(--s)); }
+.plan-notice { display:flex;align-items:center;gap:8px;margin:calc(12px * var(--s)) 0 0;padding:calc(10px * var(--s)) calc(12px * var(--s));border-radius:12px;background:#fdf0e6;color:#7a3412;font-size:calc(15px * var(--s));font-weight:700;line-height:1.45; }
+.plan-notice svg { flex:none; }
+.plan-option strong { display:flex;align-items:center;gap:8px;flex-wrap:wrap; }
+.plan-tag { padding:1px 8px;border-radius:999px;background:#efe7df;color:#6e625a;font-size:calc(12px * var(--s));font-weight:700; }
+.plan-price { grid-column:2;font-size:calc(15px * var(--s));color:#6e625a; }
+.plan-price b { font-size:calc(22px * var(--s));font-weight:800;color:#2b2420;letter-spacing:-.4px; }
+.plan-option[aria-pressed=true] .plan-price b { color:#b44d1d; }
+.plan-points { grid-column:2;list-style:none;margin:calc(8px * var(--s)) 0 0;padding:0;font-size:calc(14px * var(--s));line-height:1.4;color:#6e625a; }
+.plan-points li { display:flex;justify-content:space-between;gap:calc(10px * var(--s));padding:calc(7px * var(--s)) 0;border-top:1px solid rgba(94,83,76,.14); }
+.plan-points li b { color:#2b211c;font-weight:700;white-space:nowrap; }
+.plan-pay { width:100%;margin-top:calc(18px * var(--s)); }
+.plan-pay:disabled { opacity:1;background:#d9cfc6;border-color:#d9cfc6;color:#5e534c;box-shadow:none;cursor:not-allowed; }
+.plan-foot { margin:calc(8px * var(--s)) 0 calc(12px * var(--s));font-size:calc(14px * var(--s));line-height:1.55;color:#6e625a;text-align:center; }
+.easy-mode .plan-points,.easy-mode .plan-foot { font-size:calc(16px * var(--s)); }
 .creation-flow:has(> .generation) { height:100%; }
 .generation { min-height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:calc(6px * var(--s)) 0 calc(14px * var(--s)); }
 .generation h2 { margin:0 0 calc(16px * var(--s));font-size:calc(22px * var(--s));font-weight:800;line-height:1.35;letter-spacing:-.6px;text-align:center; }
