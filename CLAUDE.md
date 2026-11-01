@@ -9,7 +9,7 @@
 - 결정과 이력: `ad_prototype/docs/결정과_이력.md` — 무엇을 왜 정했는지, 버린 시도(다시 꺼내지 않음). 흐름도 `ad_prototype/docs/서비스흐름도/서비스흐름도.png`
 - **남은 일·보류 목록: `ad_prototype/docs/나중에_할일.md`** — 사용자가 "나중에 할 일 ○○"라고 하면 이 문서의 해당 항목을 따른다.
 - 유료 호출 장부·단가·품질 감점표·음원 출처: `ad_prototype/docs/비용_품질_출처.md`
-- 발표 자료: 별도 저장소 `son884999-oss/CODYSEEY-presentation`(비공개), 배포 https://codyseeypresentation.vercel.app
+- 발표 자료: 별도 저장소 `son884999-oss/CODYSEEY-presentation`(비공개), 배포 https://codyseeypresentation.vercel.app. 발표 대본(11-01 확정)은 그 저장소 `docs/대본/`, 최신 덱 결정은 그 저장소 AGENTS.md 맨 아래.
 - 기술 문서: 팀 공유 `ad_prototype/docs/기술문서/`(2장), 제출용 `ad_prototype/docs/기술설계서_통합본/`(6장, `통합본_만들기.mjs`로 다시 만듦)
 - 결과물 품질 기준과 점검 명령: `.claude/skills/hongboitda-quality/SKILL.md`
 
