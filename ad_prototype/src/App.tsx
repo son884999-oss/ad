@@ -3814,54 +3814,56 @@ function Records({
     </section>
   )
 }
-function Plan({ easyMode }: { easyMode: boolean }) {
-  const [selected, setSelected] = useState<"subscription" | "single">(
-    "subscription",
-  )
+/**
+ * 구독 관리 화면 (2026-11-01 사용자): 무료 / 월 구독 두 가지. 결제는 아직 연결하지 않았다 — 결제 버튼은 잠그고
+ * "결제 준비 중"이라고 분명히 쓴다(카드 입력 같은 결제 화면은 만들지 않는다). 지금은 모두 무료.
+ * 가격은 원가 기준(배경 바꾸기 1장 약 50원, 포스터·영상·글은 폰에서 0원). 한 줄 안은 쉼표, 다른 내용은 줄바꿈.
+ */
+const PLAN_CHOICES = [
+  // 11-01 사용자: 핵심(포스터·영상·글)은 끝까지 무료, 원가가 드는 두 가지(AI 보정 사진 약 50원/장 · 계정 저장 공간)만 차이
+  { id: "free", name: "무료", price: "0원", unit: "", points: [["포스터, 영상, 홍보 글", "무제한"], ["AI 보정 사진", "한 달 5장"], ["내 계정에 보관", "최근 20개"]] },
+  { id: "monthly", name: "월 구독", price: "9,900원", unit: "/ 월", points: [["포스터, 영상, 홍보 글", "무제한"], ["AI 보정 사진", "한 달 100장"], ["내 계정에 보관", "제한 없음"]] },
+] as const
+type PlanId = (typeof PLAN_CHOICES)[number]["id"]
 
+function Plan({ easyMode, signedIn, monthCount }: { easyMode: boolean; signedIn: boolean; monthCount: number }) {
+  const t = (text: string) => uiText(text, easyMode)
+  const [selected, setSelected] = useState<PlanId>("free")
+  const chosen = PLAN_CHOICES.find((plan) => plan.id === selected)!
   return (
     <section className="plan-screen">
-      <h2 data-screen-heading tabIndex={-1}>
-        {uiText("내게 맞는 이용 방식을 골라 보세요", easyMode)}
-      </h2>
-      <p className="plan-note">
-        {uiText(
-          "가격은 아직 정하는 중이에요. 지금은 무료로 쓸 수 있어요.",
-
-          easyMode,
-        )}
+      {/* 위계(11-01): 머리줄 = 구독 관리 → 큰 제목 = 지금 상태 → 결제 안내 → "요금제" 소제목 아래 카드 2개 → 잠긴 버튼 */}
+      <h2 data-screen-heading tabIndex={-1}>{t("지금은 무료로 쓰고 있어요")}</h2>
+      <p className="plan-usage">
+        {signedIn ? <>{t("이번 달 만든 홍보물")} <b>{monthCount}{t("개")}</b></> : t("로그인하면 이번 달 사용량을 볼 수 있어요.")}
       </p>
+      <p className="plan-notice" role="note">
+        <Icon name="card" size={16} />
+        <span>{t("결제는 아직 연결 전이에요. 지금은 모두 무료로 쓸 수 있어요.")}</span>
+      </p>
+      <h3 className="plan-section">{t("요금제")}</h3>
+      <p className="plan-section-note">{t("결제가 연결되면 적용돼요.")} {t("AI 보정 사진은 배경을 광고 사진처럼 바꾼 사진이에요.")}</p>
       <div className="plan-options">
-        {[
-          [
-            "subscription",
-            "매달 이용하는 구독 플랜",
-            "꾸준히 홍보물을 만드는 사장님께",
-          ],
-
-          [
-            "single",
-            "한 번씩 이용하는 건당 플랜",
-            "필요할 때 한 번씩 만드는 사장님께",
-          ],
-        ].map(([value, title, note]) => (
-          <button
-            key={value}
-            onClick={() => setSelected(value as "subscription" | "single")}
-            aria-pressed={selected === value}
-            className="plan-option"
-          >
+        {PLAN_CHOICES.map((plan) => (
+          <button key={plan.id} type="button" onClick={() => setSelected(plan.id)} aria-pressed={selected === plan.id} className="plan-option">
             <span className="plan-radio" aria-hidden="true" />
             <strong>
-              {uiText(title, easyMode)}
+              {t(plan.name)}
+              {plan.id === "free" && <span className="plan-tag">{t("지금 이용 중")}</span>}
             </strong>
-            <span className="plan-option-note">{uiText(note, easyMode)}</span>
-            <span className="plan-status">
-              {uiText("세부 조건은 준비 중", easyMode)}
-            </span>
+            <span className="plan-price"><b>{plan.price}</b>{plan.unit && <small> {plan.unit}</small>}</span>
+            <ul className="plan-points">
+              {plan.points.map(([label, value]) => <li key={label}><span>{t(label)}</span><b>{t(value)}</b></li>)}
+            </ul>
           </button>
         ))}
       </div>
+      <button type="button" className="studio-primary plan-pay" disabled aria-describedby="plan-pay-note">
+        {chosen.id === "free" ? t("지금 이용 중인 플랜이에요") : t("결제 준비 중")}
+      </button>
+      <p id="plan-pay-note" className="plan-foot">
+        {t("결제가 연결되면 이 화면에서 바로 바꿀 수 있어요. 해지와 환불 안내도 그때 함께 드려요.")}
+      </p>
     </section>
   )
 }
@@ -4221,7 +4223,7 @@ export default function App() {
     if (page === "login") return "로그인 화면이에요. 아래 바로 시작하기를 누르면 가입 없이 쓸 수 있어요."
     if (page === "home") return "첫 화면이에요. 사진 한 장이면 홍보물이 돼요. 홍보물 만들기를 누르세요. 다음 화면에서 사진을 넣어요."
     if (page === "records") return "내 홍보물 화면이에요. 만든 것을 누르면 다시 볼 수 있어요."
-    if (page === "plan") return "이용 요금 화면이에요. 가격은 아직 안 정했어요."
+    if (page === "plan") return "요금 보기 화면이에요. 결제는 아직 연결 전이라 지금은 모두 무료예요."
     if (step === 1) {
       return imageUrl
         ? "사진을 넣었어요. 다음으로를 누르세요. 다른 사진은 사진 바꾸기를 누르세요."
@@ -4254,8 +4256,8 @@ export default function App() {
 
     if (page === "plan") {
       return easyMode
-        ? "이용 방법 화면입니다. 매달 이용하거나 필요할 때 이용하는 방법을 고를 수 있으며, 가격과 만들 수 있는 수량은 아직 정해지지 않았습니다."
-        : "이용권 화면입니다. 구독으로 이용하거나 건당 이용하는 구조를 선택할 수 있으며, 가격과 수량은 아직 정해지지 않았습니다."
+        ? "요금 보기 화면입니다. 포스터, 영상, 글은 계속 무료예요. 매달 이용하면 한 달에 구천구백 원이고, 광고 사진 바꾸기를 더 많이 쓸 수 있어요. 지금은 돈 내는 기능이 없어서 모두 무료예요."
+        : "구독 관리 화면입니다. 포스터, 영상, 홍보 글은 무료로 계속 쓸 수 있고, 월 구독 9,900원은 AI 보정 사진을 한 달 100장까지, 계정 보관을 제한 없이 쓸 수 있습니다. 결제는 아직 연결 전이라 지금은 모두 무료입니다."
     }
 
     if (step === 1) {
@@ -4730,7 +4732,7 @@ export default function App() {
 
     records: "내 홍보물",
 
-    plan: "이용권",
+    plan: "구독 관리",
   }
 
   return (
@@ -4857,7 +4859,14 @@ export default function App() {
           onStartNew={startNew}
         />
       )}
-      {page === "plan" && <Plan easyMode={easyMode} />}
+      {page === "plan" && (
+        <Plan
+          easyMode={easyMode}
+          signedIn={Boolean(auth.user)}
+          // createdAt is shown as "11월 1일 …" (no year): this month = records that start with this month's name.
+          monthCount={records.filter((record) => record.createdAt.startsWith(`${new Date().getMonth() + 1}월`)).length}
+        />
+      )}
     </Shell>
   )
 }

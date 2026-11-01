@@ -47,7 +47,7 @@ try {
     await page.screenshot({path:join(output,`speech-${width}.png`)})
     if(await page.locator('.studio-read-button[aria-pressed=true]').count()) await page.locator('.studio-read-button[aria-pressed=true]').click()
     await page.getByRole('button',{name:'메뉴 열기',exact:true}).click()
-    await page.getByRole('dialog').getByRole('button',{name:'구독·건당 플랜',exact:true}).click()
+    await page.getByRole('dialog').getByRole('button',{name:'구독 관리',exact:true}).click()
     const plans=page.locator('main[data-app-scroll-container] button[aria-pressed]')
     await plans.nth(1).click();assert.equal(await plans.nth(1).getAttribute('aria-pressed'),'true')
     await capture(page,'single-plan',width)

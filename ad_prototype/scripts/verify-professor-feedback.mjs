@@ -126,7 +126,7 @@ try {
     assert.equal(await page.evaluate(() => document.activeElement.getAttribute("aria-label")), "메뉴 닫기")
     assert.equal(await chooser.locator(".studio-menu-row").count(), 4)
     assert.equal(
-      await chooser.getByText("구독·건당 플랜", { exact: true }).count(),
+      await chooser.getByText("구독 관리", { exact: true }).count(),
       0,
     )
     await capture(page, "create-options", width)

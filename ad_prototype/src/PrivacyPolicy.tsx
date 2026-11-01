@@ -25,7 +25,7 @@ export default function PrivacyPolicy() {
       <h3>5. 만 14세 미만</h3>
       <p>만 14세 미만은 가입할 수 없습니다.</p>
       <h3>6. 문의</h3>
-      <p>개인정보 보호책임자: (팀에서 기입) · 연락처: (팀에서 기입)</p>
+      <p>개인정보 보호책임자: 손용범 · 연락처: hmcf7nz7@naver.com</p>
     </div>
   )
 }

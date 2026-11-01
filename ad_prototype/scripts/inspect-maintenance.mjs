@@ -41,7 +41,7 @@ try {
     await inspect(page,'home-full',width)
     await page.getByRole('button',{name:'메뉴 열기',exact:true}).click()
     await inspect(page,'menu-full',width)
-    await page.getByRole('dialog').getByRole('button',{name:'구독·건당 플랜',exact:true}).click()
+    await page.getByRole('dialog').getByRole('button',{name:'구독 관리',exact:true}).click()
     await inspect(page,'plan-full',width)
     const nav=page.locator(width<1024?'.studio-bottom-nav':'.studio-desktop-nav')
     await nav.getByRole('button',{name:'내 홍보물',exact:true}).click()

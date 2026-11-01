@@ -18,7 +18,7 @@ function formatElapsed(ms: number) {
 const FAILURE_TEXT: Record<string, string> = {
   VIDEO_BLOCKED: "사진이나 내용 때문에 진짜 영상을 만들 수 없었어요. 다른 사진으로 해 보세요.",
   VIDEO_BUSY: "지금은 영상 만들기가 붐벼요. 잠시 뒤 다시 만들어 주세요.",
-  VIDEO_NO_CREDITS: "영상 만들기 이용권이 부족해요. 관리자에게 알려 주세요.",
+  VIDEO_NO_CREDITS: "영상 만들기 한도가 다 찼어요. 관리자에게 알려 주세요.",
   VIDEO_DAILY_LIMIT: "오늘 만들 수 있는 AI 영상을 다 만들었어요. 내일 다시 만들 수 있어요. 예시 영상은 그대로 쓸 수 있어요.",
 }
 
