@@ -305,6 +305,9 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,summary:focus-vi
 /* 2026-11-04 실기기 버그: 단일 결과(이미지·홍보 글·동영상 만들기)에서 고르기 칸(width:100%)이 제목과 한 줄에 놓여 제목이 한 글자 너비로 눌림 → 고르기 칸을 다음 줄로 */
 .results-step.is-single .result-card-heading { flex-wrap:wrap; }
 .results-step.is-single .result-card-heading > .result-preview-controls { flex:1 0 100%; }
+/* 간격: 제목 묶음 / 고르기 / 결과물 세 덩어리로(제목 아래 14px, 고르기→결과물 12px, "어디에 올릴까요?"는 고르기에 4px) */
+.results-step.is-single .result-card-heading { gap:14px 10px;margin-bottom:12px; }
+.results-step.is-single .result-card-heading .channel-choice legend { margin-bottom:4px; }
 .results-step.is-single .result-preview { height:calc(408px * var(--s)); }
 .easy-mode .reference-home { height:auto;min-height:100%; }
 .easy-mode .home-samples { flex:none;height:calc(260px * var(--s));margin-block:calc(16px * var(--s)); }
