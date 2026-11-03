@@ -1137,3 +1137,10 @@ html[data-layout=mobile] .results-step:not(.is-single) .result-card > .result-ne
 .easy-mode .reference-menu-links .reference-account-row small { font-size:calc(17px * var(--s));margin-top:2px; }
 .easy-mode .reference-menu-links .reference-account-row { background:#fff;border-color:#d9cdc2; }
 .easy-mode .reference-menu-links { margin-top:calc(18px * var(--s));padding-top:calc(16px * var(--s));border-top:1px solid #e3d8ce; }
+/* 2026-11-04: 내 홍보물 큰 보기 — 홍보 글 카드는 저장된 글 첫머리를 보여 준다(빈 칸에 "홍보 글"만 있던 문제) */
+.record-card .record-thumbnail[data-kind=copy] { display:block;place-items:initial;padding:calc(12px * var(--s));background:#fffdf9;border-bottom:1px solid var(--color-line); }
+.record-copy-preview { display:flex;flex-direction:column;gap:6px;height:100%;min-width:0;text-align:left;color:var(--color-ink); }
+.record-copy-preview small { font-size:max(12px,calc(12px * var(--s)));font-weight:700;color:#b44d1d; }
+.record-copy-preview > span { display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:8;overflow:hidden;white-space:pre-line;font-size:max(13px,calc(13px * var(--s)));line-height:1.5;font-weight:500;overflow-wrap:anywhere; }
+.easy-mode .record-copy-preview > span { -webkit-line-clamp:6;font-size:calc(16px * var(--s)); }
+.easy-mode .record-copy-preview small { font-size:calc(15px * var(--s)); }
