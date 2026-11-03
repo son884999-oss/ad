@@ -142,6 +142,9 @@ try {
     await page.getByRole("button", { name: /홍보물 만들기/ }).first().waitFor()
     assert.equal(seen.signup, 1)
     await page.getByRole("button", { name: /메뉴/ }).first().click()
+    // 이메일은 [내 계정]을 눌러야 보이고, 다시 누르면 가린다.
+    assert.equal(await page.getByText("owner@example.com").count(), 0, "email hidden until 내 계정 is pressed")
+    await page.getByRole("button", { name: /내 계정/ }).click()
     await page.getByText("owner@example.com").waitFor()
     assert.ok(await page.getByRole("button", { name: "로그아웃" }).isVisible())
     assert.ok(await page.getByRole("button", { name: "회원 탈퇴" }).isVisible())
