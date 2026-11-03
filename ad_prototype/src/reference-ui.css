@@ -1145,6 +1145,7 @@ html[data-layout=mobile] .results-step:not(.is-single) .result-card > .result-ne
 .easy-mode .record-copy-preview > span { -webkit-line-clamp:6;font-size:calc(16px * var(--s)); }
 .easy-mode .record-copy-preview small { font-size:calc(15px * var(--s)); }
 /* 2026-11-04: 간편 로그인(카카오·Google)은 앱 안 동의 체크가 없어, 버튼 아래에 동의로 보는 범위와 처리방침을 밝힌다 */
+.reference-social-consent > span { display:block;text-wrap:balance; }
 .reference-social-consent { margin:10px 0 0;font-size:max(13px,calc(13px * var(--s)));line-height:1.5;color:#6e625a;text-align:center; }
 .easy-mode .reference-social-consent { font-size:calc(16px * var(--s)); }
 .reference-social-consent + .reference-login-policy { margin-top:6px;text-align:center; }
