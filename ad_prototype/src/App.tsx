@@ -3785,9 +3785,15 @@ function Records({
               onClick={() => onOpen(record, kind)}
             >
               <span className="record-thumbnail" data-kind={kind}>
-                {kind === "copy" ? (
+                {kind === "copy" && view === "grid" ? (
+                  // 11-04 실기기: 큰 보기에서 "홍보 글" 글자만 덩그러니 → 저장된 글 첫머리를 종이처럼 보여 준다.
+                  <span className="record-copy-preview" aria-hidden="true">
+                    <small>{labels.copy}</small>
+                    <span>{(record.promo ? composePromoText(record.promo, record.details) : record.details.description || record.details.name || "").trim()}</span>
+                  </span>
+                ) : kind === "copy" ? (
                   <>
-                    <Icon name="copy" size={view === "grid" ? 44 : 30} />
+                    <Icon name="copy" size={30} />
                     <span className="record-copy-mark">{labels.copy}</span>
                   </>
                 ) : (
