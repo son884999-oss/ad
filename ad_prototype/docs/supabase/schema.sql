@@ -25,7 +25,7 @@ create policy "records: own rows" on public.records
   using (user_id = auth.uid())
   with check (user_id = auth.uid());
 
--- 파일 버킷: 공개 아님(링크는 짧게 유효한 서명 주소로만). 파일 하나 최대 50MB, 그림·영상만.
+-- 파일 버킷: 공개 아님(링크는 7일 동안 유효한 서명 주소로만, src/cloudRecords.ts LINK_SECONDS). 파일 하나 최대 50MB, 그림·영상만.
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values ('records', 'records', false, 52428800, array['image/jpeg', 'image/png', 'image/webp', 'video/mp4', 'video/webm'])
 on conflict (id) do update set public = false, file_size_limit = excluded.file_size_limit, allowed_mime_types = excluded.allowed_mime_types;
