@@ -32,7 +32,7 @@
 
 | 부분 | 어떻게 | 비용 |
 |---|---|---|
-| 사진 읽기·홍보 글 | AI 순서: 기관 Claude(COPA) → Gemini 무료 → Gemini 유료(하루 상한) → 앱 기본 문구. 실패하면 무엇이든 다음으로 넘어감 | 0원 또는 약 3원/건(유료로 넘어갔을 때, 10-22 실측) |
+| 사진 읽기·홍보 글 | AI 순서: 코디세이 COPA(Claude) → Gemini 무료 → Gemini 유료(하루 상한) → 앱 기본 문구. 실패하면 무엇이든 다음으로 넘어감 | 0원 또는 약 7~10원/건(유료로 넘어갔을 때, 공식 단가 추정 — 11-01 정정. 10-22 장부의 약 3원은 단가를 낮게 잡은 값) |
 | 배경 바꾸기 | Gemini `gemini-3.1-flash-lite-image`, 프롬프트 `api/_lib/background.js`(그릇·받침은 제품의 일부, 업종별 10종). 실패·상한이면 원래 사진 | 장당 약 50원 |
 | 포스터 | `src/poster/` 브라우저 Canvas. 4:5, 스타일 1·2·3, 색은 사진에서 | 0원 |
 | 영상 | `src/motionVideo.ts` 10초(전체 컷 → 전환 → 상품 클로즈업 → 마지막 화면). WebCodecs 빠른 MP4(`src/fastVideo.ts`), 안 되면 실시간 녹화 + `src/mp4Flatten.ts`. 소리 `src/videoSound.ts` | 0원 |
