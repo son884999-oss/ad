@@ -6,6 +6,7 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs"
 import { dirname, join } from "node:path"
 import { copaJson, getCopaConfig } from "./copa.js"
 import { ApiError } from "./http.js"
+import { EVENT_DAILY_LIMIT_KRW, inEventWindow } from "./event.js"
 
 const ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models"
 
@@ -43,7 +44,9 @@ const BASE_DAILY_LIMIT_KRW = 500
 const RAISED_DAILY_LIMIT_KRW = 1000
 const RAISED_UNTIL_DAY = "2026-10-22"
 /** Today's ₩ cap on the paid key (checked on every call, so the raise ends at midnight KST without a deploy). */
-export function dailyLimitKrw() {
+export function dailyLimitKrw(now = Date.now()) {
+  // 발표 당일 15:30~17:00은 넉넉히(api/_lib/event.js). 그날 쓴 금액은 이어서 세므로 17:00 뒤에는 그날 더 쓰지 않는다.
+  if (inEventWindow(now)) return EVENT_DAILY_LIMIT_KRW
   return today() <= RAISED_UNTIL_DAY ? RAISED_DAILY_LIMIT_KRW : BASE_DAILY_LIMIT_KRW
 }
 /** Today's cap when this module loaded (checks scripts read it; the API itself calls dailyLimitKrw()). */
