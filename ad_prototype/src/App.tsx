@@ -236,7 +236,7 @@ function DeleteAccountDialog({ easyMode, step, onConfirm, onClose }: { easyMode:
       <p id="delete-account-body" role={step === "ask" ? undefined : "status"}>{t(text[1])}</p>
       {step === "ask" && (
         <div className="bg-ask-actions">
-          <button type="button" className="studio-primary" onClick={onClose}>{t("취소")}</button>
+          <button type="button" className="studio-primary" onClick={onClose}>취소</button>
           <button type="button" className="studio-secondary is-danger" onClick={onConfirm}>{t("탈퇴하기")}</button>
         </div>
       )}
