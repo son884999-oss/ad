@@ -895,8 +895,7 @@ function ResultCardHeading({
     <div className="result-card-heading">
       <span aria-hidden="true"><Icon name={icon} size={22} /></span>
       <div className="result-card-title">
-        <h3>{easyMode ? title : `${title} 결과`}</h3>
-        <small>{uiText("바로 쓸 수 있어요", easyMode)}</small>
+        <h3>{title}</h3>
       </div>
       {(control || extra) && <div className="result-preview-controls">{control}{extra}</div>}
     </div>

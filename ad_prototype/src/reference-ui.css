@@ -309,8 +309,8 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,summary:focus-vi
 .results-step.is-single .result-card-heading { gap:14px 10px;margin-bottom:12px; }
 .results-step.is-single .result-card-heading .channel-choice legend { margin-bottom:4px; }
 /* 아이콘: 제목 줄에 맞춘 36px, 글자와 14px 띄움(기본 화면 단일 결과) */
-.results-step.is-single .result-card-heading { column-gap:14px;align-items:flex-start; }
-.results-step.is-single .result-card-heading > span { width:calc(36px * var(--s));height:calc(36px * var(--s));border-radius:10px;margin-top:-2px; }
+.results-step.is-single .result-card-heading { column-gap:14px;align-items:center; }
+.results-step.is-single .result-card-heading > span { width:calc(36px * var(--s));height:calc(36px * var(--s));border-radius:10px; }
 .results-step.is-single .result-card-heading > span svg { width:20px;height:20px; }
 .results-step.is-single .result-preview { height:calc(408px * var(--s)); }
 .easy-mode .reference-home { height:auto;min-height:100%; }
