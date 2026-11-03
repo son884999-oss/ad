@@ -124,7 +124,7 @@ try {
     })
     await page.goto(base)
     await page.getByRole("button", { name: /메뉴/ }).first().click()
-    await page.getByRole("button", { name: /로그인 · 회원가입/ }).click()
+    await page.getByRole("button", { name: "로그인 / 회원가입" }).click()
     await page.getByRole("button", { name: "회원가입", exact: true }).click()
     await page.getByRole("heading", { name: "회원가입" }).waitFor()
     await page.locator("#login-email").fill("owner@example.com")
@@ -145,7 +145,24 @@ try {
     await page.getByText("owner@example.com").waitFor()
     assert.ok(await page.getByRole("button", { name: "로그아웃" }).isVisible())
     assert.ok(await page.getByRole("button", { name: "회원 탈퇴" }).isVisible())
-    await page.getByRole("button", { name: /닫기/ }).first().click()
+    // 탈퇴 확인은 브라우저 기본 창이 아니라 앱 팝업이고, [취소]를 누르면 아무것도 지우지 않는다.
+    let nativeDialog = 0
+    page.on("dialog", (d) => { nativeDialog += 1; void d.dismiss() })
+    if (process.env.SHOT_DIR) {
+      const bottom = () => page.locator(".reference-menu-content").evaluate((el) => { el.scrollTop = el.scrollHeight; (el.closest(".reference-menu") ?? el).scrollTop = 99999 })
+      await page.screenshot({ path: `${process.env.SHOT_DIR}/menu-logged-in.png` })
+      await bottom(); await page.screenshot({ path: `${process.env.SHOT_DIR}/menu-bottom.png` })
+      await page.getByRole("switch", { name: /쉬운 화면/ }).click(); await page.waitForTimeout(400)
+      await page.screenshot({ path: `${process.env.SHOT_DIR}/menu-easy-top.png` })
+      await bottom(); await page.screenshot({ path: `${process.env.SHOT_DIR}/menu-easy-bottom.png` })
+      await page.getByRole("switch", { name: /쉬운 화면/ }).click(); await page.waitForTimeout(400)
+    }
+    await page.getByRole("button", { name: "회원 탈퇴" }).click()
+    await page.getByRole("dialog").getByRole("heading", { name: "회원 탈퇴할까요?" }).waitFor()
+    if (process.env.SHOT_DIR) await page.screenshot({ path: `${process.env.SHOT_DIR}/delete-ask.png` })
+    await page.getByRole("dialog").getByRole("button", { name: "취소" }).click()
+    await page.getByRole("heading", { name: "회원 탈퇴할까요?" }).waitFor({ state: "detached" })
+    assert.equal(nativeDialog, 0, "no browser confirm window")
 
     // A creation goes to the server: the row, then the photo and the poster.
     await page.getByRole("button", { name: "홍보물 만들기", exact: true }).first().click()
@@ -179,7 +196,7 @@ try {
     await page.route("**/api/**", (route) => route.fulfill({ status: 503, contentType: "application/json", body: "{}" }))
     await page.goto(offline.url)
     await page.getByRole("button", { name: /메뉴/ }).first().click()
-    await page.getByRole("button", { name: /로그인 · 회원가입/ }).click()
+    await page.getByRole("button", { name: "로그인 / 회원가입" }).click()
     await page.getByRole("button", { name: "카카오로 시작하기" }).click()
     await page.getByText(/준비 중/).waitFor()
     await page.getByRole("button", { name: /바로 시작하기/ }).click()

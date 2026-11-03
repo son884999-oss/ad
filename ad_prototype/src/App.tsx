@@ -219,6 +219,37 @@ function BackgroundAskDialog({ easyMode, onAnswer, onClose }: { easyMode: boolea
 }
 
 /**
+ * 회원 탈퇴 확인 (2026-11-04 실기기): 브라우저 기본 확인 창(주소가 그대로 보임) 대신 앱 팝업. 안전한 [취소]가 먼저,
+ * 탈퇴는 빨간 글씨. 탈퇴하는 동안·끝난 뒤 안내도 같은 팝업에서 보여 준다.
+ */
+function DeleteAccountDialog({ easyMode, step, onConfirm, onClose }: { easyMode: boolean; step: "ask" | "busy" | "done" | "failed"; onConfirm: () => void; onClose: () => void }) {
+  const t = (text: string) => uiText(text, easyMode)
+  const text = {
+    ask: ["회원 탈퇴할까요?", "계정과 서버에 저장한 홍보물이 모두 지워지고, 되돌릴 수 없어요."],
+    busy: ["탈퇴하고 있어요", "잠시만 기다려 주세요."],
+    done: ["탈퇴했어요", "그동안 이용해 주셔서 감사해요."],
+    failed: ["탈퇴하지 못했어요", "잠시 뒤에 다시 해 주세요."],
+  }[step]
+  return (
+    <AppDialog titleId="delete-account-title" bodyId="delete-account-body" onClose={() => { if (step !== "busy") onClose() }} closeOnBackdrop={step !== "busy"}>
+      <h2 id="delete-account-title">{t(text[0])}</h2>
+      <p id="delete-account-body" role={step === "ask" ? undefined : "status"}>{t(text[1])}</p>
+      {step === "ask" && (
+        <div className="bg-ask-actions">
+          <button type="button" className="studio-primary" onClick={onClose}>{t("취소")}</button>
+          <button type="button" className="studio-secondary is-danger" onClick={onConfirm}>{t("탈퇴하기")}</button>
+        </div>
+      )}
+      {(step === "done" || step === "failed") && (
+        <div className="bg-ask-actions">
+          <button type="button" className="studio-primary" onClick={onClose}>{t("확인")}</button>
+        </div>
+      )}
+    </AppDialog>
+  )
+}
+
+/**
  * 사진 고르기 popup (QA 2026-10-20): opens as soon as the owner says 바꾸기, before 정보 입력, so nothing pops up
  * while they type. The original (left) can be picked at once; the corrected one (right) shows 보정 중 until it
  * arrives, then becomes pickable. Picking either moves on. Tapping outside does nothing; Escape keeps the current
@@ -895,8 +926,7 @@ function ResultCardHeading({
     <div className="result-card-heading">
       <span aria-hidden="true"><Icon name={icon} size={22} /></span>
       <div className="result-card-title">
-        <h3>{easyMode ? title : `${title} 결과`}</h3>
-        <small>{uiText("바로 쓸 수 있어요", easyMode)}</small>
+        <h3>{title}</h3>
       </div>
       {(control || extra) && <div className="result-preview-controls">{control}{extra}</div>}
     </div>
@@ -3884,6 +3914,7 @@ export default function App() {
   const [photoPick, setPhotoPick] = useState<"changed" | "original">("changed")
 
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [deleteStep, setDeleteStep] = useState<null | "ask" | "busy" | "done" | "failed">(null)
   // A result opened from 내 홍보물 goes back to that list, not to the 정보 입력 step.
   const [openedFromRecords, setOpenedFromRecords] = useState(false)
 
@@ -4765,12 +4796,22 @@ export default function App() {
           void signOut()
         },
         onDelete: () => {
-          if (!window.confirm("회원 탈퇴하면 계정과 서버에 저장한 홍보물이 모두 지워져요. 탈퇴할까요?")) return
           setMobileOpen(false)
-          void deleteAccount().then(() => window.alert("탈퇴했어요. 그동안 이용해 주셔서 감사해요.")).catch(() => window.alert("탈퇴하지 못했어요. 잠시 뒤에 다시 해 주세요."))
+          setDeleteStep("ask")
         },
       } : null}
     >
+      {deleteStep && (
+        <DeleteAccountDialog
+          easyMode={easyMode}
+          step={deleteStep}
+          onClose={() => setDeleteStep(null)}
+          onConfirm={() => {
+            setDeleteStep("busy")
+            void deleteAccount().then(() => setDeleteStep("done")).catch(() => setDeleteStep("failed"))
+          }}
+        />
+      )}
       {page === "home" && (
         <Home
           navigate={navigate}
