@@ -2849,7 +2849,6 @@ function CreateFlow({
             <img src={photoPick === "changed" && changedUrl ? changedUrl : imageUrl} alt={t("선택한 제품 사진")} width="88" height="88" />
             <div>
               <strong>{t("선택한 사진")}</strong>
-              <span>{t("다른 사진으로 바꿀 수 있어요.")}</span>
             </div>
             <button
               type="button"
@@ -3872,7 +3871,7 @@ function Plan({ easyMode, signedIn, monthCount }: { easyMode: boolean; signedIn:
         <span>{t("결제는 아직 연결 전이에요. 지금은 모두 무료로 쓸 수 있어요.")}</span>
       </p>
       <h3 className="plan-section">{t("요금제")}</h3>
-      <p className="plan-section-note">{t("결제가 연결되면 적용돼요.")} {t("AI 보정 사진은 배경을 광고 사진처럼 바꾼 사진이에요.")}</p>
+      <p className="plan-section-note">{!easyMode&&<>{t("결제가 연결되면 적용돼요.")} </>}{t("AI 보정 사진은 배경을 광고 사진처럼 바꾼 사진이에요.")}</p>
       <div className="plan-options">
         {PLAN_CHOICES.map((plan) => (
           <button key={plan.id} type="button" onClick={() => setSelected(plan.id)} aria-pressed={selected === plan.id} className="plan-option">

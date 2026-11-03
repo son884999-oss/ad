@@ -1,3 +1,4 @@
+import { EVENT_RATE_MULTIPLIER, inEventWindow } from "./event.js"
 // Shared request/response helpers for the AI functions in api/.
 // The leading underscore keeps this folder from being routed as a Vercel function.
 // Handlers only use Node's plain req/res API so the same module runs on Vercel and
@@ -105,9 +106,14 @@ export function checkOrigin(req) {
 // Per-address sliding window, per function instance (memory only). It stops casual loops; a determined
 // attacker spreads over instances, so production should also add a Vercel Firewall rate-limit rule.
 const recentCalls = new Map()
+/** The per-minute cap in force now: ×EVENT_RATE_MULTIPLIER during the presentation window (api/_lib/event.js). */
+export function rateLimitFor(perMinute, now = Date.now()) {
+  return inEventWindow(now) ? perMinute * EVENT_RATE_MULTIPLIER : perMinute
+}
 export function checkRateLimit(req, bucket, perMinute) {
   const address = clientAddress(req)
   if (!address || !perMinute) return
+  perMinute = rateLimitFor(perMinute)
   const key = `${bucket}:${address}`
   const now = Date.now()
   const calls = (recentCalls.get(key) ?? []).filter((time) => now - time < 60_000)

@@ -90,4 +90,16 @@ await check("scene-start and video-start use both guards", async () => {
     assert.match(source, new RegExp(`withDailyPaid\\("${kind}"`), file)
   }
 })
-console.log(`PASS: verify-api-guard ${results.length} checks (origin, rate limit, demo access code, daily paid cap)`)
+await check("발표 당일 2026-11-13 15:30~17:00(KST)만 1분 한도 ×10, 유료 키 하루 상한 5,000원; 앞뒤는 원래대로", async () => {
+  const { rateLimitFor } = await import("../api/_lib/http.js")
+  const { dailyLimitKrw } = await import("../api/_lib/gemini.js")
+  const at = (text) => Date.parse(text)
+  assert.equal(rateLimitFor(3, at("2026-11-13T15:29:59+09:00")), 3)
+  assert.equal(rateLimitFor(3, at("2026-11-13T15:30:00+09:00")), 30)
+  assert.equal(rateLimitFor(20, at("2026-11-13T16:59:59+09:00")), 200)
+  assert.equal(rateLimitFor(3, at("2026-11-13T17:00:00+09:00")), 3)
+  assert.equal(dailyLimitKrw(at("2026-11-13T15:29:59+09:00")), 500)
+  assert.equal(dailyLimitKrw(at("2026-11-13T16:00:00+09:00")), 5000)
+  assert.equal(dailyLimitKrw(at("2026-11-13T17:00:00+09:00")), 500)
+})
+console.log(`PASS: verify-api-guard ${results.length} checks (origin, rate limit, demo access code, daily paid cap, presentation window)`)
