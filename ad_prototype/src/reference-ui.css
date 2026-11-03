@@ -1123,3 +1123,8 @@ html[data-layout=mobile] .results-step:not(.is-single) .result-card > .result-ne
 .home-tags-title { font-size:10.5cqw;font-weight:800;color:#2b2420;margin-bottom:5cqh; }
 .home-sample.is-tags .home-copy-tags { margin-top:0;line-height:1.55; }
 .home-sample.is-blog p { font-size:10cqw; }
+/* 2026-11-04: 회원 탈퇴는 메뉴 맨 아래 작은 회색 글씨, 확인은 앱 팝업(빨간 글씨 탈퇴하기) */
+.reference-menu-delete { display:block;margin:calc(18px * var(--s)) auto 0;min-height:44px;padding:8px 14px;background:none;border:0;font-size:max(14px,calc(14px * var(--s)));font-weight:600;color:#7a6d65;text-decoration:underline;text-underline-offset:3px; }
+.easy-mode .reference-menu-delete { font-size:calc(17px * var(--s)); }
+.bg-ask-actions .studio-secondary.is-danger { color:#b42318;border-color:#e9b9b3; }
+

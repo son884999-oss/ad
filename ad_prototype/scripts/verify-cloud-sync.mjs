@@ -91,7 +91,7 @@ async function device() {
 }
 async function login(page, email = "owner@example.com") {
   await page.getByRole("button", { name: /메뉴/ }).first().click()
-  await page.getByRole("button", { name: /로그인 · 회원가입/ }).click()
+  await page.getByRole("button", { name: "로그인 / 회원가입" }).click()
   await page.locator("#login-email").fill(email)
   await page.locator("#login-password").fill("password123")
   await page.getByRole("button", { name: "로그인", exact: true }).click()
