@@ -1148,4 +1148,7 @@ html[data-layout=mobile] .results-step:not(.is-single) .result-card > .result-ne
 .reference-social-consent > span { display:block;text-wrap:balance; }
 .reference-social-consent { margin:10px 0 0;font-size:max(13px,calc(13px * var(--s)));line-height:1.5;color:#6e625a;text-align:center; }
 .easy-mode .reference-social-consent { font-size:calc(16px * var(--s)); }
-.reference-social-consent + .reference-login-policy { margin-top:6px;text-align:center; }
+.reference-social-consent + .reference-login-policy { margin-top:6px; }
+/* 2026-11-04: 보호책임자·연락처를 한 줄씩, 이메일은 중간에서 끊기지 않게 */
+.privacy-contact > span { display:block; }
+.privacy-email { white-space:nowrap; }
