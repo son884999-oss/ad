@@ -1128,3 +1128,11 @@ html[data-layout=mobile] .results-step:not(.is-single) .result-card > .result-ne
 .easy-mode .reference-menu-delete { font-size:calc(17px * var(--s)); }
 .bg-ask-actions .studio-secondary.is-danger { color:#b42318;border-color:#e9b9b3; }
 
+/* 2026-11-04: 메뉴의 계정 줄을 다른 줄과 같은 모양의 [내 계정] 바로. 누르면 이메일이 보이고 다시 누르면 가린다. */
+.reference-menu-links .reference-account-row > span { min-width:0;overflow-wrap:anywhere; }
+.reference-menu-links .reference-account-row small { display:block;font-weight:500;color:#6e625a;font-size:max(13px,calc(13px * var(--s))); }
+.reference-menu-links .reference-account-row > svg:last-child { transition:transform .15s; }
+.reference-menu-links .reference-account-row[aria-expanded=true] > svg:last-child { transform:rotate(90deg); }
+.easy-mode .reference-menu-links .reference-account-row small { font-size:calc(17px * var(--s));margin-top:2px; }
+.easy-mode .reference-menu-links .reference-account-row { background:#fff;border-color:#d9cdc2; }
+.easy-mode .reference-menu-links { margin-top:calc(18px * var(--s));padding-top:calc(16px * var(--s));border-top:1px solid #e3d8ce; }
