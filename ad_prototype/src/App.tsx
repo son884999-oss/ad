@@ -2993,7 +2993,7 @@ function CreateFlow({
             )}
             <details className="details-more" open={Boolean(details.description || details.features || details.keywords || details.audience || details.location || details.priceInfo || details.contact) || undefined}>
               <summary>
-                <span>{t("더 자세히 알려주기")}</span>
+                <span>{t("더 자세히 알려 주기")}</span>
                 {(() => {
                   const filled = [details.description, details.features, details.keywords, details.audience, details.location, details.priceInfo, details.contact].filter((value) => value?.trim()).length
                   return <small>{easyMode ? (filled ? `${filled}개 썼어요` : "안 써도 돼요") : `${filled}/7 입력 · 선택`}</small>
@@ -3018,11 +3018,11 @@ function CreateFlow({
                   <span className="field-meta">{Boolean(details.description) && <span className="field-count" aria-hidden="true">{(details.description ?? "").length}/500</span>}</span>
                 </label>
                 <label className="block text-[18px] font-bold">
-                  {t("어떤 점을 알려주고 싶나요?")}
+                  {t("어떤 점을 알려 주고 싶나요?")}
                   <VoiceField voice={voice} field="features" label={t("알리고 싶은 점")} inputId="field-features" value={details.features} maxLength={1000} easyMode={easyMode} onVoiceText={(text) => updateDetails({ ...details, features: text })}>
                   {(bind) => <AutoSizeTextarea
                     {...bind}
-                    aria-label={t("어떤 점을 알려주고 싶나요?")}
+                    aria-label={t("어떤 점을 알려 주고 싶나요?")}
                     aria-required="false"
                     value={details.features}
                     maxLength={1000}
@@ -4323,7 +4323,7 @@ export default function App() {
 
     if (step === 2) {
       return (
-        "제품 이름을 적어 주세요. 가게 이름과 홍보 분위기는 골라도 되고 비워 둬도 돼요. 더 자세히 알려주기를 누르면 제품 설명, 알리고 싶은 점, 핵심 특징, 주요 고객층을 더 적을 수 있어요. " +
+        "제품 이름을 적어 주세요. 가게 이름과 홍보 분위기는 골라도 되고 비워 둬도 돼요. 더 자세히 알려 주기를 누르면 제품 설명, 알리고 싶은 점, 핵심 특징, 주요 고객층을 더 적을 수 있어요. " +
         (details.name?.trim()
           ? "상품 이름은 " + details.name + ". "
           : "") +
@@ -4359,7 +4359,7 @@ export default function App() {
       setSpeechPreparing(false)
 
       setSpeechMessage(
-        uiText("현재 브라우저에서 읽어주기를 사용할 수 없어요.", easyMode),
+        uiText("현재 브라우저에서 읽어 주기를 사용할 수 없어요.", easyMode),
       )
 
       return
@@ -4388,7 +4388,7 @@ export default function App() {
     speechRequestRef.current = requestId
 
     setSpeechPreparing(true)
-    setSpeechMessage(uiText("읽어주기를 준비하고 있어요.", easyMode))
+    setSpeechMessage(uiText("읽어 주기를 준비하고 있어요.", easyMode))
 
     let voices = synthesis.getVoices()
 
@@ -4476,7 +4476,7 @@ export default function App() {
         setSpeechPreparing(false)
 
         setSpeechMessage(
-          uiText("일시적으로 읽어주기를 시작하지 못했어요. 다시 눌러 시도해 주세요.", easyMode),
+          uiText("일시적으로 읽어 주기를 시작하지 못했어요. 다시 눌러 시도해 주세요.", easyMode),
         )
       }
     }, 8000)
@@ -4520,7 +4520,7 @@ export default function App() {
       }
 
       setSpeechMessage(
-        uiText("일시적으로 읽어주기를 시작하지 못했어요. 화면을 한 번 누른 뒤 다시 시도해 주세요.", easyMode),
+        uiText("일시적으로 읽어 주기를 시작하지 못했어요. 화면을 한 번 누른 뒤 다시 시도해 주세요.", easyMode),
       )
     }
 
@@ -4534,7 +4534,7 @@ export default function App() {
       setSpeechPreparing(false)
 
       setSpeechMessage(
-        uiText("일시적으로 읽어주기를 시작하지 못했어요. 다시 눌러 시도해 주세요.", easyMode),
+        uiText("일시적으로 읽어 주기를 시작하지 못했어요. 다시 눌러 시도해 주세요.", easyMode),
       )
     }
   }
@@ -4791,6 +4791,7 @@ export default function App() {
       mobileOpen={mobileOpen}
       setMobileOpen={setMobileOpen}
       resultView={page === "create" && step === 3}
+      reopened={openedFromRecords}
       generating={page === "create" && step === 3 && generatingView}
       creationView={page === "create"}
       navigate={navigate}

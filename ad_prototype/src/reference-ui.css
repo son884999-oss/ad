@@ -1153,3 +1153,5 @@ html[data-layout=mobile] .results-step:not(.is-single) .result-card > .result-ne
 .record-item-copy .record-date,.record-item-copy .record-kinds { display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
 /* 쉬운 화면 [말로 하기]가 360 폭에서 두 줄로 꺾이던 것 */
 .easy-mode .voice-mic-button { white-space:nowrap;width:auto;padding-inline:8px; }
+/* 2026-11-04 점검: 화면 높이가 낮아 4:5 포스터가 줄어들 때 틀 좌우에 빈 띠가 생기던 것 — 틀 폭을 포스터에 맞춘다 */
+.result-preview:has(.poster-image-canvas):not(:has(.is-expanded)) { width:auto;aspect-ratio:4 / 5;max-width:100%;margin-inline:auto; }
