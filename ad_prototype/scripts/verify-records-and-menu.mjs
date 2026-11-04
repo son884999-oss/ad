@@ -143,8 +143,15 @@ try {
     assert.equal(await page.locator(".records-list .record-item").count(), 1)
     assert.equal(await pressed(page, "줄로 보기"), "true")
     // delete removes the whole creation at once
-    page.once("dialog", (d) => { assert.match(d.message(), /포스터·영상·글이 함께 지워지고/); d.accept() })
+    // 11-04: 앱 팝업으로 확인([취소] 먼저), 브라우저 기본 창은 뜨지 않는다
+    let native = 0; page.on("dialog", (d) => { native += 1; void d.dismiss() })
     await page.locator(".record-delete").first().click()
+    const ask = page.getByRole("dialog", { name: "이 홍보물을 지울까요?" })
+    await ask.getByRole("button", { name: "취소", exact: true }).click()
+    assert.equal(await page.locator(".record-item, .record-card").count(), 1, "취소 keeps it")
+    await page.locator(".record-delete").first().click()
+    await ask.getByRole("button", { name: "지우기", exact: true }).click()
+    assert.equal(native, 0, "no browser confirm window")
     await page.locator(".empty-results").waitFor()
     assert.equal(await page.locator(".record-item, .record-card").count(), 0)
     assert.deepEqual(page.errors, [])

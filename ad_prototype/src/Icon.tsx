@@ -1,4 +1,4 @@
-export type IconName = "grid" | "text-size" | "close" | "chevron" | "card" | "user" | "home" | "plus" | "folder" | "picture" | "camera" | "zoom-in" | "zoom-out" | "play" | "pause" | "video" | "copy" | "arrow" | "menu" | "check" | "upload" | "download" | "share" | "window" | "sound" | "settings" | "mic" | "undo" | "keyboard"
+export type IconName = "grid" | "text-size" | "close" | "chevron" | "card" | "user" | "home" | "plus" | "folder" | "picture" | "camera" | "zoom-in" | "zoom-out" | "play" | "pause" | "video" | "copy" | "arrow" | "menu" | "check" | "upload" | "download" | "share" | "window" | "sound" | "settings" | "mic" | "undo" | "keyboard" | "logout"
 export default function Icon({
   name,
   size = 24,
@@ -14,6 +14,7 @@ export default function Icon({
     camera: "M3.5 9A2 2 0 0 1 5.5 7h2.2l1.4-2.2A1.5 1.5 0 0 1 10.4 4h3.2a1.5 1.5 0 0 1 1.3.8L16.3 7h2.2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2ZM15.5 13a3.5 3.5 0 1 0-7 0 3.5 3.5 0 0 0 7 0",
     chevron: "m9 5 7 7-7 7",
     grid: "M4 4h7v7H4ZM13 4h7v7h-7ZM4 13h7v7H4ZM13 13h7v7h-7Z",
+    logout: "M14 4h5v16h-5M10 16l4-4-4-4M14 12H4",
     "text-size": "M3 19 8 5l5 14M4.8 14h6.4M14 19l3.5-9 3.5 9M15.2 16h4.6",
     close: "M6 6l12 12M18 6 6 18",
     card: "M3 7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2ZM3 10h18M7 15h4",

@@ -2963,7 +2963,7 @@ function CreateFlow({
               </VoiceField>
             </label>
             <fieldset className="tone-field">
-              <legend>{t("홍보 분위기")} <span className="field-tag">{t("선택")}</span></legend>
+              <legend>{t("홍보 분위기")} <span className="field-tag">{easyMode ? "안 골라도 돼요" : "선택"}</span></legend>
               {/* Several moods can be chosen; the first one leads. 자동 clears them and shows as chosen when none is. */}
               <div className="tone-options" role="group" aria-label={t("홍보 분위기 · 여러 개 고를 수 있어요")}>
                 {toneOptions.map((option) => {
@@ -3385,7 +3385,7 @@ function CreateFlow({
                   <div className="result-main-preview result-photo-preview">
                     <img src={photoTabUrl} alt={t("AI로 배경을 바꾼 제품 사진")} decoding="async" />
                     {/* AI 표시 (인공지능기본법 제31조): the corrected photo says it was made with AI. */}
-                    <span className="ai-badge">{t("AI 보정 사진")}</span>
+                    <span className="ai-badge">{easyMode ? "AI로 바꾼 사진" : "AI 보정 사진"}</span>
                   </div>
                 </ResultPreview>
                 {/* Owner, QA 2026-10-20: only the corrected photo and 저장하기 / 공유하기 here. */}
@@ -3641,7 +3641,8 @@ function CreateFlow({
                       tabIndex={0}
                     >
                       {/* Same text as finalText; each hashtag is kept whole when the line wraps. */}
-                      {copyText.trim()}
+                      {/* 11-04: 전화번호 같은 숫자-숫자는 줄이 바뀌지 않게(복사·공유 글은 원래 하이픈 그대로). */}
+                      {copyText.trim().replace(/(\d)-(?=\d)/g, "$1\u2011")}
                       {hashtags.length > 0 && (copyText.trim() ? "\n\n" : "")}
                       {hashtags.map((tag, index) => (
                         <Fragment key={tag + index}>{index ? " " : ""}<span className="hashtag">{tag}</span></Fragment>
@@ -3718,6 +3719,8 @@ function Records({
   onCreate: () => void
   onStartNew: () => void
 }) {
+  // 11-04: 지우기 확인은 브라우저 기본 창(주소가 보임) 대신 앱 팝업. [취소]가 먼저, 지우기는 빨간 글씨.
+  const [pendingDelete, setPendingDelete] = useState<GeneratedRecord | null>(null)
   // 목록/격자: the viewer's own choice wins; without one, 쉬운 화면 starts with big thumbnails.
   const [chosenView, setChosenView] = useState<RecordsView | null>(readRecordsView)
   const view: RecordsView = chosenView ?? (easyMode ? "grid" : "list")
@@ -3812,7 +3815,8 @@ function Records({
                   {record.details.name?.trim() || record.details.description}
                 </strong>
                 <small>
-                  {kinds.map((value) => labels[value]).join("·")} · {record.createdAt}
+                  <span className="record-kinds">{kinds.map((value) => labels[value]).join("·")}</span>
+                  <span className="record-date">{record.createdAt}</span>
                 </small>
                 <span className="sr-only">{t("결과 다시 보기")}</span>
               </span>
@@ -3823,9 +3827,7 @@ function Records({
               className="record-delete"
               disabled={cloudLoading}
               aria-label={`${record.details.name?.trim() || labels[kind]} ${t("지우기")}`}
-              onClick={() => {
-                if (window.confirm(t("이 홍보물을 지울까요? 포스터·영상·글이 함께 지워지고 되돌릴 수 없어요."))) onDelete(record)
-              }}
+              onClick={() => setPendingDelete(record)}
             >
               {t("지우기")}
             </button>
@@ -3845,6 +3847,16 @@ function Records({
             {records.length ? t("새 홍보물 만들기") : "홍보물 만들기"}
           </button>
         </div>
+      )}
+      {pendingDelete && (
+        <AppDialog titleId="record-delete-title" bodyId="record-delete-body" onClose={() => setPendingDelete(null)}>
+          <h2 id="record-delete-title">이 홍보물을 지울까요?</h2>
+          <p id="record-delete-body">{easyMode ? "지우면 되돌릴 수 없어요." : "포스터·영상·글이 함께 지워지고 되돌릴 수 없어요."}</p>
+          <div className="bg-ask-actions">
+            <button type="button" className="studio-primary" onClick={() => setPendingDelete(null)}>취소</button>
+            <button type="button" className="studio-secondary is-danger" onClick={() => { const record = pendingDelete; setPendingDelete(null); onDelete(record) }}>지우기</button>
+          </div>
+        </AppDialog>
       )}
     </section>
   )
@@ -4822,6 +4834,7 @@ export default function App() {
           navigate={navigate}
           easyMode={easyMode}
           hasDraft={userTouched}
+          signedIn={Boolean(auth.user)}
           onChooseCreation={() => navigate("create", "all")}
         />
       )}

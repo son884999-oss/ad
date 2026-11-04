@@ -1147,3 +1147,9 @@ html[data-layout=mobile] .results-step:not(.is-single) .result-card > .result-ne
 /* 2026-11-04: 보호책임자·연락처를 한 줄씩, 이메일은 중간에서 끊기지 않게 */
 .privacy-contact > span { display:block; }
 .privacy-email { white-space:nowrap; }
+.privacy-policy .nw { white-space:nowrap; }
+/* 2026-11-04 점검: 내 홍보물 목록 제목은 두 줄까지, 날짜는 중간에서 안 끊기게 */
+.records-list .record-item-copy strong { display:-webkit-box;white-space:normal;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden; }
+.record-item-copy .record-date,.record-item-copy .record-kinds { display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+/* 쉬운 화면 [말로 하기]가 360 폭에서 두 줄로 꺾이던 것 */
+.easy-mode .voice-mic-button { white-space:nowrap;width:auto;padding-inline:8px; }

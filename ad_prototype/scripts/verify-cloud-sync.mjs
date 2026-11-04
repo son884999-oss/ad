@@ -250,8 +250,8 @@ try {
     await login(b.page)
     await recordsPage(b.page)
     await b.page.getByText(fixture.details.name, { exact: true }).waitFor()
-    b.page.once("dialog", (dialog) => dialog.accept())
     await b.page.getByRole("button", { name: `${fixture.details.name} 지우기`, exact: true }).click()
+    await b.page.getByRole("dialog", { name: "이 홍보물을 지울까요?" }).getByRole("button", { name: "지우기", exact: true }).click()
     await until(() => !backend.rows.has(fixture.id), "explicit deletion did not reach server")
     const before = posts().length
     await a.page.reload()
