@@ -41,7 +41,7 @@
 - 유료 하루 상한: 10-22까지 1,000원, 10-23부터 500원(`api/_lib/gemini.js` `RAISED_UNTIL_DAY`·`RAISED_DAILY_LIMIT_KRW`). 배경 그림과 글이 같은 장부를 쓴다. **발표 당일 2026-11-13 15:30~17:00(한국 시간)에만** 하루 상한 5,000원, 접속 주소당 1분 한도 10배(`api/_lib/event.js`, 시간이 지나면 저절로 원래대로).
 - 배포 서버의 하루 장부는 메모리에 있어 서버가 여러 개 뜨면 덜 막을 수 있다 → Google Cloud 결제에 예산 알림을 건다.
 - 홍보물 1건: 배경을 그대로 두면 0~10원, 바꾸면 약 57~63원(발표 부록 A3과 같은 값).
-- 마지막 점검(11-04): tsc·build, verify:auth·records·easy·cloud-sync·guard·background·ai 통과. `audit:screens`에 남는 8건은 의도한 홈 예시 카드 가로 넘침. `verify:photo`는 적용 보류한 사진 경고 흐름을 기대하는 검사라 실패(정리는 [나중에_할일.md](나중에_할일.md)).
+- 마지막 점검(11-04): tsc·build, verify:auth·records·easy·photo·cloud-sync·guard·background·ai 통과. `audit:screens`에 남는 8건은 의도한 홈 예시 카드 가로 넘침.
 - 기종 11종 점검(10-22): iPhone SE(320×568)만 저장 버튼이 한 번 스크롤해야 보이고, 나머지는 통과.
 
 ## 2. 규칙 (전체는 저장소 맨 위 `CLAUDE.md`)
