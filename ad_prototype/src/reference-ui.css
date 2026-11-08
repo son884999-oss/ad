@@ -1157,3 +1157,6 @@ html[data-layout=mobile] .results-step:not(.is-single) .result-card > .result-ne
 .result-preview:has(.poster-image-canvas):not(:has(.is-expanded)) { width:auto;aspect-ratio:4 / 5;max-width:100%;margin-inline:auto; }
 
 .home-legal-links{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;padding:12px 0 8px;font-size:14px;color:#62554d;flex-shrink:0}.home-legal-links a{text-decoration:underline;text-underline-offset:3px}.home-legal-links a:focus-visible{outline:3px solid #a64014;outline-offset:4px}
+/* Keep home examples readable after the policy footer and first-visit offer take space. */
+.reference-app .reference-home { height:auto;min-height:100%; }
+.reference-app .reference-home .home-samples { flex:1 0 calc(116px * var(--s));min-height:calc(116px * var(--s)); }
