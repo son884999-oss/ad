@@ -140,22 +140,34 @@ export function buildGenerationConfig({ model, temperature, maxOutputTokens, res
  * maxOutputTokens caps cost; a cut-off answer (finishReason MAX_TOKENS) is rejected as AI_BAD_RESPONSE.
  * The schema only shapes the answer: callers still validate every field.
  */
-export async function generateJson({ config, systemInstruction, parts, timeoutMs = 15_000, temperature = 0.7, maxOutputTokens = 1024, responseJsonSchema }) {
+export async function generateJson({ config, systemInstruction, parts, timeoutMs = 15_000, temperature = 0.7, maxOutputTokens = 1024, responseJsonSchema, remainingMs, validateResult }) {
   const request = { systemInstruction, parts, timeoutMs, temperature, maxOutputTokens, responseJsonSchema }
   // Owner's order (2026-10-18): COPA (Claude, the institution's monthly tokens; it wrote the more concrete copy in a
   // side-by-side test) → free Gemini key → paid Gemini key (₩500/day).
   // Any failure (limit, error, timeout, bad answer) moves on to the next; the last error is the answer.
   const steps = [
-    config.copa && (() => copaJson(config.copa, request)),
-    config.apiKey && (() => geminiOnce(config.apiKey, config.model, request)),
-    config.backupKey && (() => geminiBackup(config, request)),
+    config.copa && ["copa", (next) => copaJson(config.copa, next)],
+    config.apiKey && ["gemini-free", (next) => geminiOnce(config.apiKey, config.model, next)],
+    config.backupKey && ["gemini-backup", (next) => geminiBackup(config, next)],
   ].filter(Boolean)
   let lastError = new ApiError(503, "AI_NOT_CONFIGURED")
-  for (const step of steps) {
+  for (const [index, [provider, step]] of steps.entries()) {
+    // Promo shares one deadline across providers AND its quality rewrite. Other callers keep their existing limits.
+    const available = remainingMs ? remainingMs() : timeoutMs
+    if (available <= 0) throw new ApiError(504, "AI_TIMEOUT")
+    const providersLeft = steps.length - index
+    const reserve = remainingMs ? (providersLeft - 1) * Math.min(6_000, available / providersLeft) : 0
+    const stepTimeout = Math.max(1, Math.floor(Math.min(timeoutMs, available - reserve)))
+    const stepStarted = Date.now()
     try {
-      return await step()
+      const result = await step({ ...request, timeoutMs: stepTimeout })
+      if (remainingMs && remainingMs() <= 0) throw new ApiError(504, "AI_TIMEOUT")
+      if (validateResult && !validateResult(result)) throw new ApiError(502, "AI_BAD_RESPONSE")
+      if (remainingMs) console.info("promo_ai_step", JSON.stringify({ provider, status: "ok", elapsedMs: Date.now() - stepStarted }))
+      return result
     } catch (error) {
       lastError = error
+      if (remainingMs) console.warn("promo_ai_step", JSON.stringify({ provider, status: "failed", code: error?.code ?? "AI_REQUEST_FAILED", upstreamStatus: error?.upstreamStatus, elapsedMs: Date.now() - stepStarted, remainingMs: Math.max(0, remainingMs()) }))
     }
   }
   throw lastError
@@ -165,7 +177,7 @@ export async function generateJson({ config, systemInstruction, parts, timeoutMs
 async function geminiOnce(apiKey, model, request, onOk) {
   const response = await requestOnce({ apiKey, model, ...request })
   if (response.status === 429) throw new ApiError(429, "AI_RATE_LIMITED")
-  if (!response.ok) throw new ApiError(502, "AI_REQUEST_FAILED")
+  if (!response.ok) throw Object.assign(new ApiError(502, "AI_REQUEST_FAILED"), { upstreamStatus: response.status })
   if (onOk) await onOk(response)
   return readAnswer(response)
 }
@@ -188,7 +200,7 @@ async function requestOnce({ apiKey, model, systemInstruction, parts, timeoutMs,
     response = await fetch(`${ENDPOINT}/${model}:generateContent`, {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
-      signal: AbortSignal.timeout(Math.max(1_000, timeoutMs)),
+      signal: AbortSignal.timeout(Math.max(1, Math.floor(timeoutMs))),
       body: JSON.stringify({
         systemInstruction: { parts: [{ text: systemInstruction }] },
         contents: [{ role: "user", parts }],

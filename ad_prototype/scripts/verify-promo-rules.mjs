@@ -238,10 +238,16 @@ try {
     let t = 0
     replies = [bad]
     sentBodies.length = 0
-    // Each clock read moves 8 s, so after the first answer under 5 s of the 20 s budget is left (budget raised 2026-10-20).
-    const r = await generatePromo(normalizePromoInput(product), config, { now: () => (t += 8_000) })
-    assert.equal(sentBodies.length, 1)
-    assert.equal(r.copy, trimCliches(badData.copy))
+    // Advance time with the fake operation, not with clock reads (providers now inspect the same shared deadline).
+    const fetchReply = globalThis.fetch
+    globalThis.fetch = async (...args) => { const response = await fetchReply(...args); t = 20_000; return response }
+    try {
+      const r = await generatePromo(normalizePromoInput(product), config, { now: () => t })
+      assert.equal(sentBodies.length, 1)
+      assert.equal(r.copy, trimCliches(badData.copy))
+    } finally {
+      globalThis.fetch = fetchReply
+    }
   })
 
   await check("copyCandidates: cleaned, deduped, ≤60 chars, max 3; clichés not in input and medical words dropped", async () => {

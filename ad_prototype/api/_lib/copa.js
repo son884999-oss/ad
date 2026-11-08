@@ -42,7 +42,7 @@ export async function copaJson(copa, { systemInstruction, parts, timeoutMs = 15_
     response = await fetch(`${copa.baseUrl}/v1/messages`, {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-api-key": copa.apiKey, "anthropic-version": "2023-06-01" },
-      signal: AbortSignal.timeout(Math.max(1_000, timeoutMs)),
+      signal: AbortSignal.timeout(Math.max(1, Math.floor(timeoutMs))),
       body: JSON.stringify({
         model: copa.model,
         system,
@@ -57,7 +57,7 @@ export async function copaJson(copa, { systemInstruction, parts, timeoutMs = 15_
     throw new ApiError(timeout ? 504 : 502, timeout ? "AI_TIMEOUT" : "AI_REQUEST_FAILED")
   }
   if (response.status === 429) throw new ApiError(429, "AI_RATE_LIMITED")
-  if (!response.ok) throw new ApiError(502, "AI_REQUEST_FAILED")
+  if (!response.ok) throw Object.assign(new ApiError(502, "AI_REQUEST_FAILED"), { upstreamStatus: response.status })
   let result
   try {
     result = await response.json()
