@@ -447,11 +447,11 @@ function composePromoText(promo: PromoTextResult, details: GeneratedRecord["deta
 }
 
 /** How long 홍보물 만들기 waits for the AI 홍보 글 before using the local template. */
-const PROMO_WAIT_MS = 21_000
+const PROMO_WAIT_MS = 28_000
 // Another channel picked on the result screen: the owner is looking at 글을 맞추는 중, so it may take longer. On Vercel a
 // second channel took about 10 s (2026-10-20), and with a phone network the 12 s cap fell back to the plain text
 // without first-line choices ("다른 채널은 문구가 아예 안 뜬다").
-const PROMO_SWITCH_WAIT_MS = 25_000
+const PROMO_SWITCH_WAIT_MS = 28_000
 
 const MAX_PHOTO_SIZE = 10 * 1024 * 1024
 const ACCEPTED_PHOTO_TYPES = ["image/jpeg", "image/png", "image/webp"]
@@ -3662,7 +3662,7 @@ function CreateFlow({
                   error={copyMessage.includes("못했어요")}
                 />
                 {/* The no-AI fallback, said once under the text instead of a band above the tabs (QA 2026-10-22). */}
-                {/* While a channel's text is still being written (up to 25 s after a switch) it is not a fallback yet (QA 2026-10-26). */}
+                {/* While a channel's text is still being written (up to 28 s after a switch) it is not a fallback yet. */}
                 {!activePromo && <p className="copy-fallback-note" role="status">{t(promoPending ? "AI가 이 채널 글을 쓰고 있어요. 잠시만 기다려 주세요." : "AI 없이 기본 문구로 만들었어요.")}</p>}
               </article>
             )}
