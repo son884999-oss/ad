@@ -10,7 +10,7 @@
 | **앱 바로 써 보기** | https://ad-prototype-codyssey.vercel.app — 가입 없이 바로 시작. 사진이 없으면 홈의 예시로 시작 |
 | 개인정보처리방침 | [로그인 없이 확인](https://ad-prototype-codyssey.vercel.app/privacy.html) |
 | 이용약관 | [로그인 없이 확인](https://ad-prototype-codyssey.vercel.app/terms.html) |
-| **발표 자료(웹 슬라이드)** | https://codyseeypresentation.vercel.app — 본편 12장 + 질문 목록 1장 + 질문별 답 20장(A1\~A20) |
+| **발표 자료(웹 슬라이드)** | https://codyseeypresentation.vercel.app — 본편 13장 + 질문 목록 1장 + 질문별 답 21장(A1\~A21) |
 | 브랜드 자료 | https://ad-prototype-codyssey.vercel.app/brand-library/ — 지금 쓰는 로고·색·표기 규칙 |
 | 개발 문서 | [ad_prototype/docs/README.md](ad_prototype/docs/README.md) |
 
@@ -23,6 +23,21 @@
 | 포스터 | 10초 영상 한 장면 | 홍보 글 |
 |---|---|---|
 | <img src="ad_prototype/docs/readme/poster.jpg" width="220" alt="포스터"> | <img src="ad_prototype/docs/readme/video.jpg" width="220" alt="영상 장면"> | <img src="ad_prototype/docs/readme/copy.jpg" width="220" alt="홍보 글 화면"> |
+
+## 저장과 공유
+
+결과 화면에서 **공유하기**를 누르면 휴대폰의 **기본 공유창(Web Share API)**이 열립니다. 공유할 파일이나 문구를 받을 수 있는 설치된 앱을 선택해 전달합니다.
+
+| 결과물 | 공유하는 내용 |
+|---|---|
+| 포스터와 보정 사진 | 이미지 파일 |
+| 영상 | MP4 영상 파일. MP4 제작을 지원하지 않는 일부 브라우저에서는 WebM 파일 |
+| 홍보 글 | 텍스트. 이미지·영상 파일과는 따로 공유하거나 복사해 붙여 넣기 |
+
+- 카카오톡, Instagram, BAND, 메일 등 여러 앱으로 전달할 수 있습니다. **공유 대상은 앱 설치 여부뿐 아니라 기기·브라우저·파일 형식에 따라 달라집니다.**
+- 각 플랫폼에 자동으로 게시하는 기능은 아닙니다. 공유할 앱을 고르고 마지막 전송·게시는 사용자가 직접 확인합니다.
+- 공유창이나 파일 공유를 지원하지 않으면 파일을 다운로드하거나 문구를 복사해 원하는 앱에서 사용합니다.
+- 영상 파일을 준비 중이라는 안내가 나오면 준비가 끝난 뒤 **공유하기**를 다시 누릅니다. 공유를 취소해도 만들어 둔 결과는 유지됩니다.
 
 ## 어떻게 동작하나
 
