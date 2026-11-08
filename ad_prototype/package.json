@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "dev:mock": "vite --mode mock --host 127.0.0.1 --port 5174 --strictPort",
-    "build": "vite build",
+    "build": "node scripts/generate-policy-pages.mjs && vite build",
     "preview": "vite preview",
     "assets:optimize": "node scripts/optimize-illustrations.mjs",
     "format": "oxfmt",
