@@ -71,7 +71,7 @@
 ## 폴더 구조
 
 ```
-A_손용범/ ~ F_육성준/   팀원별 작업 원본
+A_손용범 ~ F_육성준/   팀원별 작업 원본
 ad_prototype/           팀원 작업을 하나로 합친 앱 (React + Vite, Vercel 함수, Supabase)
 ad_prototype/docs/      개발 문서 4개
 ```
