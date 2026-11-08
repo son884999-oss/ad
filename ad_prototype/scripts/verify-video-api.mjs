@@ -701,6 +701,7 @@ try {
     // Reopen from 내 홍보물: the saved record still points at the real video, no new start.
     await page.getByRole("button", { name: /내 홍보물/ }).first().click()
     await page.locator(".records-list button, .records-list a").filter({ hasText: /영상/ }).first().click()
+    await openVideoTab(page)
     await page.locator("#result-video-preview .ai-badge").waitFor({ timeout: 10000 })
     assert.equal(counts.start, 1)
     assert.deepEqual(errors, [])

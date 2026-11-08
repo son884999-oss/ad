@@ -14,6 +14,7 @@ const keepPhoto = async (page) => {
 }
 
 const out=process.env.REFERENCE_REBUILD_OUTPUT
+const base=process.argv[2]||'http://127.0.0.1:5173/'
 if(!out)throw new Error('REFERENCE_REBUILD_OUTPUT required')
 await mkdir(out,{recursive:true})
 const browser=await chromium.launch({channel:'msedge',headless:true})
@@ -32,7 +33,7 @@ for(const [width,height] of [[320,640],[360,740],[390,844],[430,932],[768,1024],
  // Keep this layout check deterministic and off the free AI quota: answer /api/* as if no key is set.
  if(!process.env.REFERENCE_REBUILD_ALLOW_AI)await page.route('**/api/**',r=>r.fulfill({status:503,contentType:'application/json',body:'{"error":"AI_NOT_CONFIGURED"}'}))
  const errors=[];page.on('pageerror',e=>errors.push(e.message))
- await page.goto('http://127.0.0.1:5173/')
+ await page.goto(base)
  await capture(page,'home',width,['.reference-home-create','.reference-home-steps'])
  await page.getByRole('button',{name:'전체 메뉴 열기',exact:true}).click()
  await capture(page,'menu',width,['.menu-creation-options','.reference-menu-links'])
@@ -48,15 +49,15 @@ for(const [width,height] of [[320,640],[360,740],[390,844],[430,932],[768,1024],
  if(!(await page.locator('.details-more').getAttribute('open')))await page.locator('.details-more > summary').click();await page.getByLabel('어떤 점을 알려 주고 싶나요?',{exact:true}).fill('신선한 재료, 직접 만든 디저트, 아늑한 분위기')
  await page.getByLabel('제품 이름',{exact:true}).blur()
  if(await page.locator('.details-more').getAttribute('open')!==null)await page.locator('.details-more > summary').click()
- await capture(page,'information',width,['.information-photo','.details-actions'])
+ await capture(page,'information',width,['.information-photo','.details-primary-bar'])
  await page.getByRole('button',{name:'홍보물 만들기',exact:true}).click()
  await page.locator('#result-poster-preview img').waitFor()
- await capture(page,'result',width,['.result-action-buttons','.result-followup-actions'])
+ await capture(page,'result',width,['#result-poster .result-action-buttons'])
  const downloadEvent=page.waitForEvent('download');await page.getByRole('button',{name:'이미지 다운로드',exact:true}).click();const download=await downloadEvent;assert.match(download.suggestedFilename(),/\.png$/)
  await page.getByRole('tab',{name:'홍보 글',exact:true}).click()
  await page.getByRole('button',{name:'홍보 글 복사하기',exact:true}).click()
  assert.ok((await page.evaluate(()=>navigator.clipboard.readText())).includes('수제 크림과 커피'))
- await page.getByRole('button',{name:'홈으로',exact:true}).click()
+ await page.getByRole('button',{name:'홈',exact:true}).first().click()
  assert.equal(await page.getByRole('button',{name:'홍보물 이어 만들기',exact:true}).count(),0)
  await page.getByRole('button',{name:'홍보물 만들기',exact:true}).click()
  assert.ok(await page.getByRole('button',{name:'사진 선택하기',exact:true}).isVisible())
