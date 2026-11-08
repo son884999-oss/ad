@@ -8,6 +8,8 @@
 | | 주소 |
 |---|---|
 | **앱 바로 써 보기** | https://ad-prototype-codyssey.vercel.app — 가입 없이 바로 시작. 사진이 없으면 홈의 예시로 시작 |
+| 개인정보처리방침 | [로그인 없이 확인](https://ad-prototype-codyssey.vercel.app/privacy.html) |
+| 이용약관 | [로그인 없이 확인](https://ad-prototype-codyssey.vercel.app/terms.html) |
 | **발표 자료(웹 슬라이드)** | https://codyseeypresentation.vercel.app — 본편 12장 + 질문 목록 1장 + 질문별 답 20장(A1~A20) |
 | 브랜드 자료 | https://ad-prototype-codyssey.vercel.app/brand-library/ — 지금 쓰는 로고·색·표기 규칙 |
 | 개발 문서 | [ad_prototype/docs/README.md](ad_prototype/docs/README.md) |
@@ -63,6 +65,7 @@ ad_prototype/docs/      개발 문서 4개
 
 - 기술: React 19 + TypeScript · Vite · Canvas/WebCodecs(폰 안에서 포스터·영상) · Vercel 함수 · Supabase(로그인·저장) · 코디세이 COPA(Claude)·Gemini
 - 키 없이 실행해 보기: `cd ad_prototype` → `npx -y pnpm@9.15.9 install` → `npm run dev:mock`(가짜 AI 답으로 동작)
-- 로그인: 카카오·이메일은 누구나, Google은 아직 Google 쪽 '테스트' 단계라 등록한 계정만 됩니다. 가입 없이 "바로 시작하기"로도 씁니다.
+- 로그인: 카카오·이메일·Google을 지원합니다. Google은 2026-11-08 외부 사용자용 프로덕션으로 전환했고, 테스트 사용자에 등록하지 않은 계정의 로그인 성공을 확인했습니다. 가입 없이 "바로 시작하기"로도 씁니다.
+- 개인정보처리방침과 이용약관은 홈 하단 링크 또는 위 공개 주소에서 로그인 없이 확인할 수 있습니다. Google 홈페이지 소유권 확인도 완료했으며, 브랜딩 수동 검토는 로그인 사용 가능 상태와 별개로 진행 중입니다(2026-11-08 확인).
 
 실행 방법, 키 설정, 점검 명령, 배포는 [ad_prototype/docs/README.md](ad_prototype/docs/README.md)에 있습니다.

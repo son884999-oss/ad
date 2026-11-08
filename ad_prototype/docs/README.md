@@ -1,7 +1,7 @@
 # 홍보잇다 개발 문서
 
 실행·설정·점검·배포 방법과 문서 안내입니다. 문서는 아래 4개입니다.
-마지막 갱신: 2026-11-07 · 기본 작업 브랜치 `feature/UI-Screen` · 앱 `ad_prototype/`(Vite + React, Vercel 함수 `api/`)
+마지막 갱신: 2026-11-08 · 기본 작업 브랜치 `feature/UI-Screen` · 앱 `ad_prototype/`(Vite + React, Vercel 함수 `api/`)
 
 | 문서 | 무엇 |
 |---|---|
@@ -37,7 +37,7 @@
 | 배경 바꾸기 | Gemini `gemini-3.1-flash-lite-image`, 프롬프트 `api/_lib/background.js`(그릇·받침은 제품의 일부, 업종별 10종). 실패·상한이면 원래 사진 | 장당 약 50~53원 |
 | 포스터 | `src/poster/` 브라우저 Canvas. 4:5, 스타일 1·2·3, 색은 사진에서 | 0원 |
 | 영상 | `src/motionVideo.ts` 10초(전체 컷 → 전환 → 상품 클로즈업 → 마지막 화면). WebCodecs 빠른 MP4(`src/fastVideo.ts`), 안 되면 실시간 녹화 + `src/mp4Flatten.ts`. 소리 `src/videoSound.ts` | 0원 |
-| 회원가입 | Supabase Auth — 카카오·이메일·Google(Google은 테스트 계정만, 6절). 가입 없이 "바로 시작하기"도 됨 | 무료 플랜 |
+| 회원가입 | Supabase Auth — 카카오·이메일·Google(외부 프로덕션, 11-08 테스트 사용자 외 계정 로그인 확인, 6절). 가입 없이 "바로 시작하기"도 됨 | 무료 플랜 |
 
 - 유료 하루 상한: 10-22까지 1,000원, 10-23부터 500원(`api/_lib/gemini.js` `RAISED_UNTIL_DAY`·`RAISED_DAILY_LIMIT_KRW`). 배경 그림과 글이 같은 장부를 쓴다. **발표 당일 2026-11-13 15:30~17:00(한국 시간)에만** 하루 상한 5,000원, 접속 주소당 1분 한도 10배(`api/_lib/event.js`, 시간이 지나면 저절로 원래대로).
 - 배포 서버의 하루 장부는 메모리에 있어 서버가 여러 개 뜨면 덜 막을 수 있다 → Google Cloud 결제에 예산 알림을 건다.
@@ -113,12 +113,26 @@ npm run eval:promo; npm run eval:promo -- --local
 
 ## 6. 회원가입 설정 (끝남, 다시 할 때만)
 
-**상태(10-21):** 이메일·카카오·Google 모두 켜짐, 실제 로그인 확인. Google은 OAuth 앱이 '테스트' 게시 상태라 **테스트 사용자로 넣은 계정(최대 100개)만** 로그인된다. 모두에게 열려면 '앱 게시' 후 브랜드 확인을 받아야 하고, 그러려면 직접 소유를 증명한 도메인의 홈페이지·처리방침 주소가 필요하다(무료 `vercel.app` 주소로는 어려움) → 정식 도메인을 붙일 때 함께 한다(발표 부록 A9). 코드: `src/auth.ts`, `src/cloudRecords.ts`, `api/account-delete.js`, 점검 `npm run verify:auth`.
+**상태(2026-11-08):** 이메일·카카오·Google 모두 켜짐. Google OAuth는 사용자 유형 **외부**, 게시 상태 **프로덕션**이며, 테스트 사용자에 등록하지 않은 다른 계정의 로그인 성공을 사용자가 확인했다. 기존의 '테스트 사용자 계정만 로그인 가능' 제한 설명은 더 이상 현재 운영 상태가 아니다. Google 브랜딩 수동 검토는 진행 중이며 외부 로그인 성공과 구분한다. 코드: `src/auth.ts`, `src/cloudRecords.ts`, `api/account-delete.js`, 모의 점검 `npm run verify:auth`.
 
-1. **Supabase**(Region Seoul, Free): Project URL → `VITE_SUPABASE_URL`, Publishable key → `VITE_SUPABASE_ANON_KEY`, Secret key → `SUPABASE_SERVICE_ROLE_KEY`(절대 공개 금지). SQL Editor에 `docs/supabase/schema.sql` 실행(실행 때 뜨는 "destructive" 경고는 `drop policy if exists` 때문). Email 켜기(이메일 인증 확인은 현재 끔). URL Configuration: Site URL = 운영 주소, Redirect URLs = `http://localhost:5173/**`, `https://*.vercel.app/**`.
+1. **Supabase**(인도 뭄바이 `ap-south-1`, Free): Project URL → `VITE_SUPABASE_URL`, Publishable key → `VITE_SUPABASE_ANON_KEY`, Secret key → `SUPABASE_SERVICE_ROLE_KEY`(절대 공개 금지). SQL Editor에 `docs/supabase/schema.sql` 실행(실행 때 뜨는 "destructive" 경고는 `drop policy if exists` 때문). Email 켜기(이메일 인증 확인은 현재 끔). URL Configuration: Site URL = 운영 주소, Redirect URLs = `http://localhost:5173/**`, `https://*.vercel.app/**`.
 2. **카카오**(2025 콘솔): 앱 → 플랫폼 키 → **REST API 키** 화면 안에 리다이렉트 URI `https://<프로젝트>.supabase.co/auth/v1/callback`과 클라이언트 시크릿이 있다. 카카오 로그인 ON. 동의항목 닉네임·사진·**이메일**(없으면 KOE205 오류). 이메일은 비즈 앱만 되므로 "개인 개발자 비즈 앱 전환" 뒤 선택 동의로. Supabase Kakao에 키·시크릿, "Allow users without an email" 켬. 사이트 도메인에 localhost와 Vercel 주소.
-3. **Google**: OAuth consent(External, Test users에 QA 계정) → OAuth client(Web): JavaScript origins = localhost·Vercel 주소, redirect = Supabase callback → Supabase Google에 입력.
+3. **Google**: 현재 운영 기준은 사용자 유형 External·게시 상태 Production. OAuth client(Web)의 JavaScript origins에는 사용하는 localhost·Vercel 원본 주소를 등록하고, 승인된 redirect URI는 `https://nrtwahibtutduovouwlg.supabase.co/auth/v1/callback`을 사용한다. 클라이언트 ID·시크릿은 Supabase Google 제공자 설정에 입력한다. 현재 요청 범위는 `email`, `profile`이며 Gmail·Google Drive 자료 조회 권한은 요청하지 않는다.
 4. 확인: 이메일 가입 → 메뉴에 이메일이 보임 → 홍보물을 만들면 Table Editor `records`와 Storage `records`에 생김 → 다른 브라우저에서도 보임 → 회원 탈퇴하면 지워짐.
+
+### 공개 정책 페이지·Google 홈페이지 소유권 확인 (2026-11-08)
+
+| 항목 | 운영 주소 | 접근 |
+|---|---|---|
+| 홈페이지 | https://ad-prototype-codyssey.vercel.app/ | 가입 없이 이용 가능 |
+| 개인정보처리방침 | https://ad-prototype-codyssey.vercel.app/privacy.html | 로그인 없이 열림, 홈 하단 링크 |
+| 이용약관 | https://ad-prototype-codyssey.vercel.app/terms.html | 로그인 없이 열림, 홈 하단 링크 |
+
+- 개인정보 안내의 원본은 [`src/PrivacyPolicy.tsx`](../src/PrivacyPolicy.tsx)이며, 회원가입 화면과 공개 페이지가 같은 내용을 사용한다. 공개 개인정보처리방침에는 저장 서버 위치(인도 뭄바이), 비로그인 AI 처리 시 필요한 사진·입력 내용의 서버 전송, 가입 방식별 처리 정보와 삭제 범위를 안내한다.
+- [`scripts/generate-policy-pages.mjs`](../scripts/generate-policy-pages.mjs)가 `public/privacy.html`과 `public/terms.html`을 만든다. 개인정보 안내는 원본 컴포넌트, 이용약관은 생성 스크립트에서 수정한 뒤 `npm run build`로 다시 생성한다. 생성된 HTML만 따로 수정하면 다음 빌드에서 덮어써진다. 빌드·문서 확인에 실제 AI 호출은 필요하지 않다.
+- Google 브랜딩에는 위 홈페이지·개인정보처리방침·이용약관 주소를 등록했다. 운영 문의 연락처는 손용범·`hmcf7nz7@naver.com`이다.
+- Google Search Console에서 HTML 파일 방식의 홈페이지 소유권 인증 완료를 확인했다. 확인 파일은 [`public/google16125abbddcd37df.html`](../public/google16125abbddcd37df.html)이며, [운영 확인 주소](https://ad-prototype-codyssey.vercel.app/google16125abbddcd37df.html)에서 제공된다. 소유권 확인이 유지되도록 이 파일과 공개 정책 페이지를 삭제하지 않는다.
+- 브랜딩 검토 완료를 기다리는 상태와 실제 로그인 가능 상태는 별개다. Google 콘솔의 검토 진행만으로 저장소 코드나 GitHub 커밋 이력이 바뀌지는 않는다.
 
 ### Linux에서 점검할 때
 
