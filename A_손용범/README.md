@@ -44,7 +44,7 @@ if (result.status === 'completed') {
 }
 ```
 
-입력: `imageUrl`, `videoPrompt`, 선택값 `duration`(기본 10초, 5 또는 10), `cfgScale`(0~1), `negativePrompt`.
+입력: `imageUrl`, `videoPrompt`, 선택값 `duration`(기본 10초, 5 또는 10), `cfgScale`(0\~1), `negativePrompt`.
 
 기존 `prompt`도 하위 호환을 위해 지원하지만, 새 코드는 공통 데이터 규격인 `videoPrompt`를 사용하세요. 두 값을 함께 보내면 같은 문자열이어야 합니다.
 

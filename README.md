@@ -10,7 +10,7 @@
 | **앱 바로 써 보기** | https://ad-prototype-codyssey.vercel.app — 가입 없이 바로 시작. 사진이 없으면 홈의 예시로 시작 |
 | 개인정보처리방침 | [로그인 없이 확인](https://ad-prototype-codyssey.vercel.app/privacy.html) |
 | 이용약관 | [로그인 없이 확인](https://ad-prototype-codyssey.vercel.app/terms.html) |
-| **발표 자료(웹 슬라이드)** | https://codyseeypresentation.vercel.app — 본편 12장 + 질문 목록 1장 + 질문별 답 20장(A1~A20) |
+| **발표 자료(웹 슬라이드)** | https://codyseeypresentation.vercel.app — 본편 12장 + 질문 목록 1장 + 질문별 답 20장(A1\~A20) |
 | 브랜드 자료 | https://ad-prototype-codyssey.vercel.app/brand-library/ — 지금 쓰는 로고·색·표기 규칙 |
 | 개발 문서 | [ad_prototype/docs/README.md](ad_prototype/docs/README.md) |
 
@@ -37,8 +37,8 @@
 | 배경을 광고 사진처럼 바꾸기(사장님이 고를 때만) | 자막·배경음 |
 
 - 포스터와 영상은 폰 안에서 만들어서 **0원**입니다. 글자가 깨지지 않고, 같은 입력이면 같은 결과가 나옵니다.
-- 사진 읽기·홍보 글은 무료 AI로 처리되면 0원, 유료 AI로 넘어가면 1건 약 7~10원입니다.
-- 배경 바꾸기는 1장에 약 50~53원이고, 원래 사진과 바뀐 사진 중에서 고를 수 있습니다. 홍보물 1건은 배경을 그대로 두면 0~10원, 바꾸면 약 57~63원입니다(발표 부록 A3).
+- 사진 읽기·홍보 글은 무료 AI로 처리되면 0원, 유료 AI로 넘어가면 1건 약 7\~10원입니다.
+- 배경 바꾸기는 1장에 약 50\~53원이고, 원래 사진과 바뀐 사진 중에서 고를 수 있습니다. 홍보물 1건은 배경을 그대로 두면 0\~10원, 바꾸면 약 57\~63원입니다(발표 부록 A3).
 - AI가 실패하면 다음 순서로 넘어가서(코디세이 COPA(Claude) → Gemini 무료 → Gemini 유료 → 앱 기본 문구) 결과는 늘 나옵니다.
 - AI가 들어간 결과물에는 "AI 활용"을 표시합니다. 포스터·영상·보정 사진에는 그림에, 홍보 글은 복사·공유할 때 안내합니다(인공지능기본법 제31조).
 
